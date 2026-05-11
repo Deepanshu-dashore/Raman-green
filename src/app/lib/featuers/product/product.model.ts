@@ -8,14 +8,12 @@ export interface IProduct extends Document {
     description?: string;
     category: ICategory['_id'];
     basePrice: number; // Keep base price
-    variants: [
-    {
-        weight: String,
-        price: Number,
-        stock: Number,
-        sku: String
-    }
-    ];
+    variants: {
+        weight: string,
+        price: number,
+        stock: number,
+        sku: string
+    }[];
     rating?: number;
     numReviews?: number;
     isFeatured?: boolean;

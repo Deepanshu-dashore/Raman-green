@@ -40,10 +40,9 @@ const userSchema = new Schema<IUser>({
   }
 },{timestamps: true});
 
-userSchema.pre("save", async function (this: IUser, next: any) {
-  if (!this.isModified("password") || !this.password) return next();
+userSchema.pre("save", async function (this: IUser) {
+  if (!this.isModified("password") || !this.password) return;
   this.password = await hashPassword(this.password);
-  next();
 });
 
 const User = models.User || model<IUser>("User", userSchema);

@@ -5,10 +5,10 @@ import { IProduct } from "../product/product.model";
 export interface IOrderItem extends Document {
     product: IProduct['_id'];
     variant: {
-        weight: String,
-        price: Number,
-        stock: Number,
-        sku: String
+        weight: string,
+        price: number,
+        stock: number,
+        sku: string
     }
     quantity: number;
     totalAmount: number;
