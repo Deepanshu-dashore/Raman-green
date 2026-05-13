@@ -9,7 +9,7 @@ export class JWTHelper {
     static generateToken(payload: object): string {
         const secret: Secret = (process.env.JWT_SECRET as string) || "default_secret";
         const options: SignOptions = {
-            expiresIn: (process.env.JWT_EXPIRES_IN as any) || "7d"
+            expiresIn: (process.env.JWT_EXPIRES_IN as any) || "1d"
         };
         // Explicitly use the overload for (payload, secret, options)
         return jwt.sign(payload, secret, options);

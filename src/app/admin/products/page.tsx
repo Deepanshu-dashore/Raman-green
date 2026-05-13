@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -17,6 +18,7 @@ const AdminProducts = () => {
       })
       .catch(err => {
         console.error(err);
+        toast.error("Failed to load products.");
         setLoading(false);
       });
   }, []);
@@ -37,10 +39,13 @@ const AdminProducts = () => {
           <h1 className="text-3xl font-extrabold tracking-tight">Products</h1>
           <p className="text-gray-500 mt-1">Manage your inventory and product variants.</p>
         </div>
-        <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-green-200 transition-all flex items-center space-x-2">
+        <a 
+          href="/admin/products/add" 
+          className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-green-200 transition-all flex items-center space-x-2"
+        >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
           <span>Add Product</span>
-        </button>
+        </a>
       </div>
 
       {/* Product Table */}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
 const AdminCategories = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -20,7 +21,20 @@ const AdminCategories = () => {
       .then(res => res.json())
       .then(json => {
         if (json.success) {
-          setCategories(json.data);
+          // Sort categories: parent first, then its children
+          const sorted = [...json.data].sort((a, b) => {
+            const parentA = a.parent?._id || a._id;
+            const parentB = b.parent?._id || b._id;
+            
+            if (parentA === parentB) {
+              // Same parent or both are roots, put root first
+              if (!a.parent) return -1;
+              if (!b.parent) return 1;
+              return a.name.localeCompare(b.name);
+            }
+            return parentA.localeCompare(parentB);
+          });
+          setCategories(sorted);
         }
         setLoading(false);
       })
@@ -44,6 +58,14 @@ const AdminCategories = () => {
     }));
   };
 
+  const handleAddSubcategory = (parentId: string) => {
+    setFormData(prev => ({ ...prev, parent: parentId }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Focus the name input
+    const nameInput = document.getElementsByName('name')[0];
+    if (nameInput) nameInput.focus();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -58,14 +80,14 @@ const AdminCategories = () => {
       });
       const json = await res.json();
       if (json.success) {
-        alert("Category created successfully!");
+        toast.success("Category created successfully!");
         setFormData({ name: '', slug: '', parent: '', description: '', image: '' });
         fetchCategories(); // Refresh list
       } else {
-        alert("Error: " + json.message);
+        toast.error("Error: " + json.message);
       }
     } catch (err: any) {
-      alert("An error occurred.");
+      toast.error("An error occurred.");
     } finally {
       setSubmitting(false);
     }
@@ -77,12 +99,13 @@ const AdminCategories = () => {
       const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
+        toast.success("Category deleted successfully");
         fetchCategories();
       } else {
-        alert(json.message);
+        toast.error(json.message);
       }
     } catch (err) {
-      alert("Error deleting category.");
+      toast.error("Error deleting category.");
     }
   };
 
@@ -119,13 +142,42 @@ const AdminCategories = () => {
             <tbody className="divide-y divide-gray-50">
               {categories.length > 0 ? categories.map((cat: any) => (
                 <tr key={cat._id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="px-6 py-4 font-bold text-sm">{cat.name}</td>
+                  <td className="px-6 py-4 font-bold text-sm">
+                    <div className="flex items-center">
+                      {cat.parent && (
+                        <span className="text-gray-300 mr-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                        </span>
+                      )}
+                      <span className={cat.parent ? 'text-gray-600 font-medium ml-4' : 'text-gray-900 font-bold'}>
+                        {cat.name}
+                      </span>
+                    </div>
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-500">{cat.slug}</td>
-                  <td className="px-6 py-4 text-sm font-medium">{cat.parent?.name || '-'}</td>
+                  <td className="px-6 py-4 text-sm font-medium">
+                    {cat.parent ? (
+                      <span className="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600">
+                        {cat.parent.name}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">Root</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {!cat.parent && (
+                        <button 
+                          onClick={() => handleAddSubcategory(cat._id)}
+                          title="Add Subcategory"
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                        </button>
+                      )}
                       <button 
                         onClick={() => handleDelete(cat._id)}
+                        title="Delete"
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>

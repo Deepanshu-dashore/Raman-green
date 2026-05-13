@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 const AddProduct = () => {
   const router = useRouter();
@@ -10,13 +11,15 @@ const AddProduct = () => {
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
+    description: '',
     category: '',
     basePrice: '',
-    description: '',
-    brand: '',
+    brand: 'Raman Green',
     isFeatured: false,
-    images: [''],
-    variants: [{ weight: '', price: '', stock: '', sku: '' }]
+    images: [''], // Start with one empty image field
+    variants: [
+      { weight: '', price: '', stock: '', sku: '' }
+    ]
   });
 
   useEffect(() => {
@@ -24,38 +27,19 @@ const AddProduct = () => {
       .then(res => res.json())
       .then(json => {
         if (json.success) setCategories(json.data);
-      });
+      })
+      .catch(() => toast.error("Failed to load categories"));
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target as any;
-    const val = type === 'checkbox' ? (e.target as any).checked : value;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     
     setFormData(prev => ({
       ...prev,
       [name]: val,
       ...(name === 'name' ? { slug: value.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') } : {})
     }));
-  };
-
-  const handleVariantChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    const newVariants = [...formData.variants];
-    (newVariants[index] as any)[name] = value;
-    setFormData({ ...formData, variants: newVariants });
-  };
-
-  const addVariant = () => {
-    setFormData({
-      ...formData,
-      variants: [...formData.variants, { weight: '', price: '', stock: '', sku: '' }]
-    });
-  };
-
-  const removeVariant = (index: number) => {
-    if (formData.variants.length === 1) return;
-    const newVariants = formData.variants.filter((_, i) => i !== index);
-    setFormData({ ...formData, variants: newVariants });
   };
 
   const handleImageChange = (index: number, value: string) => {
@@ -68,143 +52,319 @@ const AddProduct = () => {
     setFormData({ ...formData, images: [...formData.images, ''] });
   };
 
+  const removeImageField = (index: number) => {
+    if (formData.images.length > 1) {
+      const newImages = formData.images.filter((_, i) => i !== index);
+      setFormData({ ...formData, images: newImages });
+    }
+  };
+
+  const handleVariantChange = (index: number, field: string, value: string) => {
+    const newVariants = [...formData.variants];
+    (newVariants[index] as any)[field] = value;
+    setFormData({ ...formData, variants: newVariants });
+  };
+
+  const addVariant = () => {
+    setFormData({
+      ...formData,
+      variants: [...formData.variants, { weight: '', price: '', stock: '', sku: '' }]
+    });
+  };
+
+  const removeVariant = (index: number) => {
+    if (formData.variants.length > 1) {
+      const newVariants = formData.variants.filter((_, i) => i !== index);
+      setFormData({ ...formData, variants: newVariants });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
+      // Clean up data
+      const payload = {
+        ...formData,
+        basePrice: Number(formData.basePrice),
+        images: formData.images.filter(img => img.trim() !== ''),
+        variants: formData.variants.map(v => ({
+          ...v,
+          price: Number(v.price),
+          stock: Number(v.stock)
+        }))
+      };
+
+      if (payload.images.length === 0) {
+        toast.error("At least one image URL is required");
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          basePrice: Number(formData.basePrice),
-          variants: formData.variants.map(v => ({
-            ...v,
-            price: Number(v.price),
-            stock: Number(v.stock)
-          }))
-        })
+        body: JSON.stringify(payload)
       });
+
       const json = await res.json();
+
       if (json.success) {
-        alert("Product added successfully!");
+        toast.success("Product added successfully!");
         router.push('/admin/products');
       } else {
-        alert("Error: " + json.message);
+        toast.error(json.message || "Failed to add product");
       }
     } catch (err) {
-      alert("An error occurred.");
+      toast.error("An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-20">
-      <div className="flex items-center space-x-4">
-        <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+    <div className="max-w-4xl mx-auto pb-12">
+      <div className="flex items-center space-x-4 mb-8">
+        <button 
+          onClick={() => router.back()}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </button>
-        <h1 className="text-3xl font-extrabold tracking-tight">Add New Product</h1>
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Add New Product</h1>
+          <p className="text-gray-500 mt-1">Create a new entry in your store catalog.</p>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Info Card */}
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Basic Info */}
         <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-          <h3 className="font-bold text-lg border-b border-gray-50 pb-4">Basic Information</h3>
+          <h2 className="text-xl font-bold border-b border-gray-50 pb-4">Basic Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Product Name</label>
-              <input type="text" name="name" value={formData.name} onChange={handleInputChange} required className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none" placeholder="e.g. Premium Broccoli Microgreens" />
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Product Name</label>
+              <input 
+                type="text" 
+                name="name"
+                required
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all" 
+                placeholder="e.g. Organic Broccoli Microgreens"
+              />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Slug</label>
-              <input type="text" name="slug" value={formData.slug} onChange={handleInputChange} required className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none" />
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Slug (URL)</label>
+              <input 
+                type="text" 
+                name="slug"
+                required
+                value={formData.slug}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all" 
+                placeholder="slug-url"
+              />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Category</label>
-              <select name="category" value={formData.category} onChange={handleInputChange} required className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Category</label>
+              <select 
+                name="category"
+                required
+                value={formData.category}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all"
+              >
                 <option value="">Select Category</option>
-                {categories.map(cat => <option key={cat._id} value={cat._id}>{cat.name}</option>)}
+                {categories.map(cat => (
+                  <option key={cat._id} value={cat._id}>{cat.name}</option>
+                ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Base Price (₹)</label>
-              <input type="number" name="basePrice" value={formData.basePrice} onChange={handleInputChange} required className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none" placeholder="299" />
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Base Price (₹)</label>
+              <input 
+                type="number" 
+                name="basePrice"
+                required
+                value={formData.basePrice}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all" 
+                placeholder="0.00"
+              />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Brand (Optional)</label>
-              <input type="text" name="brand" value={formData.brand} onChange={handleInputChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none" placeholder="Raman Green" />
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Brand</label>
+              <input 
+                type="text" 
+                name="brand"
+                value={formData.brand}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all" 
+                placeholder="Brand name"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Description</label>
+              <textarea 
+                name="description"
+                rows={4}
+                value={formData.description}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all" 
+                placeholder="Detailed product description..."
+              />
+            </div>
+            <div className="flex items-center space-x-3">
+              <input 
+                type="checkbox" 
+                name="isFeatured"
+                id="isFeatured"
+                checked={formData.isFeatured}
+                onChange={handleInputChange}
+                className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
+              />
+              <label htmlFor="isFeatured" className="text-sm font-bold text-gray-700">Mark as Featured Product</label>
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Description</label>
-            <textarea name="description" value={formData.description} onChange={handleInputChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none min-h-[120px]" placeholder="Detailed product description..." />
-          </div>
-          <div className="flex items-center space-x-3">
-            <input type="checkbox" name="isFeatured" checked={formData.isFeatured} onChange={handleInputChange} id="isFeatured" className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500" />
-            <label htmlFor="isFeatured" className="text-sm font-medium text-gray-700">Mark as Featured Product</label>
-          </div>
         </div>
 
-        {/* Variants Card */}
+        {/* Images */}
         <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-6">
           <div className="flex justify-between items-center border-b border-gray-50 pb-4">
-            <h3 className="font-bold text-lg">Product Variants</h3>
-            <button type="button" onClick={addVariant} className="text-sm text-green-600 font-bold hover:underline">+ Add Variant</button>
+            <h2 className="text-xl font-bold">Product Images</h2>
+            <button 
+              type="button"
+              onClick={addImageField}
+              className="text-sm font-bold text-green-600 hover:text-green-700 flex items-center space-x-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+              <span>Add URL</span>
+            </button>
           </div>
           <div className="space-y-4">
-            {formData.variants.map((v, i) => (
-              <div key={i} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-gray-50 rounded-xl relative group">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Weight</label>
-                  <input type="text" name="weight" value={v.weight} onChange={(e) => handleVariantChange(i, e)} className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-md outline-none text-sm" placeholder="100g" />
+            {formData.images.map((url, index) => (
+              <div key={index} className="flex items-center space-x-3">
+                <div className="flex-1">
+                  <input 
+                    type="text" 
+                    value={url}
+                    required
+                    onChange={(e) => handleImageChange(index, e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all" 
+                    placeholder="https://example.com/image.jpg"
+                  />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Price</label>
-                  <input type="number" name="price" value={v.price} onChange={(e) => handleVariantChange(i, e)} className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-md outline-none text-sm" placeholder="₹" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Stock</label>
-                  <input type="number" name="stock" value={v.stock} onChange={(e) => handleVariantChange(i, e)} className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-md outline-none text-sm" />
-                </div>
-                <div className="md:col-span-2 flex items-end space-x-2">
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">SKU</label>
-                    <input type="text" name="sku" value={v.sku} onChange={(e) => handleVariantChange(i, e)} className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-md outline-none text-sm" />
-                  </div>
-                  {formData.variants.length > 1 && (
-                    <button type="button" onClick={() => removeVariant(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
-                  )}
-                </div>
+                {formData.images.length > 1 && (
+                  <button 
+                    type="button"
+                    onClick={() => removeImageField(index)}
+                    className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Images Card */}
+        {/* Variants */}
         <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-6">
           <div className="flex justify-between items-center border-b border-gray-50 pb-4">
-            <h3 className="font-bold text-lg">Product Images</h3>
-            <button type="button" onClick={addImageField} className="text-sm text-green-600 font-bold hover:underline">+ Add Image URL</button>
+            <h2 className="text-xl font-bold">Price Variants & Stock</h2>
+            <button 
+              type="button"
+              onClick={addVariant}
+              className="text-sm font-bold text-green-600 hover:text-green-700 flex items-center space-x-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+              <span>Add Variant</span>
+            </button>
           </div>
-          <div className="space-y-3">
-            {formData.images.map((url, i) => (
-              <div key={i}>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Image URL {i + 1}</label>
-                <input type="text" value={url} onChange={(e) => handleImageChange(i, e.target.value)} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none" placeholder="https://example.com/image.jpg" />
+          
+          <div className="space-y-6">
+            {formData.variants.map((variant, index) => (
+              <div key={index} className="p-6 bg-gray-50 rounded-2xl border border-gray-100 relative group">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Weight/Size</label>
+                    <input 
+                      type="text" 
+                      value={variant.weight}
+                      required
+                      onChange={(e) => handleVariantChange(index, 'weight', e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" 
+                      placeholder="50g / 100g"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Price (₹)</label>
+                    <input 
+                      type="number" 
+                      value={variant.price}
+                      required
+                      onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" 
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Stock</label>
+                    <input 
+                      type="number" 
+                      value={variant.stock}
+                      required
+                      onChange={(e) => handleVariantChange(index, 'stock', e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" 
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">SKU</label>
+                    <input 
+                      type="text" 
+                      value={variant.sku}
+                      onChange={(e) => handleVariantChange(index, 'sku', e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" 
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+                {formData.variants.length > 1 && (
+                  <button 
+                    type="button"
+                    onClick={() => removeVariant(index)}
+                    className="absolute -top-3 -right-3 p-2 bg-white border border-gray-200 text-red-500 hover:text-red-600 rounded-full shadow-sm hover:shadow transition-all opacity-0 group-hover:opacity-100"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex space-x-4">
-          <button type="button" onClick={() => router.back()} className="flex-1 bg-white border border-gray-200 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all">Cancel</button>
-          <button type="submit" disabled={loading} className="flex-[2] bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-100 transition-all disabled:opacity-70 flex items-center justify-center space-x-2">
-            {loading ? <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white"></div> : <span>Save Product</span>}
+        {/* Form Actions */}
+        <div className="flex items-center justify-end space-x-4">
+          <button 
+            type="button"
+            onClick={() => router.back()}
+            className="px-6 py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit"
+            disabled={loading}
+            className={`bg-gray-900 text-white px-10 py-3 rounded-xl font-bold shadow-xl hover:bg-gray-800 transition-all flex items-center space-x-2 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+          >
+            {loading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white"></div>
+            ) : (
+              <span>Publish Product</span>
+            )}
           </button>
         </div>
       </form>

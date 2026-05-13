@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState<any[]>([]);
@@ -17,6 +18,7 @@ const AdminOrders = () => {
       })
       .catch(err => {
         console.error(err);
+        toast.error("Failed to load orders.");
         setLoading(false);
       });
   }, []);

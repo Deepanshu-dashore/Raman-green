@@ -36,9 +36,27 @@ export class UserController {
 
             const { user, token } = await UserService.login(identifier, password);
 
-            return ApiResponse(200, { user, token }, "Login successful.");
+            const response = ApiResponse(200, { user }, "Login successful.");
+
+            response.cookies.set("token", token, {
+                httpOnly: true,
+                sameSite: "strict",
+                path: "/",
+                maxAge: 60 * 60 * 24 * 1, // 1 day
+            });
+
+            return response;
         } catch (error: any) {
             return ApiResponse(401, null, error.message || "An error occurred during login.");
         }
+    }
+
+    /**
+     * Handle user logout
+     */
+    static async logout() {
+        const response = ApiResponse(200, null, "Logged out successfully.");
+        response.cookies.delete("token");
+        return response;
     }
 }

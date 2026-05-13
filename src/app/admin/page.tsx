@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
 const StatCard = ({ title, value, icon, trend }: { title: string, value: string, icon: React.ReactNode, trend: string }) => (
   <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
@@ -34,6 +35,7 @@ const AdminDashboard = () => {
       })
       .catch(err => {
         console.error(err);
+        toast.error("Failed to load dashboard stats.");
         setLoading(false);
       });
   }, []);

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 const AdminLogin = () => {
   const router = useRouter();
@@ -28,12 +29,15 @@ const AdminLogin = () => {
         // but let's assume we might need to set it or just redirect)
         localStorage.setItem('adminToken', json.data.token);
         document.cookie = `authToken=${json.data.token}; path=/; max-age=604800`;
+        toast.success("Login successful!");
         router.push('/admin');
       } else {
         setError(json.message);
+        toast.error(json.message);
       }
     } catch (err) {
       setError("An unexpected error occurred.");
+      toast.error("An unexpected error occurred.");
     } finally {
       setLoading(false);
     }

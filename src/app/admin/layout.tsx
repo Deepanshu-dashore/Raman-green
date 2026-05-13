@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
@@ -25,10 +26,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           setAdminUser(json.data);
           setIsVerifying(false);
         } else {
+          toast.error("Session expired. Please login again.");
           router.push('/admin/login');
         }
       })
       .catch(() => {
+        toast.error("Authentication failed.");
         router.push('/admin/login');
       });
   }, [pathname, router, isLoginPage]);
@@ -36,6 +39,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const handleLogout = () => {
     document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
     localStorage.removeItem('adminToken');
+    toast.success("Logged out successfully");
     router.push('/admin/login');
   };
 

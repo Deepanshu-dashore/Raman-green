@@ -6,7 +6,15 @@ export class CategoryService {
      */
     static async createCategory(data: Partial<ICategory>): Promise<ICategory> {
         const category = new Category(data);
-        return await category.save();
+        const savedCategory = await category.save();
+
+        if (data.parent) {
+            await Category.findByIdAndUpdate(data.parent, {
+                $addToSet: { children: savedCategory._id }
+            });
+        }
+
+        return savedCategory;
     }
 
     /**
@@ -34,6 +42,24 @@ export class CategoryService {
      * Delete category
      */
     static async deleteCategory(id: string): Promise<ICategory | null> {
+        const category = await Category.findById(id);
+        if (!category) return null;
+
+        // Remove from parent's children array
+        if (category.parent) {
+            await Category.findByIdAndUpdate(category.parent, {
+                $pull: { children: category._id }
+            });
+        }
+
+        // Set children's parent to null (or handle as needed)
+        if (category.children && category.children.length > 0) {
+            await Category.updateMany(
+                { _id: { $in: category.children } },
+                { $unset: { parent: "" } }
+            );
+        }
+
         return await Category.findByIdAndDelete(id);
     }
 }
