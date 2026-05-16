@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Public_Sans } from "next/font/google";
+import { Geist, Geist_Mono, Public_Sans, Lato } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,6 +18,12 @@ const publicSans = Public_Sans({
   weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
+const lato = Lato({
+  variable: "--font-lato",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+});
+
 export const metadata: Metadata = {
   title: "Raman Green | Premium Organic Products",
   description: "Discover and manage premium organic and natural products from Raman Green.",
@@ -33,7 +39,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${publicSans.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${publicSans.variable} ${lato.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}

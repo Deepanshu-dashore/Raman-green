@@ -2,18 +2,18 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import toast from 'react-hot-toast';
+import { Icon } from '@iconify/react';
 
 const AdminLogin = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({ identifier: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
     
     try {
       const res = await fetch('/api/admin/auth/login', {
@@ -25,18 +25,14 @@ const AdminLogin = () => {
       const json = await res.json();
       
       if (json.success) {
-        // Store token in cookie (the API already handles this if using cookies, 
-        // but let's assume we might need to set it or just redirect)
         localStorage.setItem('adminToken', json.data.token);
         document.cookie = `authToken=${json.data.token}; path=/; max-age=604800`;
-        toast.success("Login successful!");
+        toast.success("Welcome back!");
         router.push('/admin');
       } else {
-        setError(json.message);
         toast.error(json.message);
       }
     } catch (err) {
-      setError("An unexpected error occurred.");
       toast.error("An unexpected error occurred.");
     } finally {
       setLoading(false);
@@ -44,62 +40,97 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h1 className="text-center text-4xl font-extrabold text-green-600 tracking-tight">Raman Green</h1>
-        <h2 className="mt-6 text-center text-2xl font-bold text-gray-900">Admin Portal</h2>
-      </div>
-
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl border border-gray-100 sm:rounded-2xl sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded text-sm text-red-700">
-                {error}
-              </div>
-            )}
-            
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                Phone or Email
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all"
-                placeholder="Admin credentials"
-                value={formData.identifier}
-                onChange={(e) => setFormData({...formData, identifier: e.target.value})}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 focus:outline-none transition-all disabled:opacity-70"
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white"></div>
-              ) : (
-                "Sign In to Dashboard"
-              )}
-            </button>
-          </form>
+    <div className="h-screen bg-[#F0F7F2] flex items-center justify-center p-4 lg:p-10 font-sans overflow-hidden">
+      <div className="bg-white w-full max-w-5xl rounded-3xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col lg:flex-row min-h-[540px] border border-white">
+        
+        {/* Left Side: Image with Glassmorphism */}
+        <div className="hidden lg:block w-[55%] relative">
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ 
+              backgroundImage: `url('/login_background_natural.png')` 
+            }}
+          >
+            {/* Soft Ambient Overlay */}
+            <div className="absolute inset-0 bg-black/5"></div>
+          </div>
         </div>
+
+        {/* Right Side: Login Form */}
+        <div className="w-full lg:w-[45%] p-8 lg:p-16 flex flex-col justify-between">
+          <div className="w-full">
+            <div className="mb-12 flex justify-start">
+              <Image 
+                src="/logo.png" 
+                alt="Raman Green" 
+                width={160} 
+                height={80} 
+                className="h-16 w-auto object-contain"
+                priority
+              />
+            </div>
+
+            <div className="mb-10">
+              <h1 className="text-[38px] font-bold text-gray-900 leading-none mb-5 tracking-tight text-left">Welcome back!</h1>
+              <p className="text-gray-400 text-base leading-relaxed font-medium text-left">
+                Enter your credentials to access the management dashboard.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4 w-full">
+              <div className="group relative">
+                <input
+                  type="text"
+                  required
+                  placeholder="Admin Email"
+                  className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-[18px] focus:ring-0 focus:border-[#47C269] focus:bg-white outline-none transition-all text-gray-900 placeholder:text-gray-400 font-semibold text-[14px]"
+                  value={formData.identifier}
+                  onChange={(e) => setFormData({...formData, identifier: e.target.value})}
+                />
+              </div>
+
+              <div className="group relative">
+                <input
+                  type="password"
+                  required
+                  placeholder="Password"
+                  className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-[18px] focus:ring-0 focus:border-[#47C269] focus:bg-white outline-none transition-all text-gray-900 placeholder:text-gray-400 font-semibold text-[14px]"
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                />
+              </div>
+
+              <div className="flex justify-start px-1">
+                <button type="button" className="text-[#47C269] text-[12px] font-bold hover:text-green-700 transition-colors uppercase tracking-wider">
+                  Forgot password?
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full cursor-pointer bg-gray-950 text-white py-4 px-6 rounded-2xl font-bold text-base hover:bg-black transition-all shadow-xl hover:shadow-2xl active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-3 mt-6 group"
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white"></div>
+                ) : (
+                  <>
+                    <span>Login to Dashboard</span>
+                    <Icon icon="lucide:arrow-right" className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          <div className="mt-12 pt-8 border-t border-gray-50 w-full">
+            <p className="text-gray-300 text-[9px] font-bold uppercase tracking-widest leading-loose text-left">
+              © 2026 Raman Green Technologies<br />
+              Secure Admin Environment
+            </p>
+          </div>
+        </div>
+
       </div>
     </div>
   );

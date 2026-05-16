@@ -39,7 +39,13 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       });
   }, [pathname, router, isLoginPage]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error("Server-side logout failed", error);
+    }
+    
     document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
     localStorage.removeItem('adminToken');
     toast.success("Logged out successfully");
