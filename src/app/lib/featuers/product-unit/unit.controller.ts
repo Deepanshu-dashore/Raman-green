@@ -21,10 +21,10 @@ export class UnitController {
         }
     }
 
-    static async update(req: Request, { params }: { params: { id: string } }) {
+    static async update(req: Request, { params }: { params: Promise<{ id: string }> }) {
         try {
             const body = await req.json();
-            const { id } = params;
+            const { id } = await params;
             const data = await UnitService.update(id, body);
             if (!data) return NextResponse.json({ success: false, message: "Not found" }, { status: 404 });
             return NextResponse.json({ success: true, data });
@@ -33,9 +33,9 @@ export class UnitController {
         }
     }
 
-    static async delete(req: Request, { params }: { params: { id: string } }) {
+    static async delete(req: Request, { params }: { params: Promise<{ id: string }> }) {
         try {
-            const { id } = params;
+            const { id } = await params;
             const data = await UnitService.delete(id);
             if (!data) return NextResponse.json({ success: false, message: "Not found" }, { status: 404 });
             return NextResponse.json({ success: true, message: "Deleted successfully" });

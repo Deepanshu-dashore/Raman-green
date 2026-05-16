@@ -21,10 +21,10 @@ export class CertificateController {
         }
     }
 
-    static async update(req: Request, { params }: { params: { id: string } }) {
+    static async update(req: Request, { params }: { params: Promise<{ id: string }> }) {
         try {
             const body = await req.json();
-            const { id } = params;
+            const { id } = await params;
             const certificate = await CertificateService.updateCertificate(id, body);
             if (!certificate) {
                 return NextResponse.json({ success: false, message: "Certificate not found" }, { status: 404 });
@@ -35,9 +35,9 @@ export class CertificateController {
         }
     }
 
-    static async delete(req: Request, { params }: { params: { id: string } }) {
+    static async delete(req: Request, { params }: { params: Promise<{ id: string }> }) {
         try {
-            const { id } = params;
+            const { id } = await params;
             const certificate = await CertificateService.deleteCertificate(id);
             if (!certificate) {
                 return NextResponse.json({ success: false, message: "Certificate not found" }, { status: 404 });

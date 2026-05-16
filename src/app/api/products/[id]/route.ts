@@ -4,14 +4,14 @@ import { NextRequest } from "next/server";
 import { verifyJWT } from "@/app/lib/middlewares/verifyJWT";
 import { ApiResponse } from "@/app/lib/utils/ApiResponse";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     await connectDB();
     const { id } = await params;
     // Assuming ID could be slug for GET request
     return ProductController.getBySlug(id);
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     await connectDB();
     const user = await verifyJWT();
     if (!user || user.role !== 'admin') {
@@ -22,7 +22,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return ProductController.update(id, body);
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     await connectDB();
     const user = await verifyJWT();
     if (!user || user.role !== 'admin') {
