@@ -13,6 +13,7 @@
   --font-sans: var(--font-public-sans), var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-public: var(--font-public-sans);
+  --font-lato: var(--font-lato);
 }
 
 @media (prefers-color-scheme: dark) {

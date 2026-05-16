@@ -71,8 +71,8 @@ const AdminLogin = () => {
             </div>
 
             <div className="mb-10">
-              <h1 className="text-[38px] font-bold text-gray-900 leading-none mb-5 tracking-tight text-left">Welcome back!</h1>
-              <p className="text-gray-400 text-base leading-relaxed font-medium text-left">
+              <h1 className="text-[38px] font-bold text-gray-900 leading-none mb-5 tracking-tight text-left font-lato">Welcome back!</h1>
+              <p className="text-gray-400 text-base leading-relaxed font-medium text-left font-lato">
                 Enter your credentials to access the management dashboard.
               </p>
             </div>
