@@ -8,8 +8,10 @@ export interface IProduct extends Document {
     description?: string;
     category: ICategory['_id'];
     basePrice: number; // Keep base price
+    discountedPrice: number;
     variants: {
-        weight: string,
+        value: number,
+        unit: string, // Reference to Unit shortName or ID? I'll use string for now to match 'weight' style but better to link
         price: number,
         stock: number,
         sku: string
@@ -17,7 +19,12 @@ export interface IProduct extends Document {
     rating?: number;
     numReviews?: number;
     isFeatured?: boolean;
+    isDeleted?: boolean;
+    isPublished?: boolean;
     brand?: string;
+    tags?: string[];
+    certificates?: string[]; // Array of Certificate IDs
+    packaging?: string[]; // Array of Packaging IDs
 }
 
 const productSchema = new Schema<IProduct>({
@@ -54,13 +61,35 @@ const productSchema = new Schema<IProduct>({
         required: true
     },
 
+    discountedPrice: {
+        type: Number,
+    },
+
     variants: [
     {
-        weight: String,
+        value: Number,
+        unit: {
+            type: Schema.Types.ObjectId,
+            ref: 'Unit'
+        },
         price: Number,
         stock: Number,
         sku: String
     }
+    ],
+
+    certificates: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: 'Certificate'
+        }
+    ],
+
+    packaging: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: 'Packaging'
+        }
     ],
 
     rating: {
@@ -74,6 +103,21 @@ const productSchema = new Schema<IProduct>({
     isFeatured: {
         type: Boolean,
         default: false
+    },
+
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+
+    isPublished: {
+        type: Boolean,
+        default: false
+    },
+
+    tags: {
+        type: [String],
+        default: []
     },
 
     brand: {

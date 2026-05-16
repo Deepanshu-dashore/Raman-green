@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 const StatCard = ({ title, value, icon, trend }: { title: string, value: string, icon: React.ReactNode, trend: string }) => (
   <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
@@ -54,10 +55,14 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight">Overview</h1>
-        <p className="text-gray-500 mt-1">Here's what's happening with your store today.</p>
-      </div>
+      <PageHeader 
+        title="Overview"
+        description="Here's what's happening with your store today."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Dashboard' }
+        ]}
+      />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

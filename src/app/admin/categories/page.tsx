@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { Icon } from '@iconify/react';
 import toast from 'react-hot-toast';
+import { DataTable, ColumnDef } from '@/components/shared/DataTable';
+import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 const AdminCategories = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -120,78 +124,71 @@ const AdminCategories = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Categories</h1>
-          <p className="text-gray-500 mt-1">Organize your products into hierarchies.</p>
-        </div>
-      </div>
+      <PageHeader 
+        title="Categories"
+        description="Organize your products into hierarchies."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Categories' }
+        ]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Category List */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
-                <th className="px-6 py-4 font-semibold">Name</th>
-                <th className="px-6 py-4 font-semibold">Slug</th>
-                <th className="px-6 py-4 font-semibold">Parent</th>
-                <th className="px-6 py-4 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {categories.length > 0 ? categories.map((cat: any) => (
-                <tr key={cat._id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="px-6 py-4 font-bold text-sm">
-                    <div className="flex items-center">
-                      {cat.parent && (
-                        <span className="text-gray-300 mr-2">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-                        </span>
-                      )}
-                      <span className={cat.parent ? 'text-gray-600 font-medium ml-4' : 'text-gray-900 font-bold'}>
-                        {cat.name}
+        <div className="lg:col-span-2">
+          <DataTable 
+            data={categories}
+            loading={loading}
+            rowKey={(cat) => cat._id}
+            columns={[
+              {
+                key: 'name',
+                label: 'Name',
+                sortable: true,
+                custom: true,
+                render: (cat) => (
+                  <div className="flex items-center">
+                    {cat.parent && (
+                      <span className="text-gray-300 mr-2">
+                        <Icon icon="lucide:chevron-right" className="w-4 h-4" />
                       </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{cat.slug}</td>
-                  <td className="px-6 py-4 text-sm font-medium">
-                    {cat.parent ? (
-                      <span className="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600">
-                        {cat.parent.name}
-                      </span>
-                    ) : (
-                      <span className="text-gray-300">Root</span>
                     )}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {!cat.parent && (
-                        <button 
-                          onClick={() => handleAddSubcategory(cat._id)}
-                          title="Add Subcategory"
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => handleDelete(cat._id)}
-                        title="Delete"
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={4} className="px-6 py-10 text-center text-gray-500">No categories found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    <span className={cat.parent ? 'text-gray-600 font-medium ml-4' : 'text-gray-900 font-bold'}>
+                      {cat.name}
+                    </span>
+                  </div>
+                )
+              },
+              {
+                key: 'slug',
+                label: 'Slug',
+                type: 'text',
+                sortable: true
+              },
+              {
+                key: 'parent',
+                label: 'Parent',
+                custom: true,
+                render: (cat) => cat.parent ? (
+                  <span className="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600">
+                    {cat.parent.name}
+                  </span>
+                ) : (
+                  <span className="text-gray-300">Root</span>
+                )
+              }
+            ]}
+            onDelete={(cat) => handleDelete(cat._id)}
+            additionalActions={[
+              {
+                label: 'Add Subcategory',
+                icon: PlusIcon,
+                disabled: (cat) => !!cat.parent,
+                onClick: (cat) => handleAddSubcategory(cat._id)
+              }
+            ]}
+            hiddenActions={['view', 'edit']}
+          />
         </div>
 
         {/* Add Category Form */}

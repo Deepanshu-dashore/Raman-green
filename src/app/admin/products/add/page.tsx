@@ -3,11 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { MultiSelectDropdown } from '@/components/shared/MultiSelectDropdown';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 const AddProduct = () => {
   const router = useRouter();
   const [categories, setCategories] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
+  const [packagingOptions, setPackagingOptions] = useState<any[]>([]);
+  const [certificateOptions, setCertificateOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -16,19 +22,27 @@ const AddProduct = () => {
     basePrice: '',
     brand: 'Raman Green',
     isFeatured: false,
-    images: [''], // Start with one empty image field
+    images: [''],
     variants: [
-      { weight: '', price: '', stock: '', sku: '' }
-    ]
+      { value: '', unit: '', price: '', stock: '', sku: '' }
+    ],
+    certificates: [] as string[],
+    packaging: [] as string[]
   });
 
   useEffect(() => {
-    fetch('/api/categories')
-      .then(res => res.json())
-      .then(json => {
-        if (json.success) setCategories(json.data);
-      })
-      .catch(() => toast.error("Failed to load categories"));
+    // Parallel fetching
+    Promise.all([
+      fetch('/api/categories').then(res => res.json()),
+      fetch('/api/admin/units').then(res => res.json()),
+      fetch('/api/admin/packaging').then(res => res.json()),
+      fetch('/api/admin/certificates').then(res => res.json()),
+    ]).then(([cat, uni, pack, cert]) => {
+      if (cat.success) setCategories(cat.data);
+      if (uni.success) setUnits(uni.data);
+      if (pack.success) setPackagingOptions(pack.data);
+      if (cert.success) setCertificateOptions(cert.data);
+    }).catch(() => toast.error("Failed to load options"));
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -68,7 +82,7 @@ const AddProduct = () => {
   const addVariant = () => {
     setFormData({
       ...formData,
-      variants: [...formData.variants, { weight: '', price: '', stock: '', sku: '' }]
+      variants: [...formData.variants, { value: '', unit: '', price: '', stock: '', sku: '' }]
     });
   };
 
@@ -77,6 +91,16 @@ const AddProduct = () => {
       const newVariants = formData.variants.filter((_, i) => i !== index);
       setFormData({ ...formData, variants: newVariants });
     }
+  };
+
+  const toggleFeature = (id: string, type: 'certificates' | 'packaging') => {
+    setFormData(prev => {
+      const list = [...(prev[type] as string[])];
+      const index = list.indexOf(id);
+      if (index > -1) list.splice(index, 1);
+      else list.push(id);
+      return { ...prev, [type]: list };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,6 +115,7 @@ const AddProduct = () => {
         images: formData.images.filter(img => img.trim() !== ''),
         variants: formData.variants.map(v => ({
           ...v,
+          value: Number(v.value),
           price: Number(v.price),
           stock: Number(v.stock)
         }))
@@ -125,18 +150,16 @@ const AddProduct = () => {
 
   return (
     <div className="max-w-4xl mx-auto pb-12">
-      <div className="flex items-center space-x-4 mb-8">
-        <button 
-          onClick={() => router.back()}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-        </button>
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Add New Product</h1>
-          <p className="text-gray-500 mt-1">Create a new entry in your store catalog.</p>
-        </div>
-      </div>
+      <PageHeader 
+        title="Add New Product"
+        description="Create a new entry in your store catalog."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Products', href: '/admin/products' },
+          { label: 'Add Product' }
+        ]}
+        backLink="/admin/products"
+      />
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Info */}
@@ -287,17 +310,31 @@ const AddProduct = () => {
           <div className="space-y-6">
             {formData.variants.map((variant, index) => (
               <div key={index} className="p-6 bg-gray-50 rounded-2xl border border-gray-100 relative group">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Weight/Size</label>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <div className="col-span-1">
+                    <label className="block text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Value</label>
                     <input 
-                      type="text" 
-                      value={variant.weight}
+                      type="number" 
+                      value={variant.value}
                       required
-                      onChange={(e) => handleVariantChange(index, 'weight', e.target.value)}
+                      onChange={(e) => handleVariantChange(index, 'value', e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" 
-                      placeholder="50g / 100g"
+                      placeholder="50"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Unit</label>
+                    <select 
+                      value={variant.unit}
+                      required
+                      onChange={(e) => handleVariantChange(index, 'unit', e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none cursor-pointer"
+                    >
+                      <option value="">Select</option>
+                      {units.map(u => (
+                        <option key={u._id} value={u._id}>{u.shortName}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Price (₹)</label>
@@ -344,6 +381,29 @@ const AddProduct = () => {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Certificates & Packaging */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center min-h-[160px]">
+                <MultiSelectDropdown 
+                   label="Product Certificates"
+                   options={certificateOptions.map(c => ({ id: c._id, label: c.name, image: c.url }))}
+                   selectedValues={formData.certificates}
+                   onChange={(id) => toggleFeature(id, 'certificates')}
+                   placeholder="Select certificates"
+                />
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center min-h-[160px]">
+                <MultiSelectDropdown 
+                   label="Packaging Types"
+                   options={packagingOptions.map(p => ({ id: p._id, label: p.name, subLabel: p.type }))}
+                   selectedValues={formData.packaging}
+                   onChange={(id) => toggleFeature(id, 'packaging')}
+                   placeholder="Select packaging"
+                />
+            </div>
         </div>
 
         {/* Form Actions */}

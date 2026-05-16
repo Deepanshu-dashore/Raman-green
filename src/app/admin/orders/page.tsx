@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState<any[]>([]);
@@ -34,10 +35,14 @@ const AdminOrders = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight">Orders</h1>
-        <p className="text-gray-500 mt-1">Track and manage customer shipments.</p>
-      </div>
+      <PageHeader 
+        title="Orders"
+        description="Track and manage customer shipments."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Orders' }
+        ]}
+      />
 
       {/* Orders Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
