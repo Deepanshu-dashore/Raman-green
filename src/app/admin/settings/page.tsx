@@ -8,6 +8,7 @@ import { DataTable } from '@/components/shared/DataTable';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Button } from '@/components/shared/Button';
 import Card from '@/components/shared/Card';
+import DeleteModal from '@/components/shared/DeleteModal';
 
 
 const AdminSettings = () => {
@@ -18,6 +19,8 @@ const AdminSettings = () => {
     
     const [configCategory, setConfigCategory] = useState('product');
     const [activeTab, setActiveTab] = useState('certificates');
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<{ id: string, name: string, type: 'cert' | 'pack' | 'unit' } | null>(null);
     
     // Update category and sub-tab if searchParams change
     useEffect(() => {
@@ -121,8 +124,19 @@ const AdminSettings = () => {
         finally { setIsSubmitting(false); }
     };
 
-    const handleDelete = async (id: string, type: 'cert' | 'pack' | 'unit') => {
-        if (!confirm("Are you sure?")) return;
+    const handleDeleteClick = (item: any, type: 'cert' | 'pack' | 'unit') => {
+        setSelectedItem({
+            id: item._id,
+            name: item.name,
+            type
+        });
+        setDeleteModalOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!selectedItem) return;
+        const { id, type } = selectedItem;
+        setDeleteModalOpen(false);
         try {
             let endpoint = '';
             if (type === 'cert') endpoint = `/api/admin/certificates/${id}`;
@@ -138,6 +152,7 @@ const AdminSettings = () => {
                 else if (type === 'unit') fetchUnits();
             }
         } catch (error) { toast.error("Failed to delete"); }
+        finally { setSelectedItem(null); }
     };
 
     const startEdit = (item: any, type: 'cert' | 'pack' | 'unit') => {
@@ -259,7 +274,7 @@ const AdminSettings = () => {
                                             { key: 'name', label: 'Name', type: 'text', sortable: true }
                                         ]}
                                         onEdit={(row: any) => startEdit(row, 'cert')}
-                                        onDelete={(row: any) => handleDelete(row._id, 'cert')}
+                                        onDelete={(row: any) => handleDeleteClick(row, 'cert')}
                                         hiddenActions={['view']}
                                         searchPlaceholder="Search certificates..."
                                     />
@@ -298,7 +313,7 @@ const AdminSettings = () => {
                                             { key: 'name', label: 'Name', type: 'text', sortable: true }
                                         ]}
                                         onEdit={(row: any) => startEdit(row, 'pack')}
-                                        onDelete={(row: any) => handleDelete(row._id, 'pack')}
+                                        onDelete={(row: any) => handleDeleteClick(row, 'pack')}
                                         hiddenActions={['view']}
                                         searchPlaceholder="Search packaging..."
                                     />
@@ -367,7 +382,7 @@ const AdminSettings = () => {
                                             { key: 'name', label: 'Full Name', type: 'text', sortable: true }
                                         ]}
                                         onEdit={(row: any) => startEdit(row, 'unit')}
-                                        onDelete={(row: any) => handleDelete(row._id, 'unit')}
+                                        onDelete={(row: any) => handleDeleteClick(row, 'unit')}
                                         hiddenActions={['view']}
                                         searchPlaceholder="Search units..."
                                     />
@@ -414,6 +429,18 @@ const AdminSettings = () => {
                     <p className="text-gray-400 max-w-sm mx-auto">{configCategory === 'branding' ? 'Storefront appearance and themes' : 'General system configurations'} will be available here in the next update.</p>
                 </Card>
             )}
+
+            <DeleteModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setSelectedItem(null);
+                }}
+                onConfirm={handleDeleteConfirm}
+                title={`Delete ${selectedItem?.type === 'cert' ? 'Certificate' : selectedItem?.type === 'pack' ? 'Packaging Type' : 'Measurement Unit'}`}
+                message={`Are you sure you want to delete "${selectedItem?.name}"? This action cannot be undone.`}
+                confirmButtonText="Delete"
+            />
         </div>
     );
 };

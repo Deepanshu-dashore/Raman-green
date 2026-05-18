@@ -6,10 +6,13 @@ import toast from 'react-hot-toast';
 import { DataTable, ColumnDef } from '@/components/shared/DataTable';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { PageHeader } from '@/components/shared/PageHeader';
+import DeleteModal from '@/components/shared/DeleteModal';
 
 const AdminCategories = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -97,10 +100,17 @@ const AdminCategories = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this category?")) return;
+  const handleDeleteClick = (category: any) => {
+    setSelectedCategory(category);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedCategory) return;
+    const catId = selectedCategory._id;
+    setDeleteModalOpen(false);
     try {
-      const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/categories/${catId}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         toast.success("Category deleted successfully");
@@ -110,6 +120,8 @@ const AdminCategories = () => {
       }
     } catch (err) {
       toast.error("Error deleting category.");
+    } finally {
+      setSelectedCategory(null);
     }
   };
 
@@ -178,7 +190,7 @@ const AdminCategories = () => {
                 )
               }
             ]}
-            onDelete={(cat) => handleDelete(cat._id)}
+            onDelete={handleDeleteClick}
             additionalActions={[
               {
                 label: 'Add Subcategory',
@@ -257,6 +269,18 @@ const AdminCategories = () => {
           </form>
         </div>
       </div>
+
+      <DeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setSelectedCategory(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Category"
+        message={`Are you sure you want to delete category "${selectedCategory?.name}"? This action cannot be undone.`}
+        confirmButtonText="Delete"
+      />
     </div>
   );
 };

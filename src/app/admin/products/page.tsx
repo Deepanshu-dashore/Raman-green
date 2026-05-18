@@ -8,11 +8,41 @@ import { DataTable } from '@/components/shared/DataTable';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Button } from '@/components/shared/Button';
+import DeleteModal from '@/components/shared/DeleteModal';
 
 const AdminProducts = () => {
   const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+
+  const handleDeleteClick = (product: any) => {
+    setSelectedProduct(product);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!selectedProduct) return;
+    const p = selectedProduct;
+    setDeleteModalOpen(false);
+    toast.promise(
+      fetch(`/api/products/${p._id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(json => {
+           if(json.success) {
+             setProducts(prev => prev.filter(item => item._id !== p._id));
+           } else {
+             throw new Error(json.message);
+           }
+        }),
+      {
+        loading: 'Deleting...',
+        success: 'Product deleted',
+        error: (err) => err.message || 'Failed to delete'
+      }
+    );
+  };
 
   useEffect(() => {
     fetch('/api/products')
@@ -68,15 +98,18 @@ const AdminProducts = () => {
             label: 'Image',
             align: 'center',
             custom: true,
-            render: (p) => (
-              <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden mx-auto">
-                {p.images && p.images[0] ? (
-                  <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />
-                ) : (
-                  <Icon icon="lucide:image" className="w-6 h-6 text-gray-300" />
-                )}
-              </div>
-            )
+            render: (p) => {
+              const firstImg = p.variants?.[0]?.images?.[0] || null;
+              return (
+                <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden mx-auto">
+                  {firstImg ? (
+                    <img src={firstImg} alt={p.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Icon icon="lucide:image" className="w-6 h-6 text-gray-300" />
+                  )}
+                </div>
+              );
+            }
           },
           {
             key: 'name',
@@ -120,27 +153,20 @@ const AdminProducts = () => {
           }
         ]}
         onEdit={(p) => router.push(`/admin/products/edit/${p._id}`)}
-        onDelete={(p) => {
-          if (confirm(`Are you sure you want to delete ${p.name}?`)) {
-            toast.promise(
-              fetch(`/api/products/${p._id}`, { method: 'DELETE' })
-                .then(res => res.json())
-                .then(json => {
-                   if(json.success) {
-                     setProducts(prev => prev.filter(item => item._id !== p._id));
-                   } else {
-                     throw new Error(json.message);
-                   }
-                }),
-              {
-                loading: 'Deleting...',
-                success: 'Product deleted',
-                error: (err) => err.message || 'Failed to delete'
-              }
-            );
-          }
-        }}
+        onDelete={handleDeleteClick}
         hiddenActions={['view']}
+      />
+
+      <DeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setSelectedProduct(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${selectedProduct?.name}"? This action cannot be undone.`}
+        confirmButtonText="Delete"
       />
     </div>
   );

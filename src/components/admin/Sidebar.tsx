@@ -218,6 +218,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ adminUser, handleLogout }) => 
           ]
         },
         {
+          name: 'Inventory',
+          href: '/admin/inventory',
+          icon: 'solar:clipboard-list-bold-duotone'
+        },
+        {
           name: 'Settings',
           href: '/admin/settings',
           icon: 'solar:settings-bold-duotone',

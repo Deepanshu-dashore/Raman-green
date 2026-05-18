@@ -9,6 +9,7 @@ import Card from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 
 interface VariantState {
+  _id?: string;
   value: string;
   unit: string;
   price: string;
@@ -22,13 +23,21 @@ interface VariantState {
   showInventory: boolean;
 }
 
-const AddProduct = () => {
+interface EditProductProps {
+  params: Promise<{ id: string }>;
+}
+
+const EditProduct = ({ params }: EditProductProps) => {
   const router = useRouter();
+  const resolvedParams = React.use(params);
+  const productId = resolvedParams.id;
+
   const [categories, setCategories] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [packagingOptions, setPackagingOptions] = useState<any[]>([]);
   const [certificateOptions, setCertificateOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   
   const [formData, setFormData] = useState({
@@ -38,26 +47,13 @@ const AddProduct = () => {
     category: '',
     brand: 'Raman Green',
     isFeatured: false,
-    variants: [
-      { 
-        value: '', 
-        unit: '', 
-        price: '', 
-        stock: '', 
-        sku: '', 
-        images: [] as string[],
-        batchNumber: '',
-        mfgDate: '',
-        expiryDate: '',
-        notes: '',
-        showInventory: false
-      }
-    ] as VariantState[],
+    variants: [] as VariantState[],
     certificates: [] as string[],
     packaging: [] as string[]
   });
 
   useEffect(() => {
+    // 1. Fetch reference options
     Promise.all([
       fetch('/api/categories').then(res => res.json()),
       fetch('/api/admin/units').then(res => res.json()),
@@ -68,8 +64,64 @@ const AddProduct = () => {
       if (uni.success) setUnits(uni.data);
       if (pack.success) setPackagingOptions(pack.data);
       if (cert.success) setCertificateOptions(cert.data);
-    }).catch(() => toast.error("Failed to load options"));
-  }, []);
+      
+      // 2. Fetch the target product
+      return fetch(`/api/products/${productId}`).then(res => res.json());
+    }).then((prodJson) => {
+      if (prodJson && prodJson.success && prodJson.data) {
+        const prod = prodJson.data;
+        
+        // Map variants correctly
+        const mappedVariants = (prod.variants || []).map((v: any) => ({
+          _id: v._id,
+          value: String(v.weight || v.size || v.value || ''),
+          unit: v.unit?._id || v.unit || '',
+          price: String(v.basePrice || v.price || ''),
+          stock: String(v.stock || '0'),
+          sku: v.sku || '',
+          images: v.images || [],
+          batchNumber: '',
+          mfgDate: '',
+          expiryDate: '',
+          notes: '',
+          showInventory: false
+        }));
+
+        // Fill formData
+        setFormData({
+          name: prod.name || '',
+          slug: prod.slug || '',
+          description: prod.description || '',
+          category: prod.category?._id || prod.category || '',
+          brand: prod.brand || 'Raman Green',
+          isFeatured: !!prod.isFeatured,
+          variants: mappedVariants.length > 0 ? mappedVariants : [{ 
+            value: '', 
+            unit: '', 
+            price: '', 
+            stock: '', 
+            sku: '', 
+            images: [],
+            batchNumber: '',
+            mfgDate: '',
+            expiryDate: '',
+            notes: '',
+            showInventory: false
+          }],
+          certificates: (prod.certificates || []).map((c: any) => c._id || c),
+          packaging: (prod.packaging || []).map((p: any) => p._id || p)
+        });
+      } else {
+        toast.error("Product not found");
+      }
+    })
+    .catch((err) => {
+      toast.error("Failed to load options or product details");
+    })
+    .finally(() => {
+      setFetching(false);
+    });
+  }, [productId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -217,7 +269,7 @@ const AddProduct = () => {
     setLoading(true);
 
     try {
-      // Validate that each variant has at least one image
+      // Validate variants images
       for (let i = 0; i < formData.variants.length; i++) {
         const v = formData.variants[i];
         if (!v.images || v.images.length === 0) {
@@ -235,6 +287,7 @@ const AddProduct = () => {
       const payload = {
         ...formData,
         variants: formData.variants.map(v => ({
+          _id: v._id,
           value: Number(v.value),
           unit: v.unit,
           price: Number(v.price),
@@ -248,8 +301,8 @@ const AddProduct = () => {
         }))
       };
 
-      const res = await fetch('/api/products', {
-        method: 'POST',
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -257,27 +310,36 @@ const AddProduct = () => {
       const json = await res.json();
 
       if (json.success) {
-        toast.success("Product and variants added successfully!");
+        toast.success("Product and variants updated successfully!");
         router.push('/admin/products');
       } else {
-        toast.error(json.message || "Failed to add product");
+        toast.error(json.message || "Failed to update product");
       }
-    } catch (err) {
-      toast.error("An unexpected error occurred.");
+    } catch (err: any) {
+      toast.error(err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
   };
 
+  if (fetching) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-600"></div>
+        <p className="text-sm font-bold text-gray-500">Loading product information...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto pb-16 px-4 animate-in fade-in duration-500">
       <PageHeader 
-        title="Add New Product"
-        description="Create a product catalog item and configure its variants and initial warehouse inventory."
+        title="Edit Product"
+        description="Modify basic details, pricing variants, and sync inventory levels for this product catalog."
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
           { label: 'Products', href: '/admin/products' },
-          { label: 'Add Product' }
+          { label: 'Edit Product' }
         ]}
         backLink="/admin/products"
       />
@@ -450,7 +512,7 @@ const AddProduct = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Initial Stock Qty</label>
+                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Stock Qty</label>
                     <input 
                       type="number" 
                       value={variant.stock}
@@ -656,7 +718,7 @@ const AddProduct = () => {
             icon="lucide:save"
             className="!rounded-2xl px-10 shadow-lg font-bold"
           >
-            Publish Product Catalog
+            Save Changes
           </Button>
         </div>
       </form>
@@ -664,4 +726,4 @@ const AddProduct = () => {
   );
 };
 
-export default AddProduct;
+export default EditProduct;

@@ -4,17 +4,11 @@ import { ICategory } from "../category/category.model";
 export interface IProduct extends Document {
     name: string;
     slug: string;
-    images: string[];
     description?: string;
     category: ICategory['_id'];
-    basePrice: number; // Keep base price
-    discountedPrice: number;
     variants: {
-        value: number,
-        unit: string, // Reference to Unit shortName or ID? I'll use string for now to match 'weight' style but better to link
-        price: number,
-        stock: number,
-        sku: string
+        type: Schema.Types.ObjectId,
+        ref: 'ProductVariant'
     }[];
     rating?: number;
     numReviews?: number;
@@ -39,13 +33,6 @@ const productSchema = new Schema<IProduct>({
         unique: true
     },
 
-    images: [
-        {
-            type: String,
-            required: true
-        }
-    ],
-
     description: {
         type: String,
     },
@@ -56,26 +43,11 @@ const productSchema = new Schema<IProduct>({
         required: true
     },
 
-    basePrice: {
-        type: Number,
-        required: true
-    },
-
-    discountedPrice: {
-        type: Number,
-    },
-
     variants: [
-    {
-        value: Number,
-        unit: {
+        {
             type: Schema.Types.ObjectId,
-            ref: 'Unit'
-        },
-        price: Number,
-        stock: Number,
-        sku: String
-    }
+            ref: 'ProductVariant'
+        }
     ],
 
     certificates: [
