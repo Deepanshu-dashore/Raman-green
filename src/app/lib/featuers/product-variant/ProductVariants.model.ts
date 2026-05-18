@@ -8,7 +8,7 @@ export interface IProductVariant extends Document {
     size: number;
     weight: number;
     images?: string[];
-    stock: number;
+    packaging?: Schema.Types.ObjectId[];
     sku: string;
 }
 
@@ -36,6 +36,12 @@ const productVariantSchema = new Schema<IProductVariant>({
         type: Schema.Types.ObjectId,
         ref: 'Unit',
     },
+    packaging: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: 'Packaging'
+        }
+    ],
     size: {
         type: Number,
     },
@@ -43,14 +49,12 @@ const productVariantSchema = new Schema<IProductVariant>({
         type: Number,
         required: true
     },
-    stock: {
-        type: Number,
-        default: 0
-    },
     sku: {
         type: String,
         required: true
     }
 }, { timestamps: true });
 
+delete models.ProductVariant;
 export const ProductVariant = models.ProductVariant || model<IProductVariant>('ProductVariant', productVariantSchema);
+ProductVariant.syncIndexes().catch(err => console.log("ProductVariant index sync skipped:", err));

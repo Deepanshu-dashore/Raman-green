@@ -32,15 +32,6 @@ export class InventoryService {
      */
     static async updateInventory(id: string, data: Partial<IInventory>): Promise<IInventory | null> {
         const inventory = await Inventory.findByIdAndUpdate(id, data, { new: true });
-        
-        if (inventory) {
-            // Keep ProductVariant.stock perfectly in sync with Inventory.availableQty
-            if (data.availableQty !== undefined) {
-                await ProductVariant.findByIdAndUpdate(inventory.variantId, {
-                    stock: Number(data.availableQty)
-                });
-            }
-        }
 
         return await Inventory.findById(id)
             .populate("productId")

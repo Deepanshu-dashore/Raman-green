@@ -4,7 +4,7 @@ import { Inventory } from "../inventory/Inventory.model";
 
 export class ProductService {
     /**
-     * Create a new product along with its variants and initial inventories
+     * Create a new product along with optional variants and initial inventories
      */
     static async createProduct(data: any): Promise<IProduct> {
         const { variants: variantsData, ...productData } = data;
@@ -39,16 +39,16 @@ export class ProductService {
             for (const varData of variantsData) {
                 const stockVal = Number(varData.stock) || 0;
                 
-                // Create ProductVariant
+                // Create ProductVariant (packaging included, stock omitted)
                 const variant = new ProductVariant({
                     productId: product._id,
                     basePrice: Number(varData.price || varData.basePrice || 0),
                     discountedPrice: Number(varData.discountedPrice || 0),
                     unit: varData.unit || null,
+                    packaging: varData.packaging || [],
                     size: Number(varData.size || 0),
                     weight: Number(varData.weight || varData.value || 0),
                     images: varData.images || [],
-                    stock: stockVal,
                     sku: varData.sku
                 });
                 await variant.save();
@@ -84,7 +84,10 @@ export class ProductService {
             .populate("category")
             .populate({
                 path: "variants",
-                populate: { path: "unit" }
+                populate: [
+                    { path: "unit" },
+                    { path: "packaging" }
+                ]
             });
         return populatedProduct as IProduct;
     }
@@ -107,16 +110,16 @@ export class ProductService {
 
         const stockVal = Number(varData.stock) || 0;
 
-        // 3. Create ProductVariant
+        // 3. Create ProductVariant (packaging included, stock omitted)
         const variant = new ProductVariant({
             productId: product._id,
             basePrice: Number(varData.price || varData.basePrice || 0),
             discountedPrice: Number(varData.discountedPrice || 0),
             unit: varData.unit || null,
+            packaging: varData.packaging || [],
             size: Number(varData.size || 0),
             weight: Number(varData.weight || varData.value || 0),
             images: varData.images || [],
-            stock: stockVal,
             sku: varData.sku
         });
         await variant.save();
@@ -153,7 +156,10 @@ export class ProductService {
             .populate("category")
             .populate({
                 path: "variants",
-                populate: { path: "unit" }
+                populate: [
+                    { path: "unit" },
+                    { path: "packaging" }
+                ]
             });
     }
 
@@ -166,7 +172,10 @@ export class ProductService {
                 .populate("category")
                 .populate({
                     path: "variants",
-                    populate: { path: "unit" }
+                    populate: [
+                        { path: "unit" },
+                        { path: "packaging" }
+                    ]
                 });
             if (product) return product;
         }
@@ -174,7 +183,10 @@ export class ProductService {
             .populate("category")
             .populate({
                 path: "variants",
-                populate: { path: "unit" }
+                populate: [
+                    { path: "unit" },
+                    { path: "packaging" }
+                ]
             });
     }
 
@@ -186,7 +198,10 @@ export class ProductService {
             .populate("category")
             .populate({
                 path: "variants",
-                populate: { path: "unit" }
+                populate: [
+                    { path: "unit" },
+                    { path: "packaging" }
+                ]
             });
     }
 
@@ -222,17 +237,17 @@ export class ProductService {
                 let variant;
 
                 if (varData._id && varData._id.match(/^[0-9a-fA-F]{24}$/)) {
-                    // Update existing variant
+                    // Update existing variant (stock omitted)
                     variant = await ProductVariant.findByIdAndUpdate(
                         varData._id,
                         {
                             basePrice: Number(varData.price || varData.basePrice || 0),
                             discountedPrice: Number(varData.discountedPrice || 0),
                             unit: varData.unit || null,
+                            packaging: varData.packaging || [],
                             size: Number(varData.size || 0),
                             weight: Number(varData.weight || varData.value || 0),
                             images: varData.images || [],
-                            stock: stockVal,
                             sku: skuStr
                         },
                         { new: true }
@@ -246,16 +261,16 @@ export class ProductService {
                         );
                     }
                 } else {
-                    // Create a new variant
+                    // Create a new variant (stock omitted)
                     variant = new ProductVariant({
                         productId: product._id,
                         basePrice: Number(varData.price || varData.basePrice || 0),
                         discountedPrice: Number(varData.discountedPrice || 0),
                         unit: varData.unit || null,
+                        packaging: varData.packaging || [],
                         size: Number(varData.size || 0),
                         weight: Number(varData.weight || varData.value || 0),
                         images: varData.images || [],
-                        stock: stockVal,
                         sku: skuStr
                     });
                     await variant.save();
@@ -293,14 +308,89 @@ export class ProductService {
             .populate("category")
             .populate({
                 path: "variants",
-                populate: { path: "unit" }
+                populate: [
+                    { path: "unit" },
+                    { path: "packaging" }
+                ]
             });
+    }
+
+    /**
+     * Update standalone variant (stock omitted)
+     */
+    static async updateVariant(variantId: string, varData: any): Promise<IProductVariant | null> {
+        // 1. Verify SKU uniqueness
+        if (varData.sku) {
+            const existing = await ProductVariant.findOne({ 
+                sku: varData.sku, 
+                _id: { $ne: variantId } 
+            });
+            if (existing) {
+                throw new Error(`SKU "${varData.sku}" already exists on another variant.`);
+            }
+        }
+
+        const stockVal = Number(varData.stock) || 0;
+
+        // 2. Perform updates (stock omitted)
+        const variant = await ProductVariant.findByIdAndUpdate(
+            variantId,
+            {
+                basePrice: Number(varData.price || varData.basePrice || 0),
+                discountedPrice: Number(varData.discountedPrice || 0),
+                unit: varData.unit || null,
+                packaging: varData.packaging || [],
+                size: Number(varData.size || 0),
+                weight: Number(varData.weight || varData.value || 0),
+                images: varData.images || [],
+                sku: varData.sku
+            },
+            { new: true }
+        ).populate("unit").populate("packaging");
+
+        if (variant) {
+            // Sync inventory availableQty
+            await Inventory.findOneAndUpdate(
+                { variantId: variant._id },
+                { availableQty: stockVal }
+            );
+        }
+
+        return variant;
+    }
+
+    /**
+     * Delete standalone variant
+     */
+    static async deleteVariant(variantId: string): Promise<boolean> {
+        const variant = await ProductVariant.findById(variantId);
+        if (!variant) return false;
+
+        // 1. Remove reference from Product variants array
+        await Product.findByIdAndUpdate(variant.productId, {
+            $pull: { variants: variantId }
+        });
+
+        // 2. Delete inventory entries
+        await Inventory.deleteMany({ variantId });
+
+        // 3. Delete variant itself
+        await ProductVariant.findByIdAndDelete(variantId);
+        return true;
     }
 
     /**
      * Delete product
      */
     static async deleteProduct(id: string): Promise<IProduct | null> {
+        const product = await Product.findById(id);
+        if (product) {
+            // Delete all nested variants and inventories
+            if (product.variants && product.variants.length > 0) {
+                await Inventory.deleteMany({ productId: product._id });
+                await ProductVariant.deleteMany({ productId: product._id });
+            }
+        }
         return await Product.findByIdAndDelete(id);
     }
 }

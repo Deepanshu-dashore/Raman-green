@@ -18,7 +18,6 @@ export interface IProduct extends Document {
     brand?: string;
     tags?: string[];
     certificates?: string[]; // Array of Certificate IDs
-    packaging?: string[]; // Array of Packaging IDs
 }
 
 const productSchema = new Schema<IProduct>({
@@ -57,13 +56,6 @@ const productSchema = new Schema<IProduct>({
         }
     ],
 
-    packaging: [
-        {
-            type: Schema.Types.ObjectId,
-            ref: 'Packaging'
-        }
-    ],
-
     rating: {
         type: Number,
     },
@@ -97,4 +89,6 @@ const productSchema = new Schema<IProduct>({
     }
 }, { timestamps: true });
 
+delete models.Product;
 export const Product = models.Product || model<IProduct>('Product', productSchema);
+Product.syncIndexes().catch(err => console.log("Product index sync skipped:", err));
