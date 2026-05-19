@@ -40,6 +40,8 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
   const [fetching, setFetching] = useState(true);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  // List of image URLs uploaded during this editing session (used for rollback)
+  const [pendingUrls, setPendingUrls] = useState<string[]>([]);
 
   // Form State for Adding / Editing a Single Variant
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -79,7 +81,20 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     loadData();
   }, [productId]);
 
-  const resetForm = () => {
+  const rollbackPendingUploads = async (urls: string[]) => {
+    if (urls.length === 0) return;
+    try {
+      await fetch('/api/upload/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls }),
+      });
+    } catch {
+      // silent — best-effort cleanup
+    }
+  };
+
+  const clearFormFields = () => {
     setVariantForm({
       value: '',
       unit: '',
@@ -95,11 +110,20 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       showInventory: false
     });
     setEditingVariantId(null);
+  };
+
+  const resetForm = async () => {
+    // Rollback any images uploaded during this session that were never saved
+    await rollbackPendingUploads(pendingUrls);
+    setPendingUrls([]);
+    clearFormFields();
     setIsFormOpen(false);
   };
 
-  const handleOpenAdd = () => {
-    resetForm();
+  const handleOpenAdd = async () => {
+    await rollbackPendingUploads(pendingUrls);
+    setPendingUrls([]);
+    clearFormFields();
     setIsFormOpen(true);
   };
 
@@ -150,44 +174,54 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     if (!files || files.length === 0) return;
 
     setUploading(true);
-    const toastId = toast.loading("Uploading images to Cloudinary...");
+    const toastId = toast.loading(`Uploading ${files.length} image(s) to Cloudinary...`);
 
     try {
       const uploadPromises = Array.from(files).map(async (file) => {
         const body = new FormData();
-        body.append("file", file);
-        body.append("folder", "products");
-        body.append("resource_type", "image");
+        body.append('file', file);
+        body.append('folder', 'products');
 
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body,
-        });
-
+        const res = await fetch('/api/upload', { method: 'POST', body });
         const json = await res.json();
+
         if (json.success) {
-          return json.data.url;
-        } else {
-          throw new Error(json.message || "Failed to upload");
+          return json.data as string;
         }
+        throw new Error(json.message || 'Failed to upload');
       });
 
       const urls = await Promise.all(uploadPromises);
-      
+
+      // Track pending URLs for potential rollback
+      setPendingUrls(prev => [...prev, ...urls]);
+
       setVariantForm(prev => ({
         ...prev,
         images: [...prev.images, ...urls]
       }));
 
-      toast.success("Images uploaded successfully!", { id: toastId });
+      toast.success('Images uploaded successfully!', { id: toastId });
     } catch (err: any) {
-      toast.error(err.message || "Upload failed", { id: toastId });
+      toast.error(err.message || 'Upload failed', { id: toastId });
     } finally {
       setUploading(false);
+      // Reset input so same file can be re-selected
+      e.target.value = '';
     }
   };
 
   const removeImage = (imgIndex: number) => {
+    const url = variantForm.images[imgIndex];
+    // If this image was uploaded this session, delete it from Cloudinary immediately
+    if (url && pendingUrls.includes(url)) {
+      fetch('/api/upload/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: [url] }),
+      }).catch(() => {/* silent */});
+      setPendingUrls(prev => prev.filter(u => u !== url));
+    }
     setVariantForm(prev => ({
       ...prev,
       images: prev.images.filter((_, i) => i !== imgIndex)
@@ -246,14 +280,24 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       const json = await res.json();
 
       if (json.success) {
-        toast.success(editingVariantId ? "Variant updated successfully!" : "Variant added successfully!");
+        toast.success(editingVariantId ? 'Variant updated successfully!' : 'Variant added successfully!');
+        // Clear pending URLs — images are now saved, no rollback needed
+        setPendingUrls([]);
         resetForm();
         loadData();
       } else {
-        toast.error(json.message || "Failed to save variant");
+        // Save failed — rollback newly uploaded images from Cloudinary
+        await rollbackPendingUploads(pendingUrls);
+        setPendingUrls([]);
+        setVariantForm(prev => ({ ...prev, images: [] }));
+        toast.error(json.message || 'Failed to save variant — uploaded images have been rolled back.');
       }
     } catch (err: any) {
-      toast.error(err.message || "An unexpected error occurred");
+      // Network/unexpected error — rollback
+      await rollbackPendingUploads(pendingUrls);
+      setPendingUrls([]);
+      setVariantForm(prev => ({ ...prev, images: [] }));
+      toast.error(err.message || 'An unexpected error occurred — uploaded images have been rolled back.');
     } finally {
       setLoading(false);
     }
@@ -314,9 +358,9 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
-        {/* Existing Variants list */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="flex flex-col gap-8 mt-6">
+        {/* Configured Variants Table */}
+        <div className="order-2 space-y-6">
           <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest pl-1">Configured Variants</h3>
           
           <div className="space-y-4">
@@ -381,10 +425,10 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
           </div>
         </div>
 
-        {/* Dynamic Form for Adding / Editing a Single Variant */}
-        <div className="space-y-6">
-          {isFormOpen ? (
-            <Card className="!p-6 border-gray-100 shadow-lg animate-in slide-in-from-right duration-300">
+        {/* Add / Edit Variant Form — shown above the table */}
+        <div className="order-1">
+          {isFormOpen && (
+            <Card className="!p-6 border-gray-100 shadow-lg animate-in slide-in-from-top duration-300">
               <div className="flex justify-between items-center border-b border-gray-50 pb-4 mb-4">
                 <h3 className="text-sm font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
                   <Icon icon={editingVariantId ? "lucide:edit-3" : "lucide:plus-circle"} className="w-4 h-4 text-green-600" />
@@ -399,7 +443,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
               </div>
 
               <form onSubmit={handleSave} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="space-y-1">
                     <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Size/Weight Value</label>
                     <input 
@@ -451,7 +495,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                     />
                   </div>
 
-                  <div className="space-y-1 col-span-2">
+                  <div className="space-y-1 col-span-2 md:col-span-4">
                     <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Variant SKU</label>
                     <input 
                       type="text" 
@@ -464,7 +508,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                   </div>
 
                   {/* Packaging Selection Under Variant */}
-                  <div className="col-span-2 pt-2">
+                  <div className="col-span-2 md:col-span-4 pt-2">
                     <MultiSelectDropdown 
                        label="Packaging Options (Variant Specific)"
                        options={packagingOptions.map(p => ({ id: p._id, label: p.name, subLabel: p.type }))}
@@ -545,7 +589,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                   </button>
 
                   {variantForm.showInventory && (
-                    <div className="space-y-3 mt-3 p-4 bg-green-50/10 border border-green-100/50 rounded-xl animate-in slide-in-from-top duration-300">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 p-4 bg-green-50/10 border border-green-100/50 rounded-xl animate-in slide-in-from-top duration-300">
                       <div className="space-y-1">
                         <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest ml-1">Batch Number</label>
                         <input 
@@ -610,14 +654,6 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                 </div>
               </form>
             </Card>
-          ) : (
-            <div className="border border-dashed border-gray-200 p-8 rounded-2xl text-center bg-gray-50/50 flex flex-col items-center justify-center min-h-[300px]">
-              <Icon icon="solar:box-add-bold-duotone" className="w-12 h-12 text-gray-300 mb-2" />
-              <h4 className="text-xs font-black text-gray-600 uppercase tracking-wider">No Variant Form Open</h4>
-              <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
-                Click "+ Add Variant Option" or "Edit" on any card to begin managing.
-              </p>
-            </div>
           )}
         </div>
       </div>
