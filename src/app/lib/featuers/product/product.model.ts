@@ -14,6 +14,7 @@ export interface IProduct extends Document {
     numReviews?: number;
     isFeatured?: boolean;
     isDeleted?: boolean;
+    deletedAt?: Date;
     isPublished?: boolean;
     brand?: string;
     tags?: string[];
@@ -72,6 +73,10 @@ const productSchema = new Schema<IProduct>({
     isDeleted: {
         type: Boolean,
         default: false
+    },
+
+    deletedAt: {
+        type: Date,
     },
 
     isPublished: {

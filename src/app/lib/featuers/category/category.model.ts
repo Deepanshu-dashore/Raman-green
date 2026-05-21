@@ -1,12 +1,14 @@
-import {Document, model, models, Schema} from "mongoose";
+import { Document, model, models, Schema, Types } from "mongoose";
 
 export interface ICategory extends Document {
     name: string;
     slug: string;
     image: string;
     description?: string;
-    parent?: ICategory['_id'];
-    children?: ICategory['_id'][]
+    parent?: Types.ObjectId;
+    children?: Types.ObjectId[];
+    isDeleted?: boolean;
+    deletedAt?: Date;
 }
 
 const categorySchema = new Schema<ICategory>({
@@ -37,7 +39,16 @@ const categorySchema = new Schema<ICategory>({
     children: [{
         type: Schema.Types.ObjectId,
         ref: 'Category'
-    }]
+    }],
+
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+
+    deletedAt: {
+        type: Date,
+    }
 },{timestamps: true});
 
 export const Category = models.Category || model<ICategory>('Category', categorySchema);

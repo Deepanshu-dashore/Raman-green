@@ -1,6 +1,7 @@
 import { Product, IProduct } from "./product.model";
 import { ProductVariant, IProductVariant } from "../product-variant/ProductVariants.model";
 import { Inventory } from "../inventory/Inventory.model";
+import { notDeletedFilter, variantPopulate } from "../../utils/softDelete";
 
 export class ProductService {
     /**
@@ -21,7 +22,7 @@ export class ProductService {
 
             // Check database for existing SKUs
             for (const sku of skus) {
-                const existingVariant = await ProductVariant.findOne({ sku });
+                const existingVariant = await ProductVariant.findOne({ sku, ...notDeletedFilter });
                 if (existingVariant) {
                     throw new Error(`SKU "${sku}" already exists in the database.`);
                 }
@@ -82,13 +83,7 @@ export class ProductService {
         // Return fully populated product
         const populatedProduct = await Product.findById(product._id)
             .populate("category")
-            .populate({
-                path: "variants",
-                populate: [
-                    { path: "unit" },
-                    { path: "packaging" }
-                ]
-            });
+            .populate(variantPopulate);
         return populatedProduct as IProduct;
     }
 
@@ -97,13 +92,13 @@ export class ProductService {
      */
     static async addVariantToProduct(productId: string, varData: any): Promise<IProductVariant> {
         // 1. Verify the product exists
-        const product = await Product.findById(productId);
+        const product = await Product.findOne({ _id: productId, ...notDeletedFilter });
         if (!product) {
             throw new Error("Product not found.");
         }
 
         // 2. Make sure SKU is unique
-        const existingVariant = await ProductVariant.findOne({ sku: varData.sku });
+        const existingVariant = await ProductVariant.findOne({ sku: varData.sku, ...notDeletedFilter });
         if (existingVariant) {
             throw new Error(`SKU "${varData.sku}" already exists in the database.`);
         }
@@ -152,15 +147,9 @@ export class ProductService {
      * Get all products with optional filters
      */
     static async getAllProducts(query: any = {}): Promise<IProduct[]> {
-        return await Product.find(query)
+        return await Product.find({ ...query, ...notDeletedFilter })
             .populate("category")
-            .populate({
-                path: "variants",
-                populate: [
-                    { path: "unit" },
-                    { path: "packaging" }
-                ]
-            });
+            .populate(variantPopulate);
     }
 
     /**
@@ -168,41 +157,23 @@ export class ProductService {
      */
     static async getProductBySlug(slug: string): Promise<IProduct | null> {
         if (slug.match(/^[0-9a-fA-F]{24}$/)) {
-            const product = await Product.findById(slug)
+            const product = await Product.findOne({ _id: slug, ...notDeletedFilter })
                 .populate("category")
-                .populate({
-                    path: "variants",
-                    populate: [
-                        { path: "unit" },
-                        { path: "packaging" }
-                    ]
-                });
+                .populate(variantPopulate);
             if (product) return product;
         }
-        return await Product.findOne({ slug })
+        return await Product.findOne({ slug, ...notDeletedFilter })
             .populate("category")
-            .populate({
-                path: "variants",
-                populate: [
-                    { path: "unit" },
-                    { path: "packaging" }
-                ]
-            });
+            .populate(variantPopulate);
     }
 
     /**
      * Get product by ID
      */
     static async getProductById(id: string): Promise<IProduct | null> {
-        return await Product.findById(id)
+        return await Product.findOne({ _id: id, ...notDeletedFilter })
             .populate("category")
-            .populate({
-                path: "variants",
-                populate: [
-                    { path: "unit" },
-                    { path: "packaging" }
-                ]
-            });
+            .populate(variantPopulate);
     }
 
     /**
@@ -212,7 +183,11 @@ export class ProductService {
         const { variants: variantsData, ...productData } = data;
 
         // 1. Update the main Product document
-        const product = await Product.findByIdAndUpdate(id, productData, { new: true });
+        const product = await Product.findOneAndUpdate(
+            { _id: id, ...notDeletedFilter },
+            productData,
+            { new: true }
+        );
         if (!product) return null;
 
         // 2. Process and update/create variants if provided
@@ -227,7 +202,8 @@ export class ProductService {
                 if (skuStr) {
                     const existingVariant = await ProductVariant.findOne({ 
                         sku: skuStr, 
-                        _id: { $ne: varData._id } 
+                        _id: { $ne: varData._id },
+                        ...notDeletedFilter
                     });
                     if (existingVariant) {
                         throw new Error(`SKU "${skuStr}" already exists on another variant.`);
@@ -306,13 +282,7 @@ export class ProductService {
         // Return fully populated updated product
         return await Product.findById(product._id)
             .populate("category")
-            .populate({
-                path: "variants",
-                populate: [
-                    { path: "unit" },
-                    { path: "packaging" }
-                ]
-            });
+            .populate(variantPopulate);
     }
 
     /**
@@ -323,7 +293,8 @@ export class ProductService {
         if (varData.sku) {
             const existing = await ProductVariant.findOne({ 
                 sku: varData.sku, 
-                _id: { $ne: variantId } 
+                _id: { $ne: variantId },
+                ...notDeletedFilter
             });
             if (existing) {
                 throw new Error(`SKU "${varData.sku}" already exists on another variant.`);
@@ -360,37 +331,51 @@ export class ProductService {
     }
 
     /**
-     * Delete standalone variant
+     * Soft-delete standalone variant
      */
     static async deleteVariant(variantId: string): Promise<boolean> {
-        const variant = await ProductVariant.findById(variantId);
+        const variant = await ProductVariant.findOne({ _id: variantId, ...notDeletedFilter });
         if (!variant) return false;
 
-        // 1. Remove reference from Product variants array
-        await Product.findByIdAndUpdate(variant.productId, {
-            $pull: { variants: variantId }
+        const now = new Date();
+
+        await ProductVariant.findByIdAndUpdate(variantId, {
+            isDeleted: true,
+            deletedAt: now
         });
 
-        // 2. Delete inventory entries
-        await Inventory.deleteMany({ variantId });
+        await Inventory.updateMany(
+            { variantId },
+            { $set: { availableQty: 0, notes: "Archived: variant deleted" } }
+        );
 
-        // 3. Delete variant itself
-        await ProductVariant.findByIdAndDelete(variantId);
         return true;
     }
 
     /**
-     * Delete product
+     * Soft-delete product and all associated variants
      */
     static async deleteProduct(id: string): Promise<IProduct | null> {
-        const product = await Product.findById(id);
-        if (product) {
-            // Delete all nested variants and inventories
-            if (product.variants && product.variants.length > 0) {
-                await Inventory.deleteMany({ productId: product._id });
-                await ProductVariant.deleteMany({ productId: product._id });
-            }
-        }
-        return await Product.findByIdAndDelete(id);
+        const product = await Product.findOne({ _id: id, ...notDeletedFilter });
+        if (!product) return null;
+
+        const now = new Date();
+
+        await ProductVariant.updateMany(
+            { productId: product._id, ...notDeletedFilter },
+            { $set: { isDeleted: true, deletedAt: now } }
+        );
+
+        await Inventory.updateMany(
+            { productId: product._id },
+            { $set: { availableQty: 0, notes: "Archived: product deleted" } }
+        );
+
+        product.isDeleted = true;
+        product.deletedAt = now;
+        product.isPublished = false;
+        await product.save();
+
+        return product;
     }
 }

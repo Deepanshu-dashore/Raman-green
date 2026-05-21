@@ -16,6 +16,18 @@ export const STATUS_STYLES: Record<string, StatusStyle> = {
     label: "Active",
     color: "bg-green-100 text-green-700",
   },
+  inStock: {
+    label: "In Stock",
+    color: "bg-green-100 text-green-700",
+  },
+  lowStock: {
+    label: "Low Stock",
+    color: "bg-orange-100 text-orange-700",
+  },
+  outOfStock: {
+    label: "Out of Stock",
+    color: "bg-red-100 text-red-700",
+  },
   inactive: {
     label: "Inactive",
     color: "bg-gray-100 text-gray-700",
@@ -62,8 +74,21 @@ export const getStatusStyle = (status: string): StatusStyle => {
   if (!status || status === "" || status === "undefined" || status === "null") {
     return { label: "Not Available", color: "bg-gray-100 text-gray-700" };
   }
-  const lower = status.toLowerCase();
-  return STATUS_STYLES[lower] || {
+
+  if (STATUS_STYLES[status]) {
+    return STATUS_STYLES[status];
+  }
+
+  const normalized = status.toLowerCase().replace(/\s+/g, "");
+  const matchedKey = Object.keys(STATUS_STYLES).find(
+    (key) => key.toLowerCase() === normalized
+  );
+
+  if (matchedKey) {
+    return STATUS_STYLES[matchedKey];
+  }
+
+  return {
     label: status.charAt(0).toUpperCase() + status.slice(1),
     color: "bg-gray-100 text-gray-700",
   };

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import "./index.model";
 
 type ConnectionObject = {
   isConnected?: number;

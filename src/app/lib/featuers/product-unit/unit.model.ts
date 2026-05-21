@@ -19,4 +19,6 @@ const unitSchema = new Schema<IUnit>(
         }
     }, { timestamps: true });
 
-export const Unit = models.Unit || model<IUnit>('Unit', unitSchema);
+const UnitModel = models.Unit || model<IUnit>('Unit', unitSchema);
+export const Unit = UnitModel;
+export default UnitModel;

@@ -2,6 +2,7 @@ import { VariantService } from "./variant.service";
 import { ApiResponse } from "../../utils/ApiResponse";
 import { getUrls } from "../../utils/geturl";
 import { Inventory } from "../inventory/Inventory.model";
+import { parseVariantFormData, rollbackVariantUploads } from "./variant.form";
 
 const formatVariant = async (variant: any) => {
     if (!variant) return null;
@@ -37,24 +38,43 @@ export class VariantController {
         }
     }
 
-    static async create(productId: string, reqData: any) {
+    static async create(productId: string, formData: FormData) {
+        let uploadedUrls: string[] = [];
+
         try {
-            const variant = await VariantService.create(productId, reqData);
+            const parsed = await parseVariantFormData(formData);
+            uploadedUrls = parsed.uploadedUrls;
+
+            const variant = await VariantService.create(productId, parsed.data);
             const formatted = await formatVariant(variant);
             return ApiResponse(201, formatted, "Product variant and inventory created successfully.");
-        } catch (error: any) {
-            return ApiResponse(500, null, error.message);
+        } catch (error: unknown) {
+            await rollbackVariantUploads(uploadedUrls);
+            const message = error instanceof Error ? error.message : "Failed to create variant.";
+            const status = message.includes("required") || message.includes("Invalid") ? 400 : 500;
+            return ApiResponse(status, null, message);
         }
     }
 
-    static async update(variantId: string, reqData: any) {
+    static async update(variantId: string, formData: FormData) {
+        let uploadedUrls: string[] = [];
+
         try {
-            const variant = await VariantService.update(variantId, reqData);
-            if (!variant) return ApiResponse(404, null, "Variant not found.");
+            const parsed = await parseVariantFormData(formData);
+            uploadedUrls = parsed.uploadedUrls;
+
+            const variant = await VariantService.update(variantId, parsed.data);
+            if (!variant) {
+                await rollbackVariantUploads(uploadedUrls);
+                return ApiResponse(404, null, "Variant not found.");
+            }
             const formatted = await formatVariant(variant);
             return ApiResponse(200, formatted, "Variant updated successfully.");
-        } catch (error: any) {
-            return ApiResponse(500, null, error.message);
+        } catch (error: unknown) {
+            await rollbackVariantUploads(uploadedUrls);
+            const message = error instanceof Error ? error.message : "Failed to update variant.";
+            const status = message.includes("required") || message.includes("Invalid") ? 400 : 500;
+            return ApiResponse(status, null, message);
         }
     }
 

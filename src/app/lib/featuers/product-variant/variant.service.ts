@@ -1,13 +1,14 @@
 import { ProductVariant, IProductVariant } from "./ProductVariants.model";
 import { Product } from "../product/product.model";
 import { Inventory } from "../inventory/Inventory.model";
+import { notDeletedFilter } from "../../utils/softDelete";
 
 export class VariantService {
     /**
      * Get all variants with optional filters
      */
     static async getAll(query: any = {}): Promise<IProductVariant[]> {
-        return await ProductVariant.find(query)
+        return await ProductVariant.find({ ...query, ...notDeletedFilter })
             .populate("unit")
             .populate("packaging")
             .populate("productId");
@@ -17,7 +18,7 @@ export class VariantService {
      * Get variant by ID
      */
     static async getById(id: string): Promise<IProductVariant | null> {
-        return await ProductVariant.findById(id)
+        return await ProductVariant.findOne({ _id: id, ...notDeletedFilter })
             .populate("unit")
             .populate("packaging")
             .populate("productId");
@@ -28,13 +29,13 @@ export class VariantService {
      */
     static async create(productId: string, varData: any): Promise<IProductVariant> {
         // 1. Verify the product exists
-        const product = await Product.findById(productId);
+        const product = await Product.findOne({ _id: productId, ...notDeletedFilter });
         if (!product) {
             throw new Error("Product not found.");
         }
 
         // 2. Make sure SKU is unique
-        const existingVariant = await ProductVariant.findOne({ sku: varData.sku });
+        const existingVariant = await ProductVariant.findOne({ sku: varData.sku, ...notDeletedFilter });
         if (existingVariant) {
             throw new Error(`SKU "${varData.sku}" already exists in the database.`);
         }
@@ -91,7 +92,8 @@ export class VariantService {
         if (varData.sku) {
             const existing = await ProductVariant.findOne({ 
                 sku: varData.sku, 
-                _id: { $ne: variantId } 
+                _id: { $ne: variantId },
+                ...notDeletedFilter
             });
             if (existing) {
                 throw new Error(`SKU "${varData.sku}" already exists on another variant.`);
@@ -128,22 +130,24 @@ export class VariantService {
     }
 
     /**
-     * Delete standalone variant and its inventory
+     * Soft-delete standalone variant
      */
     static async delete(variantId: string): Promise<boolean> {
-        const variant = await ProductVariant.findById(variantId);
+        const variant = await ProductVariant.findOne({ _id: variantId, ...notDeletedFilter });
         if (!variant) return false;
 
-        // 1. Remove reference from Product variants array
-        await Product.findByIdAndUpdate(variant.productId, {
-            $pull: { variants: variantId }
+        const now = new Date();
+
+        await ProductVariant.findByIdAndUpdate(variantId, {
+            isDeleted: true,
+            deletedAt: now
         });
 
-        // 2. Delete inventory entries
-        await Inventory.deleteMany({ variantId });
+        await Inventory.updateMany(
+            { variantId },
+            { $set: { availableQty: 0, notes: "Archived: variant deleted" } }
+        );
 
-        // 3. Delete variant itself
-        await ProductVariant.findByIdAndDelete(variantId);
         return true;
     }
 }

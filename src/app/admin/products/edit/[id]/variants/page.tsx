@@ -1,13 +1,19 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Icon } from '@iconify/react';
+import { useDropzone } from 'react-dropzone';
 import { PageHeader } from '@/components/shared/PageHeader';
 import Card from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 import { MultiSelectDropdown } from '@/components/shared/MultiSelectDropdown';
+import type { VariantImageOrderItem } from '@/app/lib/featuers/product-variant/variant.form';
+
+type GalleryItem =
+  | { id: string; kind: 'saved'; url: string }
+  | { id: string; kind: 'local'; file: File; preview: string };
 
 interface VariantState {
   _id?: string;
@@ -16,7 +22,6 @@ interface VariantState {
   price: string;
   stock: string;
   sku: string;
-  images: string[];
   packaging: string[];
   batchNumber: string;
   mfgDate: string;
@@ -24,6 +29,8 @@ interface VariantState {
   notes: string;
   showInventory: boolean;
 }
+
+const newGalleryId = () => `img-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 interface ProductVariantsPageProps {
   params: Promise<{ id: string }>;
@@ -39,11 +46,8 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
   const [packagingOptions, setPackagingOptions] = useState<any[]>([]);
   const [fetching, setFetching] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  // List of image URLs uploaded during this editing session (used for rollback)
-  const [pendingUrls, setPendingUrls] = useState<string[]>([]);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
 
-  // Form State for Adding / Editing a Single Variant
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
   
@@ -53,7 +57,6 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     price: '',
     stock: '',
     sku: '',
-    images: [],
     packaging: [],
     batchNumber: '',
     mfgDate: '',
@@ -61,6 +64,12 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     notes: '',
     showInventory: false
   });
+
+  const revokeGalleryPreviews = (items: GalleryItem[]) => {
+    items.forEach((item) => {
+      if (item.kind === 'local') URL.revokeObjectURL(item.preview);
+    });
+  };
 
   const loadData = () => {
     setFetching(true);
@@ -81,19 +90,6 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     loadData();
   }, [productId]);
 
-  const rollbackPendingUploads = async (urls: string[]) => {
-    if (urls.length === 0) return;
-    try {
-      await fetch('/api/upload/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls }),
-      });
-    } catch {
-      // silent — best-effort cleanup
-    }
-  };
-
   const clearFormFields = () => {
     setVariantForm({
       value: '',
@@ -101,7 +97,6 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       price: '',
       stock: '',
       sku: '',
-      images: [],
       packaging: [],
       batchNumber: '',
       mfgDate: '',
@@ -112,17 +107,16 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     setEditingVariantId(null);
   };
 
-  const resetForm = async () => {
-    // Rollback any images uploaded during this session that were never saved
-    await rollbackPendingUploads(pendingUrls);
-    setPendingUrls([]);
+  const resetForm = () => {
+    revokeGalleryPreviews(gallery);
+    setGallery([]);
     clearFormFields();
     setIsFormOpen(false);
   };
 
-  const handleOpenAdd = async () => {
-    await rollbackPendingUploads(pendingUrls);
-    setPendingUrls([]);
+  const handleOpenAdd = () => {
+    revokeGalleryPreviews(gallery);
+    setGallery([]);
     clearFormFields();
     setIsFormOpen(true);
   };
@@ -141,7 +135,6 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       price: String(v.basePrice || v.price || ''),
       stock: String(v.stock || '0'),
       sku: v.sku || '',
-      images: v.images || [],
       packaging: (v.packaging || []).map((p: any) => p._id || p),
       batchNumber: v.batchNumber || '',
       mfgDate: formattedMfg,
@@ -149,6 +142,14 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       notes: v.notes || '',
       showInventory: !!(v.batchNumber || v.mfgDate || v.expiryDate)
     });
+    revokeGalleryPreviews(gallery);
+    setGallery(
+      (v.images || []).map((url: string) => ({
+        id: newGalleryId(),
+        kind: 'saved' as const,
+        url,
+      }))
+    );
     setIsFormOpen(true);
   };
 
@@ -169,100 +170,95 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     });
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const addFilesToGallery = useCallback((files: File[]) => {
+    const newItems: GalleryItem[] = files.map((file) => ({
+      id: newGalleryId(),
+      kind: 'local',
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setGallery((prev) => [...prev, ...newItems]);
+  }, []);
 
-    setUploading(true);
-    const toastId = toast.loading(`Uploading ${files.length} image(s) to Cloudinary...`);
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length) addFilesToGallery(acceptedFiles);
+    },
+    [addFilesToGallery]
+  );
 
-    try {
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const body = new FormData();
-        body.append('file', file);
-        body.append('folder', 'products');
-
-        const res = await fetch('/api/upload', { method: 'POST', body });
-        const json = await res.json();
-
-        if (json.success) {
-          return json.data as string;
-        }
-        throw new Error(json.message || 'Failed to upload');
-      });
-
-      const urls = await Promise.all(uploadPromises);
-
-      // Track pending URLs for potential rollback
-      setPendingUrls(prev => [...prev, ...urls]);
-
-      setVariantForm(prev => ({
-        ...prev,
-        images: [...prev.images, ...urls]
-      }));
-
-      toast.success('Images uploaded successfully!', { id: toastId });
-    } catch (err: any) {
-      toast.error(err.message || 'Upload failed', { id: toastId });
-    } finally {
-      setUploading(false);
-      // Reset input so same file can be re-selected
-      e.target.value = '';
-    }
-  };
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/webp': ['.webp'],
+      'image/gif': ['.gif'],
+    },
+    disabled: loading,
+    onDropRejected: (rejections) => {
+      const err = rejections[0]?.errors[0];
+      toast.error(err?.message || 'Invalid image file.');
+    },
+  });
 
   const removeImage = (imgIndex: number) => {
-    const url = variantForm.images[imgIndex];
-    // If this image was uploaded this session, delete it from Cloudinary immediately
-    if (url && pendingUrls.includes(url)) {
-      fetch('/api/upload/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls: [url] }),
-      }).catch(() => {/* silent */});
-      setPendingUrls(prev => prev.filter(u => u !== url));
-    }
-    setVariantForm(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== imgIndex)
-    }));
+    setGallery((prev) => {
+      const item = prev[imgIndex];
+      if (item?.kind === 'local') URL.revokeObjectURL(item.preview);
+      return prev.filter((_, i) => i !== imgIndex);
+    });
   };
 
   const moveImage = (imgIndex: number, direction: 'left' | 'right') => {
-    const images = [...variantForm.images];
-    const targetIndex = direction === 'left' ? imgIndex - 1 : imgIndex + 1;
-    
-    if (targetIndex >= 0 && targetIndex < images.length) {
-      const temp = images[imgIndex];
-      images[imgIndex] = images[targetIndex];
-      images[targetIndex] = temp;
-      setVariantForm(prev => ({ ...prev, images }));
-    }
+    setGallery((prev) => {
+      const next = [...prev];
+      const targetIndex = direction === 'left' ? imgIndex - 1 : imgIndex + 1;
+      if (targetIndex < 0 || targetIndex >= next.length) return prev;
+      [next[imgIndex], next[targetIndex]] = [next[targetIndex], next[imgIndex]];
+      return next;
+    });
+  };
+
+  const buildVariantFormData = () => {
+    const body = new FormData();
+    body.append('value', variantForm.value);
+    body.append('unit', variantForm.unit);
+    body.append('price', variantForm.price);
+    body.append('stock', variantForm.stock);
+    body.append('sku', variantForm.sku);
+    body.append('packaging', JSON.stringify(variantForm.packaging));
+    if (variantForm.batchNumber) body.append('batchNumber', variantForm.batchNumber);
+    if (variantForm.mfgDate) body.append('mfgDate', variantForm.mfgDate);
+    if (variantForm.expiryDate) body.append('expiryDate', variantForm.expiryDate);
+    if (variantForm.notes) body.append('notes', variantForm.notes);
+
+    const imageOrder: VariantImageOrderItem[] = [];
+    let newIndex = 0;
+
+    gallery.forEach((item) => {
+      if (item.kind === 'saved') {
+        imageOrder.push({ type: 'existing', url: item.url });
+      } else {
+        imageOrder.push({ type: 'new', index: newIndex });
+        body.append('images', item.file);
+        newIndex += 1;
+      }
+    });
+
+    body.append('imageOrder', JSON.stringify(imageOrder));
+    return body;
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    if (variantForm.images.length === 0) {
-      toast.error("Please upload at least one variant image.");
+    if (gallery.length === 0) {
+      toast.error("Please add at least one variant image.");
       setLoading(false);
       return;
     }
-
-    const payload = {
-      value: Number(variantForm.value),
-      unit: variantForm.unit,
-      price: Number(variantForm.price),
-      stock: Number(variantForm.stock),
-      sku: variantForm.sku,
-      images: variantForm.images,
-      packaging: variantForm.packaging,
-      batchNumber: variantForm.batchNumber || undefined,
-      mfgDate: variantForm.mfgDate ? new Date(variantForm.mfgDate) : undefined,
-      expiryDate: variantForm.expiryDate ? new Date(variantForm.expiryDate) : undefined,
-      notes: variantForm.notes || undefined
-    };
 
     const url = editingVariantId 
       ? `/api/products/variants/${editingVariantId}`
@@ -273,31 +269,21 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     try {
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: buildVariantFormData(),
       });
 
       const json = await res.json();
 
       if (json.success) {
         toast.success(editingVariantId ? 'Variant updated successfully!' : 'Variant added successfully!');
-        // Clear pending URLs — images are now saved, no rollback needed
-        setPendingUrls([]);
         resetForm();
         loadData();
       } else {
-        // Save failed — rollback newly uploaded images from Cloudinary
-        await rollbackPendingUploads(pendingUrls);
-        setPendingUrls([]);
-        setVariantForm(prev => ({ ...prev, images: [] }));
-        toast.error(json.message || 'Failed to save variant — uploaded images have been rolled back.');
+        toast.error(json.message || 'Failed to save variant.');
       }
-    } catch (err: any) {
-      // Network/unexpected error — rollback
-      await rollbackPendingUploads(pendingUrls);
-      setPendingUrls([]);
-      setVariantForm(prev => ({ ...prev, images: [] }));
-      toast.error(err.message || 'An unexpected error occurred — uploaded images have been rolled back.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -519,53 +505,64 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                   </div>
                 </div>
 
-                {/* Cloudinary Gallery */}
+                {/* Gallery — multipart upload on save */}
                 <div className="space-y-2 pt-2 border-t border-gray-50">
                   <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Gallery Images (Required)</label>
                   
-                  <div className="border-2 border-dashed border-gray-100 hover:border-green-400 hover:bg-green-50/10 rounded-2xl p-4 text-center cursor-pointer relative flex flex-col items-center justify-center min-h-[90px] transition-all">
-                    <input 
-                      type="file" 
-                      multiple 
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      disabled={uploading}
-                    />
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer flex flex-col items-center justify-center min-h-[90px] transition-all outline-none ${
+                      loading
+                        ? 'opacity-60 pointer-events-none border-gray-100 bg-gray-50'
+                        : isDragActive
+                          ? 'border-green-500 bg-green-50/30'
+                          : 'border-gray-100 hover:border-green-400 hover:bg-green-50/10'
+                    }`}
+                  >
+                    <input {...getInputProps()} />
                     <Icon icon="solar:camera-add-bold-duotone" className="w-6 h-6 text-green-600 mb-1" />
-                    <p className="text-[10px] font-black text-gray-700">Upload Variant Photos</p>
+                    <p className="text-[10px] font-black text-gray-700">
+                      {isDragActive ? 'Drop images here' : 'Drag & drop or click to add photos'}
+                    </p>
                   </div>
 
-                  {/* Previews */}
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {variantForm.images.map((url, imgIdx) => {
-                      const displayUrl = url.startsWith('http') 
-                        ? url 
-                        : `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dummy'}/image/upload/${url}`;
+                    {gallery.map((item, imgIdx) => {
+                      const displayUrl =
+                        item.kind === 'saved'
+                          ? item.url.startsWith('http')
+                            ? item.url
+                            : `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dummy'}/image/upload/${item.url}`
+                          : item.preview;
 
                       return (
-                        <div key={imgIdx} className="relative group w-14 h-14 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 flex-shrink-0">
+                        <div key={item.id} className="relative group w-14 h-14 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 shrink-0">
                           <img src={displayUrl} alt="Preview" className="w-full h-full object-cover" />
+                          {item.kind === 'local' && (
+                            <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-[8px] text-white text-center font-bold py-0.5">
+                              New
+                            </span>
+                          )}
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               disabled={imgIdx === 0}
-                              onClick={() => moveImage(imgIdx, 'left')} 
+                              onClick={() => moveImage(imgIdx, 'left')}
                               className="p-0.5 bg-white rounded text-gray-700 hover:text-green-600 disabled:opacity-30"
                             >
                               <Icon icon="lucide:chevron-left" className="w-3 h-3" />
                             </button>
-                            <button 
-                              type="button" 
-                              onClick={() => removeImage(imgIdx)} 
+                            <button
+                              type="button"
+                              onClick={() => removeImage(imgIdx)}
                               className="p-0.5 bg-white rounded text-red-500 hover:bg-red-50"
                             >
                               <Icon icon="lucide:trash" className="w-3 h-3" />
                             </button>
-                            <button 
-                              type="button" 
-                              disabled={imgIdx === variantForm.images.length - 1}
-                              onClick={() => moveImage(imgIdx, 'right')} 
+                            <button
+                              type="button"
+                              disabled={imgIdx === gallery.length - 1}
+                              onClick={() => moveImage(imgIdx, 'right')}
                               className="p-0.5 bg-white rounded text-gray-700 hover:text-green-600 disabled:opacity-30"
                             >
                               <Icon icon="lucide:chevron-right" className="w-3 h-3" />

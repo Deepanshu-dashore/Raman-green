@@ -1,4 +1,5 @@
 import { Category, ICategory } from "./category.model";
+import { notDeletedFilter } from "../../utils/softDelete";
 
 export class CategoryService {
     /**
@@ -21,38 +22,46 @@ export class CategoryService {
      * Get all categories
      */
     static async getAllCategories(): Promise<ICategory[]> {
-        return await Category.find().populate("parent children");
+        return await Category.find(notDeletedFilter).populate("parent children");
     }
 
     /**
-     * Get category by slug
+     * Get category by slug or ID
      */
     static async getCategoryBySlug(slug: string): Promise<ICategory | null> {
-        return await Category.findOne({ slug }).populate("parent children");
+        if (slug.match(/^[0-9a-fA-F]{24}$/)) {
+            const byId = await Category.findOne({ _id: slug, ...notDeletedFilter }).populate("parent children");
+            if (byId) return byId;
+        }
+        return await Category.findOne({ slug, ...notDeletedFilter }).populate("parent children");
     }
 
     /**
      * Update category
      */
     static async updateCategory(id: string, data: Partial<ICategory>): Promise<ICategory | null> {
-        return await Category.findByIdAndUpdate(id, data, { new: true });
+        return await Category.findOneAndUpdate(
+            { _id: id, ...notDeletedFilter },
+            data,
+            { new: true }
+        );
     }
 
     /**
-     * Delete category
+     * Soft-delete category
      */
     static async deleteCategory(id: string): Promise<ICategory | null> {
-        const category = await Category.findById(id);
+        const category = await Category.findOne({ _id: id, ...notDeletedFilter });
         if (!category) return null;
 
-        // Remove from parent's children array
+        const now = new Date();
+
         if (category.parent) {
             await Category.findByIdAndUpdate(category.parent, {
                 $pull: { children: category._id }
             });
         }
 
-        // Set children's parent to null (or handle as needed)
         if (category.children && category.children.length > 0) {
             await Category.updateMany(
                 { _id: { $in: category.children } },
@@ -60,6 +69,10 @@ export class CategoryService {
             );
         }
 
-        return await Category.findByIdAndDelete(id);
+        category.isDeleted = true;
+        category.deletedAt = now;
+        await category.save();
+
+        return category;
     }
 }

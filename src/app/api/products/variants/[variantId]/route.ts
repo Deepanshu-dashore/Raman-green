@@ -11,8 +11,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ vari
         return ApiResponse(401, null, "Admin access required.");
     }
     const { variantId } = await params;
-    const body = await req.json();
-    return VariantController.update(variantId, body);
+    const contentType = req.headers.get("content-type") || "";
+    if (!contentType.includes("multipart/form-data")) {
+        return ApiResponse(400, null, "Content-Type must be multipart/form-data.");
+    }
+    const formData = await req.formData();
+    return VariantController.update(variantId, formData);
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ variantId: string }> }) {

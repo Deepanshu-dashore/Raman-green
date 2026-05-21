@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Icon } from '@iconify/react';
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/shared/DataTable';
 import { useRouter } from 'next/navigation';
@@ -94,34 +93,13 @@ const AdminProducts = () => {
         rowKey={(p) => p._id}
         columns={[
           {
-            key: 'image',
-            label: 'Image',
-            align: 'center',
-            custom: true,
-            render: (p) => {
-              const firstImg = p.variants?.[0]?.images?.[0] || null;
-              return (
-                <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden mx-auto">
-                  {firstImg ? (
-                    <img src={firstImg} alt={p.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Icon icon="lucide:image" className="w-6 h-6 text-gray-300" />
-                  )}
-                </div>
-              );
-            }
-          },
-          {
             key: 'name',
             label: 'Product Name',
+            type: 'user',
             sortable: true,
-            custom: true,
-            render: (p) => (
-              <div>
-                <div className="text-sm font-bold capitalize">{p.name}</div>
-                <div className="text-xs text-gray-400">slug: {p.slug}</div>
-              </div>
-            )
+            getAvatar: (p) => p.variants?.[0]?.images?.[0] || p.name?.charAt(0) || '?',
+            getTitle: (p) => p.name,
+            getSubtitle: (p) => `slug: ${p.slug}`,
           },
           {
             key: 'category',
@@ -133,13 +111,34 @@ const AdminProducts = () => {
             )
           },
           {
+            key: 'variantCount',
+            label: 'Variants',
+            sortable: false,
+            custom: true,
+            render: (p) => (
+              <span className="text-xs font-bold text-gray-600 bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-xl">
+                {p.variants?.length || 0} {p.variants?.length === 1 ? 'Variant' : 'Variants'}
+              </span>
+            )
+          },
+          {
             key: 'basePrice',
             label: 'Price',
             sortable: true,
             custom: true,
-            render: (p) => (
-              <div className="text-sm font-bold text-gray-900">₹{p.basePrice}</div>
-            )
+            render: (p) => {
+              // Compute price range from variant prices
+              const prices = p.variants?.map((v: any) => v.basePrice).filter((pr: any) => pr != null) || [];
+              const priceDisplay = (() => {
+                if (prices.length === 0) return 'N/A';
+                const min = Math.min(...prices);
+                const max = Math.max(...prices);
+                return min === max ? `₹${min}` : `₹${min} - ₹${max}`;
+              })();
+              return (
+                <div className="text-sm font-bold text-gray-900">{priceDisplay}</div>
+              );
+            }
           },
           {
             key: 'status',

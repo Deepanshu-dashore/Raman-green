@@ -1,5 +1,6 @@
-import { Inventory, IInventory } from "./Inventory.model";
-import { ProductVariant } from "../product-variant/ProductVariants.model";
+import { Inventory, ProductVariant, Product, Unit } from "@/app/lib/db/index.model";
+import { IInventory } from "./Inventory.model";
+
 
 export class InventoryService {
     /**
@@ -40,4 +41,27 @@ export class InventoryService {
                 populate: { path: "unit" }
             });
     }
+
+    /**
+     * Create a new inventory record
+     */
+    static async createInventory(data: Partial<IInventory>): Promise<IInventory> {
+        const inventory = new Inventory(data);
+        await inventory.save();
+        const populated = await Inventory.findById(inventory._id)
+            .populate("productId")
+            .populate({
+                path: "variantId",
+                populate: { path: "unit" }
+            });
+        return populated!;
+    }
+
+    /**
+     * Delete an inventory record by ID
+     */
+    static async deleteInventory(id: string): Promise<IInventory | null> {
+        return await Inventory.findByIdAndDelete(id);
+    }
 }
+

@@ -10,6 +10,8 @@ export interface IProductVariant extends Document {
     images?: string[];
     packaging?: Schema.Types.ObjectId[];
     sku: string;
+    isDeleted?: boolean;
+    deletedAt?: Date;
 }
 
 const productVariantSchema = new Schema<IProductVariant>({
@@ -52,6 +54,15 @@ const productVariantSchema = new Schema<IProductVariant>({
     sku: {
         type: String,
         required: true
+    },
+
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+
+    deletedAt: {
+        type: Date,
     }
 }, { timestamps: true });
 

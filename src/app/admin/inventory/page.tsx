@@ -3,9 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Icon } from '@iconify/react';
+import { PencilIcon } from '@heroicons/react/24/outline';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTable } from '@/components/shared/DataTable';
 import { Button } from '@/components/shared/Button';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 
 interface InventoryItem {
   _id: string;
@@ -41,7 +43,7 @@ const AdminInventory = () => {
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Edit Modal State
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
@@ -56,7 +58,7 @@ const AdminInventory = () => {
 
   const fetchInventory = () => {
     setLoading(true);
-    fetch('/api/admin/inventory')
+    fetch('/api/inventory')
       .then(res => res.json())
       .then(json => {
         if (json.success) {
@@ -96,7 +98,7 @@ const AdminInventory = () => {
 
   const handleEditClick = (item: InventoryItem) => {
     setSelectedItem(item);
-    
+
     // Format dates to YYYY-MM-DD for standard date input fields
     const formattedMfg = item.mfgDate ? new Date(item.mfgDate).toISOString().split('T')[0] : '';
     const formattedExp = item.expiryDate ? new Date(item.expiryDate).toISOString().split('T')[0] : '';
@@ -119,7 +121,7 @@ const AdminInventory = () => {
     const toastId = toast.loading("Updating inventory and synchronizing stock levels...");
 
     try {
-      const res = await fetch(`/api/admin/inventory/${selectedItem._id}`, {
+      const res = await fetch(`/api/inventory/${selectedItem._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -150,31 +152,22 @@ const AdminInventory = () => {
   const getStockBadge = (qty: number) => {
     if (qty === 0) {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-black bg-red-50 text-red-600 border border-red-100">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 animate-pulse" />
-          Out of Stock
-        </span>
+        <StatusBadge status={'outOfStock'} size='xs' />
       );
     }
     if (qty < 10) {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-black bg-amber-50 text-amber-600 border border-amber-100">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5" />
-          Low Stock ({qty})
-        </span>
+        <StatusBadge status={'lowStock'} size='xs' />
       );
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-black bg-green-50 text-green-600 border border-green-100">
-        <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5" />
-        Healthy ({qty})
-      </span>
+      <StatusBadge status="inStock" size="xs" />
     );
   };
-
+ 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <PageHeader 
+      <PageHeader
         title="Warehouse Inventory"
         description="Monitor catalog batch numbers, check manufacturing/expiry alerts, and sync variant quantities."
         breadcrumbs={[
@@ -189,16 +182,16 @@ const AdminInventory = () => {
           <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
             <Icon icon="lucide:search" className="w-5 h-5" />
           </span>
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Search by Product Name, SKU, or Batch Number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-11 pr-5 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all text-sm font-semibold"
           />
         </div>
-        
-        <Button 
+
+        <Button
           variant="outline"
           onClick={fetchInventory}
           icon="lucide:refresh-cw"
@@ -210,10 +203,11 @@ const AdminInventory = () => {
 
       {/* Data Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <DataTable 
+        <DataTable
           data={filteredItems}
           loading={loading}
           rowKey={(item) => item._id}
+          additionalActions={[{ label: 'Edit Stock', icon: PencilIcon, onClick: (item) => handleEditClick(item) }]}
           columns={[
             {
               key: 'product',
@@ -222,19 +216,19 @@ const AdminInventory = () => {
               render: (item) => (
                 <div className="flex items-center gap-3">
                   {/* Small visual image fallback */}
-                  <div className="w-10 h-10 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+                  {/* <div className="w-10 h-10 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
                     {item.variantId?.images?.[0] ? (
                       <img src={item.variantId.images[0]} alt="Product" className="w-full h-full object-cover" />
                     ) : (
                       <Icon icon="lucide:box" className="w-5 h-5 text-gray-400" />
                     )}
-                  </div>
+                  </div> */}
                   <div>
                     <div className="text-sm font-black text-gray-800 leading-snug">
                       {item.productId?.name || 'Unknown Product'}
                     </div>
                     <div className="text-[11px] text-gray-500 font-semibold mt-0.5">
-                      Brand: {item.productId?.brand || 'Raman Green'} • Pack: {item.variantId?.weight || item.variantId?.value || ''} {item.variantId?.unit?.shortName || ''}
+                      Batch: {item.batchNumber} • Pack: {item.variantId?.weight} {item.variantId?.unit?.shortName || ''}
                     </div>
                   </div>
                 </div>
@@ -250,16 +244,16 @@ const AdminInventory = () => {
                 </span>
               )
             },
-            {
-              key: 'batchNumber',
-              label: 'Batch Ref',
-              custom: true,
-              render: (item) => (
-                <div className="text-xs font-semibold text-gray-700">
-                  {item.batchNumber}
-                </div>
-              )
-            },
+            // {
+            //   key: 'batchNumber',
+            //   label: 'Batch',
+            //   custom: true,
+            //   render: (item) => (
+            //     <div className="text-xs font-semibold text-gray-700">
+            //       {item.batchNumber}
+            //     </div>
+            //   )
+            // },
             {
               key: 'dates',
               label: 'Mfg / Expiry Dates',
@@ -267,7 +261,7 @@ const AdminInventory = () => {
               render: (item) => {
                 const mfg = item.mfgDate ? new Date(item.mfgDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'N/A';
                 const exp = item.expiryDate ? new Date(item.expiryDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'N/A';
-                
+
                 // Expiry Check
                 const isExpired = item.expiryDate && new Date(item.expiryDate).getTime() < Date.now();
 
@@ -282,37 +276,48 @@ const AdminInventory = () => {
               }
             },
             {
-              key: 'status',
-              label: 'Stock Status',
-              custom: true,
-              render: (item) => getStockBadge(item.availableQty)
-            },
-            {
-              key: 'reserved',
-              label: 'Reserved Qty',
+              key: 'available',
+              label: 'Available',
               align: 'center',
               custom: true,
               render: (item) => (
-                <span className="text-xs font-black text-gray-500">
+                <span className="text-xs font-black text-gray-800 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-xl">
+                  {item.availableQty || 0}
+                </span>
+              )
+            },
+            {
+              key: 'reserved',
+              label: 'Reserved',
+              align: 'center',
+              custom: true,
+              render: (item) => (
+                <span className="text-xs font-black text-gray-500 bg-gray-50/50 border border-gray-100/50 px-3 py-1.5 rounded-xl">
                   {item.reservedQty || 0}
                 </span>
               )
             },
             {
-              key: 'actions',
-              label: 'Action',
-              align: 'right',
+              key: 'status',
+              label: 'Status',
               custom: true,
-              render: (item) => (
-                <button 
-                  onClick={() => handleEditClick(item)}
-                  className="px-3.5 py-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5"
-                >
-                  <Icon icon="lucide:edit-2" className="w-3.5 h-3.5" />
-                  Edit Stock
-                </button>
-              )
-            }
+              render: (item) => getStockBadge(item.availableQty)
+            },
+            // {
+            //   key: 'actions',
+            //   label: 'Action',
+            //   align: 'right',
+            //   custom: true,
+            //   render: (item) => (
+            //     <button
+            //       onClick={() => handleEditClick(item)}
+            //       className="px-3.5 py-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5"
+            //     >
+            //       <Icon icon="lucide:edit-2" className="w-3.5 h-3.5" />
+            //       Edit Stock
+            //     </button>
+            //   )
+            // }
           ]}
         />
       </div>
@@ -321,7 +326,7 @@ const AdminInventory = () => {
       {isEditOpen && selectedItem && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
           {/* Backdrop blur overlay */}
-          <div 
+          <div
             onClick={() => setIsEditOpen(false)}
             className="absolute inset-0 bg-black/40 backdrop-blur-[1px] transition-all"
           />
@@ -334,7 +339,7 @@ const AdminInventory = () => {
                   Product: {selectedItem.productId?.name} • SKU: {selectedItem.variantId?.sku}
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsEditOpen(false)}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
               >
@@ -346,8 +351,8 @@ const AdminInventory = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5 col-span-2">
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Available Quantity</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     required
                     min={0}
                     value={editForm.availableQty}
@@ -359,8 +364,8 @@ const AdminInventory = () => {
 
                 <div className="space-y-1.5 col-span-2">
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Batch Number</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     required
                     value={editForm.batchNumber}
                     onChange={(e) => setEditForm({ ...editForm, batchNumber: e.target.value })}
@@ -371,8 +376,8 @@ const AdminInventory = () => {
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Mfg Date</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     required
                     value={editForm.mfgDate}
                     onChange={(e) => setEditForm({ ...editForm, mfgDate: e.target.value })}
@@ -382,8 +387,8 @@ const AdminInventory = () => {
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Expiry Date</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     required
                     value={editForm.expiryDate}
                     onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })}
@@ -393,7 +398,7 @@ const AdminInventory = () => {
 
                 <div className="space-y-1.5 col-span-2">
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Inventory Notes</label>
-                  <textarea 
+                  <textarea
                     rows={3}
                     value={editForm.notes}
                     onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
@@ -405,17 +410,17 @@ const AdminInventory = () => {
 
               {/* Form buttons */}
               <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-100">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setIsEditOpen(false)}
                   className="!rounded-2xl px-6 font-bold"
                 >
                   Cancel
                 </Button>
-                <Button 
-                  type="submit" 
-                  variant="edit" 
+                <Button
+                  type="submit"
+                  variant="edit"
                   isLoading={saving}
                   icon="lucide:save"
                   className="!rounded-2xl px-8 shadow-lg font-bold"
