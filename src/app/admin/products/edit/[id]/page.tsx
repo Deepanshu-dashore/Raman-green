@@ -6,8 +6,12 @@ import toast from 'react-hot-toast';
 import { MultiSelectDropdown } from '@/components/shared/MultiSelectDropdown';
 import { PageHeader } from '@/components/shared/PageHeader';
 import Card from '@/components/shared/Card';
+import { DataTable } from "@/components/shared/DataTable";
+import { PencilIcon } from "@heroicons/react/24/outline";
 import { Button } from '@/components/shared/Button';
 import { Icon } from '@iconify/react';
+import { getStatusStyle } from '@/constants/status';
+import { div } from 'framer-motion/client';
 
 interface EditProductProps {
   params: Promise<{ id: string }>;
@@ -22,7 +26,7 @@ const EditProduct = ({ params }: EditProductProps) => {
   const [certificateOptions, setCertificateOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -42,14 +46,14 @@ const EditProduct = ({ params }: EditProductProps) => {
     ]).then(([cat, cert]) => {
       if (cat.success) setCategories(cat.data);
       if (cert.success) setCertificateOptions(cert.data);
-      
+
       return fetch(`/api/products/${productId}`).then(res => res.json());
     }).then((prodJson) => {
       if (prodJson && prodJson.success && prodJson.data) {
         const prod = prodJson.data;
-        
+
         setExistingVariants(prod.variants || []);
-        
+
         setFormData({
           name: prod.name || '',
           slug: prod.slug || '',
@@ -63,18 +67,18 @@ const EditProduct = ({ params }: EditProductProps) => {
         toast.error("Product not found");
       }
     })
-    .catch(() => {
-      toast.error("Failed to load product details");
-    })
-    .finally(() => {
-      setFetching(false);
-    });
+      .catch(() => {
+        toast.error("Failed to load product details");
+      })
+      .finally(() => {
+        setFetching(false);
+      });
   }, [productId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: val,
@@ -129,7 +133,7 @@ const EditProduct = ({ params }: EditProductProps) => {
 
   return (
     <div className="max-w-5xl mx-auto pb-16 px-4 animate-in fade-in duration-500">
-      <PageHeader 
+      <PageHeader
         title="Edit Base Product"
         description="Modify metadata, brands, and categories. Click 'Manage Variants' to configure specific product options."
         breadcrumbs={[
@@ -145,42 +149,42 @@ const EditProduct = ({ params }: EditProductProps) => {
         <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6">
           <Card className="!p-8 border-gray-100 shadow-sm space-y-6">
             <h2 className="text-lg font-bold border-b border-gray-100 pb-4 text-gray-800">Basic Information</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="col-span-2 space-y-1.5">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Product Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   name="name"
                   required
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm" 
+                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm"
                   placeholder="e.g. Premium Broccoli Microgreens"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Slug (URL)</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   name="slug"
                   required
                   value={formData.slug}
                   onChange={handleInputChange}
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm" 
+                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm"
                   placeholder="slug-url"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Category</label>
-                <select 
+                <select
                   name="category"
                   required
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm cursor-pointer"
+                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm cursor-pointer"
                 >
                   <option value="">Select Category</option>
                   {categories.map(cat => (
@@ -191,31 +195,31 @@ const EditProduct = ({ params }: EditProductProps) => {
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Brand</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   name="brand"
                   value={formData.brand}
                   onChange={handleInputChange}
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm" 
+                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm"
                   placeholder="Brand name"
                 />
               </div>
 
               <div className="col-span-2 space-y-1.5">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Product Description</label>
-                <textarea 
+                <textarea
                   name="description"
                   rows={4}
                   value={formData.description}
                   onChange={handleInputChange}
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm min-h-[100px]" 
+                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm min-h-[100px]"
                   placeholder="Write detailed product descriptions..."
                 />
               </div>
 
               <div className="flex items-center space-x-3 mt-2 col-span-2">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   name="isFeatured"
                   id="isFeatured"
                   checked={formData.isFeatured}
@@ -229,30 +233,30 @@ const EditProduct = ({ params }: EditProductProps) => {
 
           {/* Certificates */}
           <Card className="!p-8 border-gray-100 shadow-sm flex flex-col justify-center min-h-[160px]">
-              <MultiSelectDropdown 
-                 label="Product Certificates"
-                 options={certificateOptions.map(c => ({ id: c._id, label: c.name, image: c.url }))}
-                 selectedValues={formData.certificates}
-                 onChange={toggleCertificate}
-                 placeholder="Select certificates"
-              />
+            <MultiSelectDropdown
+              label="Product Certificates"
+              options={certificateOptions.map(c => ({ id: c._id, label: c.name, image: c.url }))}
+              selectedValues={formData.certificates}
+              onChange={toggleCertificate}
+              placeholder="Select certificates"
+            />
           </Card>
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end space-x-4">
-            <Button 
+            <Button
               type="button"
               variant="outline"
               onClick={() => router.push('/admin/products')}
-              className="!rounded-2xl px-8 font-bold"
+              className="px-8 font-bold"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               type="submit"
               isLoading={loading}
               icon="lucide:save"
-              className="!rounded-2xl px-10 shadow-lg font-bold"
+              className=" px-10 shadow-lg font-bold"
             >
               Save Product Details
             </Button>
@@ -274,50 +278,91 @@ const EditProduct = ({ params }: EditProductProps) => {
               </p>
             </div>
 
-            <Button 
+            <Button
               onClick={() => router.push(`/admin/products/edit/${productId}/variants`)}
-              className="w-full !rounded-2xl !py-3.5 font-bold shadow-lg shadow-green-100 mt-4 bg-green-600 hover:bg-green-700"
+              className="w-full !py-3.5 font-medium shadow-lg shadow-green-100 mt-4 bg-green-600 hover:bg-green-700"
               icon="solar:clipboard-list-bold-duotone"
             >
               Manage & Add Variants
             </Button>
           </Card>
 
-          {/* Variants quick look list */}
           <div className="space-y-4">
-            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest pl-1">Variant Options Quick-Look</h4>
-            
-            {existingVariants.map((v, index) => (
-              <div key={v._id || index} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-                    {v.images?.[0] ? (
-                      <img src={v.images[0]} alt="Variant" className="w-full h-full object-cover" />
-                    ) : (
-                      <Icon icon="lucide:box" className="w-5 h-5 text-gray-400" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-gray-800">
-                      {v.weight || v.value || ''} {v.unit?.shortName || v.unit?.name || ''}
-                    </p>
-                    <p className="text-[10px] text-gray-400 font-semibold mt-0.5 uppercase tracking-wide">
-                      SKU: {v.sku || 'N/A'}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-black text-gray-900">₹{v.basePrice || v.price}</p>
-                  <p className="text-[10px] text-green-600 font-bold mt-0.5">{v.stock} in Stock</p>
-                </div>
-              </div>
-            ))}
+            <h4 className="text-sm font-bold text-gray-900 pl-1">Variant Options</h4>
+            <DataTable
+              data={existingVariants}
+              loading={false}
+              rowKey={(v) => v._id || ''}
+              columns={[
+                {
+                  key: "image",
+                  label: "Variant",
+                  type: "user",
 
-            {existingVariants.length === 0 && (
-              <div className="p-8 text-center border border-dashed border-gray-200 rounded-2xl text-xs font-semibold text-gray-400 bg-gray-50/50">
-                No variant sizes configured. Add one now!
-              </div>
-            )}
+                  // getAvatar: (v) => v.images?.[0] ?? v.sku?.charAt(0) ?? "?",
+                  getTitle: (v) => v.sku,
+                  getSubtitle: (v) => {
+                    const size = [v.weight || v.value, v.unit?.shortName || v.unit?.name]
+                      .filter(Boolean)
+                      .join(" ");
+                    return size || "—";
+                  },
+                },
+                // {
+                //   key: "price",
+                //   label: "Price",
+                //   custom: true,
+                //   render: (v) => (
+                //     <div className="text-sm">
+                //       <span className="font-bold text-gray-900">₹{v.basePrice}</span>
+                //       {v.discountedPrice && (
+                //         <span className="block text-xs font-medium text-green-600">
+                //           ₹{v.discountedPrice} sale
+                //         </span>
+                //       )}
+                //     </div>
+                //   ),
+                // },
+                {
+                  key: "stock",
+                  label: "Stock",
+                  custom: true,
+                  render: (v) => {
+                    const stock = Number(v.stock) || 0;
+                    const key = stock === 0 ? "outOfStock" : stock < 15 ? "lowStock" : "inStock";
+                    const style = getStatusStyle(key);
+                    return (
+                      <div className="flex flex-col items-end gap-2">
+                        <span className={`px-2.5 py-1 rounded-sm text-[10px] font-semibold ${style.color}`}>
+                          {stock === 0
+                            ? "Out of stock"
+                            : stock < 15
+                              ? `Low (${stock})`
+                              : `In stock (${stock})`}
+                        </span>
+                        <div className="text-xs">
+                          <span className="font-bold text-gray-900">₹{v.basePrice}</span>
+                          {v.discountedPrice && (
+                            <span className="block text-[10px] font-medium text-green-600">
+                              ₹{v.discountedPrice} sale
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  },
+                },
+              ]}
+              // additionalActions={[
+              //   {
+              //     label: "Manage",
+              //     icon: PencilIcon,
+              //     onClick: (row) => router.push(`/admin/products/edit/${productId}/variants/${row._id}`),
+              //   },
+              // ]}
+              showPagination={false}
+              hiddenActions={["view", "edit", "delete"]}
+            />
           </div>
         </div>
       </div>

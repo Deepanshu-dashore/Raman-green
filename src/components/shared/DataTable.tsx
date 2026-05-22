@@ -71,6 +71,7 @@ export interface DataTableProps<T> {
   activeTab?: string;
   onTabChange?: (tabValue: string) => void;
   showCheckBox?: boolean;
+  showPagination?: boolean;
 
   // Actions
   onView?: (row: T) => void;
@@ -175,6 +176,7 @@ export function DataTable<T>({
   additionalActions = [],
   rowKey,
   showCheckBox = false,
+  showPagination = true,
 }: DataTableProps<T>) {
 
   const [searchInput, setSearchInput] = useState("");
@@ -473,60 +475,62 @@ export function DataTable<T>({
       </div>
 
       {/* 4. Bottom Toolbar (Pagination, Settings) */}
-      <div className="border-t border-gray-100 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white">
+      {showPagination && (
+        <div className="border-t border-gray-100 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white">
 
-        {/* Dense Toggle */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsDense(!isDense)}
-            className={`w-9 h-5 rounded-full relative transition-colors ${isDense ? 'bg-primary' : 'bg-gray-200'}`}
-          >
-            <div className={`absolute top-0.5 bottom-0.5 w-4 bg-white rounded-full transition-transform shadow-sm ${isDense ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
-          </button>
-          <span className="text-sm font-bold text-gray-700">Dense</span>
-        </div>
-
-        {/* Pagination Controls */}
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="text-[13px] font-medium text-gray-500">Rows per page:</span>
-            <select
-              value={rowsPerPage}
-              onChange={(e) => {
-                setRowsPerPage(Number(e.target.value));
-                setPage(1);
-              }}
-              className="bg-transparent text-[13px] font-bold text-gray-900 outline-none cursor-pointer"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-            </select>
-          </div>
-
-          <div className="text-[13px] font-medium text-gray-700">
-            {totalCount === 0 ? '0-0' : `${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, totalCount)}`} of {totalCount}
-          </div>
-
-          <div className="flex items-center gap-1">
+          {/* Dense Toggle */}
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="p-1.5 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+              onClick={() => setIsDense(!isDense)}
+              className={`w-9 h-5 rounded-full relative transition-colors ${isDense ? 'bg-primary' : 'bg-gray-200'}`}
             >
-              <ChevronLeftIcon className="w-5 h-5" />
+              <div className={`absolute top-0.5 bottom-0.5 w-4 bg-white rounded-full transition-transform shadow-sm ${isDense ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
             </button>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
-              className="p-1.5 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
-            >
-              <ChevronRightIcon className="w-5 h-5" />
-            </button>
+            <span className="text-sm font-bold text-gray-700">Dense</span>
           </div>
-        </div>
 
-      </div>
+          {/* Pagination Controls */}
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-medium text-gray-500">Rows per page:</span>
+              <select
+                value={rowsPerPage}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="bg-transparent text-[13px] font-bold text-gray-900 outline-none cursor-pointer"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+              </select>
+            </div>
+
+            <div className="text-[13px] font-medium text-gray-700">
+              {totalCount === 0 ? '0-0' : `${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, totalCount)}`} of {totalCount}
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="p-1.5 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+              >
+                <ChevronLeftIcon className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="p-1.5 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+              >
+                <ChevronRightIcon className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+        </div>
+      )}
 
     </div>
   );

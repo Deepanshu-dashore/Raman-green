@@ -279,22 +279,13 @@ const ProductViewPage = ({ params }: ProductViewPageProps) => {
               </p>
               <div className="flex flex-wrap gap-2">
                 {product.certificates.map((cert: any) => (
-                  <div
-                    key={cert._id}
-                    className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg"
-                  >
-                    {cert.url && (
-                      <img
-                        src={cert.url}
-                        alt={cert.name}
-                        className="w-5 h-5 object-contain"
-                      />
-                    )}
-                    <span className="text-xs font-semibold text-gray-700">
-                      {cert.name}
-                    </span>
-                  </div>
-                ))}
+  <div key={cert._id} className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg">
+    {cert.url && (
+      <img src={cert.url} alt={cert.name} className="w-5 h-5 object-contain" />
+    )}
+    <span className="text-xs font-semibold text-gray-700">{cert.name}</span>
+  </div>
+))}
               </div>
             </div>
           )}
