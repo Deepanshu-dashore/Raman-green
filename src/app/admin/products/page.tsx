@@ -29,11 +29,11 @@ const AdminProducts = () => {
       fetch(`/api/products/${p._id}`, { method: 'DELETE' })
         .then(res => res.json())
         .then(json => {
-           if(json.success) {
-             setProducts(prev => prev.filter(item => item._id !== p._id));
-           } else {
-             throw new Error(json.message);
-           }
+          if (json.success) {
+            setProducts(prev => prev.filter(item => item._id !== p._id));
+          } else {
+            throw new Error(json.message);
+          }
         }),
       {
         loading: 'Deleting...',
@@ -70,14 +70,14 @@ const AdminProducts = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <PageHeader 
+      <PageHeader
         title="Products"
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
           { label: 'Products' }
         ]}
         actionNode={
-          <Button 
+          <Button
             onClick={() => router.push('/admin/products/add')}
             icon="lucide:plus"
           >
@@ -87,7 +87,7 @@ const AdminProducts = () => {
       />
 
       {/* Product Table */}
-      <DataTable 
+      <DataTable
         data={products}
         loading={loading}
         rowKey={(p) => p._id}
@@ -116,7 +116,7 @@ const AdminProducts = () => {
             sortable: false,
             custom: true,
             render: (p) => (
-              <span className="text-xs font-bold text-gray-600 bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-xl">
+              <span className="text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-sm">
                 {p.variants?.length || 0} {p.variants?.length === 1 ? 'Variant' : 'Variants'}
               </span>
             )
@@ -136,7 +136,7 @@ const AdminProducts = () => {
                 return min === max ? `₹${min}` : `₹${min} - ₹${max}`;
               })();
               return (
-                <div className="text-sm font-bold text-gray-900">{priceDisplay}</div>
+                <div className="text-xs font-medium text-gray-600">{priceDisplay}</div>
               );
             }
           },

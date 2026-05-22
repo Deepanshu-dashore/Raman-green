@@ -360,23 +360,30 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
             <DataTable
               data={product?.variants || []}
               columns={[
+                // {
+                //   key: 'thumbnail',
+                //   label: '',
+                //   sortable: false,
+                //   render: (row: any) =>
+                //     row.images?.[0] ? (
+                //       <img src={row.images[0]} alt="Variant" className="w-12 h-12 object-cover rounded" />
+                //     ) : (
+                //       <Icon icon="lucide:image" className="w-6 h-6 text-gray-300" />
+                //     ),
+                // },
                 {
-                  key: 'thumbnail',
-                  label: '',
-                  sortable: false,
-                  render: (row: any) =>
-                    row.images?.[0] ? (
-                      <img src={row.images[0]} alt="Variant" className="w-12 h-12 object-cover rounded" />
-                    ) : (
-                      <Icon icon="lucide:image" className="w-6 h-6 text-gray-300" />
-                    ),
+                  key: 'variant',
+                  label: 'Variant',
+                  type: 'user',
+                  getAvatar: (row: any) => row.images?.[0] || row.name?.charAt(0) || '?',
+                  getTitle: (row: any) => row.sku,
                 },
-                {
-                  key: 'sku',
-                  label: 'SKU',
-                  // sortable: true,
-                  render: (row: any) => row.sku,
-                },
+                // {
+                //   key: 'sku',
+                //   label: 'SKU',
+                //   // sortable: true,
+                //   render: (row: any) => row.sku,
+                // },
                 {
                   key: 'description',
                   label: 'Description',
