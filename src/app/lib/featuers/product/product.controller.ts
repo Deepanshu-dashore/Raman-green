@@ -15,6 +15,7 @@ const formatProduct = async (product: any) => {
                 // Resolve stock level dynamically from Inventory collection
                 const inventory = await Inventory.findOne({ variantId: v._id || v });
                 v.stock = inventory ? inventory.availableQty : 0;
+                v.lowStockLimit = inventory ? inventory.lowStockLimit : 10;
             }
             return v;
         }));
@@ -85,6 +86,7 @@ export class ProductController {
             // Resolve stock dynamically
             const inventory = await Inventory.findOne({ variantId: variantObj._id });
             variantObj.stock = inventory ? inventory.availableQty : 0;
+            variantObj.lowStockLimit = inventory ? inventory.lowStockLimit : 10;
 
             return ApiResponse(201, variantObj, "Product variant and inventory created successfully.");
         } catch (error: any) {
@@ -103,6 +105,7 @@ export class ProductController {
             // Resolve stock dynamically
             const inventory = await Inventory.findOne({ variantId: variantObj._id });
             variantObj.stock = inventory ? inventory.availableQty : 0;
+            variantObj.lowStockLimit = inventory ? inventory.lowStockLimit : 10;
 
             return ApiResponse(200, variantObj, "Variant updated successfully.");
         } catch (error: any) {

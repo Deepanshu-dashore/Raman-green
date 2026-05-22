@@ -13,6 +13,7 @@ const formatVariant = async (variant: any) => {
     // Resolve stock level dynamically from Inventory collection
     const inventory = await Inventory.findOne({ variantId: variantObj._id });
     variantObj.stock = inventory ? inventory.availableQty : 0;
+    variantObj.lowStockLimit = inventory ? inventory.lowStockLimit : 10;
     return variantObj;
 };
 

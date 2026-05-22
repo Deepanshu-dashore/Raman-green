@@ -9,8 +9,10 @@ export interface ParsedVariantForm {
   unit: string;
   price: number;
   stock: number;
+  lowStockLimit: number;
   sku: string;
   images: string[];
+  imageOrder: VariantImageOrderItem[];
   packaging: string[];
   batchNumber?: string;
   mfgDate?: Date;
@@ -18,7 +20,18 @@ export interface ParsedVariantForm {
   notes?: string;
 }
 
-/** Upload new files + merge with existing URLs in gallery order */
+/**
+ * Variant FormData contract:
+ * - images: new image files to upload.
+ * - imageOrder: optional JSON array that preserves gallery order across
+ *   existing images and newly uploaded files.
+ *
+ * Example imageOrder:
+ * [
+ *   { "type": "existing", "url": "products/existing-image.jpg" },
+ *   { "type": "new", "index": 0 }
+ * ]
+ */
 export async function parseVariantFormData(
   formData: FormData
 ): Promise<{ data: ParsedVariantForm; uploadedUrls: string[] }> {
@@ -29,6 +42,10 @@ export async function parseVariantFormData(
   const value = Number(formData.get("value"));
   const price = Number(formData.get("price"));
   const stock = Number(formData.get("stock"));
+  const lowStockLimitRaw = formData.get("lowStockLimit");
+  const lowStockLimit = lowStockLimitRaw === null || lowStockLimitRaw === ""
+    ? 10
+    : Number(lowStockLimitRaw);
 
   if (!sku) throw new Error("SKU is required.");
   if (!unit) throw new Error("Unit is required.");
@@ -47,6 +64,24 @@ export async function parseVariantFormData(
       imageOrder = JSON.parse(orderRaw);
     } catch {
       throw new Error("Invalid image order payload.");
+    }
+
+    if (!Array.isArray(imageOrder)) {
+      throw new Error("Invalid image order payload.");
+    }
+
+    for (const item of imageOrder) {
+      if (item.type === "existing") {
+        if (!item.url || typeof item.url !== "string") {
+          throw new Error("Invalid existing image order item.");
+        }
+      } else if (item.type === "new") {
+        if (!Number.isInteger(item.index) || item.index < 0) {
+          throw new Error("Invalid new image order item.");
+        }
+      } else {
+        throw new Error("Invalid image order item type.");
+      }
     }
   }
 
@@ -99,8 +134,10 @@ export async function parseVariantFormData(
       unit,
       price,
       stock: Number.isNaN(stock) ? 0 : stock,
+      lowStockLimit: Number.isNaN(lowStockLimit) ? 10 : lowStockLimit,
       sku,
       images,
+      imageOrder,
       packaging,
       batchNumber,
       mfgDate: mfgDateRaw ? new Date(mfgDateRaw) : undefined,

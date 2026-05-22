@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Icon } from '@iconify/react';
-import { PencilIcon } from '@heroicons/react/24/outline';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTable } from '@/components/shared/DataTable';
 import { Button } from '@/components/shared/Button';
@@ -35,6 +34,7 @@ interface InventoryItem {
   expiryDate: string;
   availableQty: number;
   reservedQty: number;
+  lowStockLimit: number;
   notes: string;
 }
 
@@ -49,6 +49,7 @@ const AdminInventory = () => {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [editForm, setEditForm] = useState({
     availableQty: 0,
+    lowStockLimit: 10,
     batchNumber: '',
     mfgDate: '',
     expiryDate: '',
@@ -105,6 +106,7 @@ const AdminInventory = () => {
 
     setEditForm({
       availableQty: item.availableQty || 0,
+      lowStockLimit: item.lowStockLimit ?? 10,
       batchNumber: item.batchNumber || '',
       mfgDate: formattedMfg,
       expiryDate: formattedExp,
@@ -126,6 +128,7 @@ const AdminInventory = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           availableQty: Number(editForm.availableQty),
+          lowStockLimit: Number(editForm.lowStockLimit),
           batchNumber: editForm.batchNumber,
           mfgDate: editForm.mfgDate ? new Date(editForm.mfgDate) : undefined,
           expiryDate: editForm.expiryDate ? new Date(editForm.expiryDate) : undefined,
@@ -149,13 +152,13 @@ const AdminInventory = () => {
     }
   };
 
-  const getStockBadge = (qty: number) => {
+  const getStockBadge = (qty: number, lowStockLimit = 10) => {
     if (qty === 0) {
       return (
         <StatusBadge status={'outOfStock'} size='xs' />
       );
     }
-    if (qty < 10) {
+    if (qty <= lowStockLimit) {
       return (
         <StatusBadge status={'lowStock'} size='xs' />
       );
@@ -207,32 +210,22 @@ const AdminInventory = () => {
           data={filteredItems}
           loading={loading}
           rowKey={(item) => item._id}
-          additionalActions={[{ label: 'Edit Stock', icon: PencilIcon, onClick: (item) => handleEditClick(item) }]}
+          hiddenActions={['view', 'edit', 'delete']}
           columns={[
             {
               key: 'product',
-              label: 'Product & Variant',
-              custom: true,
-              render: (item) => (
-                <div className="flex items-center gap-3">
-                  {/* Small visual image fallback */}
-                  {/* <div className="w-10 h-10 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
-                    {item.variantId?.images?.[0] ? (
-                      <img src={item.variantId.images[0]} alt="Product" className="w-full h-full object-cover" />
-                    ) : (
-                      <Icon icon="lucide:box" className="w-5 h-5 text-gray-400" />
-                    )}
-                  </div> */}
-                  <div>
-                    <div className="text-sm font-black text-gray-800 leading-snug">
-                      {item.productId?.name || 'Unknown Product'}
-                    </div>
-                    <div className="text-[11px] text-gray-500 font-semibold mt-0.5">
-                      Batch: {item.batchNumber} • Pack: {item.variantId?.weight} {item.variantId?.unit?.shortName || ''}
-                    </div>
-                  </div>
-                </div>
-              )
+              label: 'Warehouse Item',
+              type: 'user',
+              getAvatar: (item) =>
+                item.variantId?.images?.[0] || item.variantId?.sku?.charAt(0) || '?',
+              getTitle: (item) => item.productId?.name || 'Unknown Product',
+              getSubtitle: (item) => {
+                const sku = item.variantId?.sku || 'N/A';
+                const pack = [item.variantId?.weight, item.variantId?.unit?.shortName]
+                  .filter(Boolean)
+                  .join(' ');
+                return `SKU: ${sku} • Batch: ${item.batchNumber}${pack ? ` • ${pack}` : ''}`;
+              },
             },
             {
               key: 'sku',
@@ -298,26 +291,38 @@ const AdminInventory = () => {
               )
             },
             {
+              key: 'lowStockLimit',
+              label: 'Low Limit',
+              align: 'center',
+              custom: true,
+              render: (item) => (
+                <span className="text-xs font-black text-amber-700 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
+                  {item.lowStockLimit ?? 10}
+                </span>
+              )
+            },
+            {
               key: 'status',
               label: 'Status',
               custom: true,
-              render: (item) => getStockBadge(item.availableQty)
+              render: (item) => getStockBadge(item.availableQty, item.lowStockLimit)
             },
-            // {
-            //   key: 'actions',
-            //   label: 'Action',
-            //   align: 'right',
-            //   custom: true,
-            //   render: (item) => (
-            //     <button
-            //       onClick={() => handleEditClick(item)}
-            //       className="px-3.5 py-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5"
-            //     >
-            //       <Icon icon="lucide:edit-2" className="w-3.5 h-3.5" />
-            //       Edit Stock
-            //     </button>
-            //   )
-            // }
+            {
+              key: 'actions',
+              label: 'Action',
+              align: 'right',
+              custom: true,
+              render: (item) => (
+                <button
+                  type="button"
+                  onClick={() => handleEditClick(item)}
+                  className="px-3.5 py-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Icon icon="lucide:edit-2" className="w-3.5 h-3.5" />
+                  Edit Stock
+                </button>
+              )
+            },
           ]}
         />
       </div>
@@ -371,6 +376,19 @@ const AdminInventory = () => {
                     onChange={(e) => setEditForm({ ...editForm, batchNumber: e.target.value })}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold"
                     placeholder="e.g. BATCH-01"
+                  />
+                </div>
+
+                <div className="space-y-1.5 col-span-2">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Low Stock Limit</label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={editForm.lowStockLimit}
+                    onChange={(e) => setEditForm({ ...editForm, lowStockLimit: Number(e.target.value) })}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold"
+                    placeholder="Alert threshold"
                   />
                 </div>
 

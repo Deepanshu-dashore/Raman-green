@@ -9,7 +9,9 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import Card from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 import { MultiSelectDropdown } from '@/components/shared/MultiSelectDropdown';
+import { DataTable } from '@/components/shared/DataTable';
 import type { VariantImageOrderItem } from '@/app/lib/featuers/product-variant/variant.form';
+
 
 type GalleryItem =
   | { id: string; kind: 'saved'; url: string }
@@ -21,6 +23,7 @@ interface VariantState {
   unit: string;
   price: string;
   stock: string;
+  lowStockLimit: string;
   sku: string;
   packaging: string[];
   batchNumber: string;
@@ -50,12 +53,13 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
-  
+
   const [variantForm, setVariantForm] = useState<VariantState>({
     value: '',
     unit: '',
     price: '',
     stock: '',
+    lowStockLimit: '10',
     sku: '',
     packaging: [],
     batchNumber: '',
@@ -82,8 +86,8 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       if (unitRes.success) setUnits(unitRes.data);
       if (packRes.success) setPackagingOptions(packRes.data);
     })
-    .catch(() => toast.error("Failed to fetch product, units, or packaging parameters"))
-    .finally(() => setFetching(false));
+      .catch(() => toast.error("Failed to fetch product, units, or packaging parameters"))
+      .finally(() => setFetching(false));
   };
 
   useEffect(() => {
@@ -96,6 +100,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       unit: '',
       price: '',
       stock: '',
+      lowStockLimit: '10',
       sku: '',
       packaging: [],
       batchNumber: '',
@@ -123,7 +128,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
 
   const handleOpenEdit = (v: any) => {
     setEditingVariantId(v._id);
-    
+
     // Setup initial dates
     const formattedMfg = v.mfgDate ? new Date(v.mfgDate).toISOString().split('T')[0] : '';
     const formattedExp = v.expiryDate ? new Date(v.expiryDate).toISOString().split('T')[0] : '';
@@ -134,13 +139,14 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       unit: v.unit?._id || v.unit || '',
       price: String(v.basePrice || v.price || ''),
       stock: String(v.stock || '0'),
+      lowStockLimit: String(v.lowStockLimit ?? '10'),
       sku: v.sku || '',
       packaging: (v.packaging || []).map((p: any) => p._id || p),
       batchNumber: v.batchNumber || '',
       mfgDate: formattedMfg,
       expiryDate: formattedExp,
       notes: v.notes || '',
-      showInventory: !!(v.batchNumber || v.mfgDate || v.expiryDate)
+      showInventory: !!(v.batchNumber || v.mfgDate || v.expiryDate || v.lowStockLimit)
     });
     revokeGalleryPreviews(gallery);
     setGallery(
@@ -226,6 +232,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     body.append('unit', variantForm.unit);
     body.append('price', variantForm.price);
     body.append('stock', variantForm.stock);
+    body.append('lowStockLimit', variantForm.lowStockLimit);
     body.append('sku', variantForm.sku);
     body.append('packaging', JSON.stringify(variantForm.packaging));
     if (variantForm.batchNumber) body.append('batchNumber', variantForm.batchNumber);
@@ -260,7 +267,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       return;
     }
 
-    const url = editingVariantId 
+    const url = editingVariantId
       ? `/api/products/variants/${editingVariantId}`
       : `/api/products/${productId}/variants`;
 
@@ -321,7 +328,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
 
   return (
     <div className="max-w-5xl mx-auto pb-16 px-4 animate-in fade-in duration-500">
-      <PageHeader 
+      <PageHeader
         title="Manage Variants"
         description={`Product: ${product?.name || ''} • Brand: ${product?.brand || 'Raman Green'}`}
         breadcrumbs={[
@@ -333,7 +340,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
         backLink={`/admin/products/edit/${productId}`}
         actionNode={
           !isFormOpen && (
-            <Button 
+            <Button
               onClick={handleOpenAdd}
               icon="lucide:plus"
               className="!rounded-2xl"
@@ -344,64 +351,72 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
         }
       />
 
-      <div className="flex flex-col gap-8 mt-6">
+      <div className="flex flex-col gap-4 mt-4">
         {/* Configured Variants Table */}
         <div className="order-2 space-y-6">
-          <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest pl-1">Configured Variants</h3>
-          
+          <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest pl-1">Configured Variants</h3>
+
           <div className="space-y-4">
-            {product?.variants && product.variants.map((v: any, idx: number) => (
-              <Card key={v._id || idx} className="!p-6 border-gray-100 hover:border-green-100 transition-colors shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  {/* Variant thumbnail */}
-                  <div className="w-16 h-16 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0">
-                    {v.images?.[0] ? (
-                      <img src={v.images[0]} alt="Variant" className="w-full h-full object-cover" />
+            <DataTable
+              data={product?.variants || []}
+              columns={[
+                {
+                  key: 'thumbnail',
+                  label: '',
+                  sortable: false,
+                  render: (row: any) =>
+                    row.images?.[0] ? (
+                      <img src={row.images[0]} alt="Variant" className="w-12 h-12 object-cover rounded" />
                     ) : (
                       <Icon icon="lucide:image" className="w-6 h-6 text-gray-300" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-gray-800 flex items-center gap-2">
-                      {v.weight || v.value || ''} {v.unit?.shortName || v.unit?.name || ''}
-                      <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider bg-gray-50 px-2 py-0.5 border border-gray-100 rounded-lg">
-                        {v.sku}
+                    ),
+                },
+                {
+                  key: 'sku',
+                  label: 'SKU',
+                  // sortable: true,
+                  render: (row: any) => row.sku,
+                },
+                {
+                  key: 'description',
+                  label: 'Description',
+                  render: (row: any) => (
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-gray-800">
+                        {row.weight || row.value || ''} {row.unit?.shortName || row.unit?.name || ''}
                       </span>
-                    </h4>
-                    <p className="text-xs text-green-600 font-bold mt-1">
-                      Price: ₹{v.basePrice || v.price} • Stock: {v.stock} units
-                    </p>
-                    {/* Display Packaging Under Variant */}
-                    {v.packaging && v.packaging.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {v.packaging.map((pack: any) => (
-                          <span key={pack._id} className="text-[9px] font-black uppercase text-purple-600 bg-purple-50 border border-purple-100/50 px-2 py-0.5 rounded-lg">
-                            {pack.name} ({pack.type})
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0 self-end md:self-center border-t border-gray-50 md:border-none pt-3 md:pt-0">
-                  <button 
-                    onClick={() => handleOpenEdit(v)}
-                    className="px-3.5 py-2 hover:bg-green-50 text-green-600 rounded-xl text-xs font-black transition-colors flex items-center gap-1 border border-green-100/50"
-                  >
-                    <Icon icon="lucide:edit" className="w-3.5 h-3.5" />
-                    Edit
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(v._id)}
-                    className="px-3.5 py-2 hover:bg-red-50 text-red-500 rounded-xl text-xs font-black transition-colors flex items-center gap-1 border border-red-100/50"
-                  >
-                    <Icon icon="lucide:trash-2" className="w-3.5 h-3.5" />
-                    Delete
-                  </button>
-                </div>
-              </Card>
-            ))}
+                    </div>
+                  ),
+                },
+                {
+                  key: 'price',
+                  label: 'Price',
+                  // sortable: true,
+                  render: (row: any) => `₹${row.basePrice || row.price}`,
+                },
+                {
+                  key: 'stock',
+                  label: 'Stock',
+                  sortable: true,
+                  render: (row: any) => row.stock,
+                },
+                {
+                  key: 'packaging',
+                  label: 'Packaging',
+                  render: (row: any) =>
+                    row.packaging?.map((pack: any) => (
+                      <span key={pack._id} className="text-[9px] font-semibold uppercase text-purple-600 bg-purple-50 border border-purple-100/50 px-2 py-0.5 rounded-lg mr-1">
+                        {pack.name} ({pack.type})
+                      </span>
+                    )),
+                },
+              ]}
+              loading={loading}
+              rowKey={(row: any) => row._id || row.id}
+              onEdit={handleOpenEdit}
+              onDelete={handleDelete}
+              showCheckBox={false}
+            />
 
             {(!product?.variants || product.variants.length === 0) && (
               <div className="p-12 text-center border-2 border-dashed border-gray-200 rounded-3xl text-sm font-semibold text-gray-400 bg-gray-50/50">
@@ -414,43 +429,50 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
         {/* Add / Edit Variant Form — shown above the table */}
         <div className="order-1">
           {isFormOpen && (
-            <Card className="!p-6 border-gray-100 shadow-lg animate-in slide-in-from-top duration-300">
-              <div className="flex justify-between items-center border-b border-gray-50 pb-4 mb-4">
-                <h3 className="text-sm font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Icon icon={editingVariantId ? "lucide:edit-3" : "lucide:plus-circle"} className="w-4 h-4 text-green-600" />
-                  {editingVariantId ? 'Edit Variant Option' : 'Add New Variant'}
-                </h3>
-                <button 
+            <Card className="!p-0 border-gray-100 shadow-sm overflow-hidden animate-in slide-in-from-top duration-300">
+              <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100 bg-white">
+                <div className="flex items-center gap-3">
+                  <span className="w-9 h-9 rounded-xl bg-green-50 text-green-700 border border-green-100 flex items-center justify-center">
+                    <Icon icon={editingVariantId ? "lucide:edit-3" : "lucide:plus"} className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-black text-gray-900 tracking-tight">
+                      {editingVariantId ? 'Edit Variant' : 'Add Variant'}
+                    </h3>
+                    <p className="text-[11px] font-semibold text-gray-400 mt-0.5">Pricing, stock, media, and packaging</p>
+                  </div>
+                </div>
+                <button
                   onClick={resetForm}
-                  className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
+                  className="w-8 h-8 hover:bg-gray-100 rounded-full transition-colors text-gray-400 flex items-center justify-center"
                 >
                   <Icon icon="lucide:x" className="w-4 h-4" />
                 </button>
               </div>
 
-              <form onSubmit={handleSave} className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <form onSubmit={handleSave} className="p-5 space-y-5">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                   <div className="space-y-1">
-                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Size/Weight Value</label>
-                    <input 
-                      type="number" 
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Size</label>
+                    <input
+                      type="number"
                       required
                       value={variantForm.value}
                       onChange={(e) => handleFormChange('value', e.target.value)}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-semibold text-xs" 
-                      placeholder="e.g. 50, 100"
+                      className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-sm transition-all"
+                      placeholder="50"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Unit</label>
-                    <select 
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Unit</label>
+                    <select
                       required
                       value={variantForm.unit}
                       onChange={(e) => handleFormChange('unit', e.target.value)}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-bold text-xs cursor-pointer"
+                      className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-xs cursor-pointer transition-all"
                     >
-                      <option value="">Select Unit</option>
+                      <option value="">Unit</option>
                       {units.map(u => (
                         <option key={u._id} value={u._id}>{u.name} ({u.shortName})</option>
                       ))}
@@ -458,75 +480,95 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Price (₹)</label>
-                    <input 
-                      type="number" 
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Price (₹)</label>
+                    <input
+                      type="number"
                       required
                       value={variantForm.price}
                       onChange={(e) => handleFormChange('price', e.target.value)}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-semibold text-xs" 
-                      placeholder="e.g. 299"
+                      className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-sm transition-all"
+                      placeholder="299"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Stock Qty</label>
-                    <input 
-                      type="number" 
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Stock</label>
+                    <input
+                      type="number"
                       required
                       value={variantForm.stock}
                       onChange={(e) => handleFormChange('stock', e.target.value)}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-semibold text-xs" 
-                      placeholder="e.g. 100"
+                      className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-sm transition-all"
+                      placeholder="100"
                     />
                   </div>
 
-                  <div className="space-y-1 col-span-2 md:col-span-4">
-                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Variant SKU</label>
-                    <input 
-                      type="text" 
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Low Limit</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={variantForm.lowStockLimit}
+                      onChange={(e) => handleFormChange('lowStockLimit', e.target.value)}
+                      className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-sm transition-all"
+                      placeholder="10"
+                    />
+                  </div>
+
+                  <div className="space-y-1 col-span-2 lg:col-span-2">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">SKU</label>
+                    <input
+                      type="text"
                       required
                       value={variantForm.sku}
                       onChange={(e) => handleFormChange('sku', e.target.value)}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-semibold text-xs uppercase" 
-                      placeholder="Unique SKU"
+                      className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-sm uppercase transition-all"
+                      placeholder="RG-001"
                     />
                   </div>
 
                   {/* Packaging Selection Under Variant */}
-                  <div className="col-span-2 md:col-span-4 pt-2">
-                    <MultiSelectDropdown 
-                       label="Packaging Options (Variant Specific)"
-                       options={packagingOptions.map(p => ({ id: p._id, label: p.name, subLabel: p.type }))}
-                       selectedValues={variantForm.packaging}
-                       onChange={togglePackaging}
-                       placeholder="Select packaging types"
+                  <div className="col-span-2 lg:col-span-3 mt-3">
+                    <MultiSelectDropdown
+                      label="Packaging"
+                      options={packagingOptions.map(p => ({ id: p._id, label: p.name, subLabel: p.type }))}
+                      selectedValues={variantForm.packaging}
+                      onChange={togglePackaging}
+                      placeholder="Select packaging"
                     />
                   </div>
                 </div>
 
                 {/* Gallery — multipart upload on save */}
-                <div className="space-y-2 pt-2 border-t border-gray-50">
-                  <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Gallery Images (Required)</label>
-                  
+                <div className="grid lg:grid-cols-[240px_1fr] gap-4 pt-4 border-t border-gray-100">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide lg:col-span-2">Gallery Images</label>
+
                   <div
                     {...getRootProps()}
-                    className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer flex flex-col items-center justify-center min-h-[90px] transition-all outline-none ${
-                      loading
-                        ? 'opacity-60 pointer-events-none border-gray-100 bg-gray-50'
-                        : isDragActive
-                          ? 'border-green-500 bg-green-50/30'
-                          : 'border-gray-100 hover:border-green-400 hover:bg-green-50/10'
-                    }`}
+                    className={`border border-dashed rounded-xl p-4 cursor-pointer flex flex-col items-center justify-center min-h-40 transition-all outline-none ${loading
+                      ? 'opacity-60 pointer-events-none border-gray-100 bg-gray-50'
+                      : isDragActive
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 bg-gray-50/70 hover:border-green-400 hover:bg-green-50/40'
+                      }`}
                   >
                     <input {...getInputProps()} />
-                    <Icon icon="solar:camera-add-bold-duotone" className="w-6 h-6 text-green-600 mb-1" />
-                    <p className="text-[10px] font-black text-gray-700">
-                      {isDragActive ? 'Drop images here' : 'Drag & drop or click to add photos'}
+                    <span className="w-11 h-11 rounded-sm bg-white border border-green-100 text-green-700 flex items-center justify-center mb-3">
+                      <Icon icon="lucide:image-plus" className="w-5 h-5" />
+                    </span>
+                    <p className="text-xs font-black text-gray-800 text-center">
+                      {isDragActive ? 'Drop images' : 'Upload images'}
                     </p>
+                    <p className="text-[10px] font-semibold text-gray-400 mt-1 text-center">PNG, JPG, WEBP, GIF</p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 pt-2">
+                  <div className="min-h-40 rounded-xl border border-gray-100 bg-white p-3 grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-7 gap-2 content-start">
+                    {gallery.length === 0 && (
+                      <div className="col-span-full h-24 rounded-lg bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center text-[11px] font-bold text-gray-400">
+                        No images selected
+                      </div>
+                    )}
                     {gallery.map((item, imgIdx) => {
                       const displayUrl =
                         item.kind === 'saved'
@@ -536,26 +578,26 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                           : item.preview;
 
                       return (
-                        <div key={item.id} className="relative group w-14 h-14 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 shrink-0">
+                        <div key={item.id} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-100 bg-gray-50">
                           <img src={displayUrl} alt="Preview" className="w-full h-full object-cover" />
                           {item.kind === 'local' && (
-                            <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-[8px] text-white text-center font-bold py-0.5">
+                            <span className="absolute left-1 top-1 bg-green-600 text-[8px] text-white font-black px-1.5 py-0.5 rounded">
                               New
                             </span>
                           )}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
                             <button
                               type="button"
                               disabled={imgIdx === 0}
                               onClick={() => moveImage(imgIdx, 'left')}
-                              className="p-0.5 bg-white rounded text-gray-700 hover:text-green-600 disabled:opacity-30"
+                              className="w-6 h-6 bg-white rounded-md text-gray-700 hover:text-green-600 disabled:opacity-30 flex items-center justify-center"
                             >
                               <Icon icon="lucide:chevron-left" className="w-3 h-3" />
                             </button>
                             <button
                               type="button"
                               onClick={() => removeImage(imgIdx)}
-                              className="p-0.5 bg-white rounded text-red-500 hover:bg-red-50"
+                              className="w-6 h-6 bg-white rounded-md text-red-500 hover:bg-red-50 flex items-center justify-center"
                             >
                               <Icon icon="lucide:trash" className="w-3 h-3" />
                             </button>
@@ -563,7 +605,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                               type="button"
                               disabled={imgIdx === gallery.length - 1}
                               onClick={() => moveImage(imgIdx, 'right')}
-                              className="p-0.5 bg-white rounded text-gray-700 hover:text-green-600 disabled:opacity-30"
+                              className="w-6 h-6 bg-white rounded-md text-gray-700 hover:text-green-600 disabled:opacity-30 flex items-center justify-center"
                             >
                               <Icon icon="lucide:chevron-right" className="w-3 h-3" />
                             </button>
@@ -574,77 +616,82 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                   </div>
                 </div>
 
-                {/* Initial warehouse inventory toggle */}
-                <div className="pt-2 border-t border-gray-50">
-                  <button
-                    type="button"
-                    onClick={() => handleFormChange('showInventory', !variantForm.showInventory)}
-                    className="text-[10px] font-black text-green-600 hover:text-green-700 transition-colors flex items-center gap-0.5"
-                  >
-                    <Icon icon="lucide:chevron-right" className={`w-3.5 h-3.5 transform transition-transform ${variantForm.showInventory ? 'rotate-90' : ''}`} />
-                    Warehouse Inventory parameters
-                  </button>
+                <fieldset className="border border-gray-200 rounded-xl px-3 pb-3 pt-2">
+                  <legend className="px-2">
+                    <button
+                      type="button"
+                      onClick={() => handleFormChange('showInventory', !variantForm.showInventory)}
+                      className="h-7 px-2 bg-white text-[11px] font-black text-gray-600 hover:text-green-700 transition-colors flex items-center gap-1"
+                    >
+                      <Icon icon="lucide:chevron-right" className={`w-3.5 h-3.5 transform transition-transform ${variantForm.showInventory ? 'rotate-90' : ''}`} />
+                      Warehouse details
+                    </button>
+                  </legend>
 
-                  {variantForm.showInventory && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 p-4 bg-green-50/10 border border-green-100/50 rounded-xl animate-in slide-in-from-top duration-300">
+                  {variantForm.showInventory ? (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-in slide-in-from-top duration-300">
                       <div className="space-y-1">
-                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest ml-1">Batch Number</label>
-                        <input 
-                          type="text" 
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Batch</label>
+                        <input
+                          type="text"
                           value={variantForm.batchNumber}
                           onChange={(e) => handleFormChange('batchNumber', e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs" 
-                          placeholder="e.g. BATCH-01 (Auto generated)"
+                          className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-xs font-semibold outline-none focus:border-green-500"
+                          placeholder="Auto generated"
                         />
                       </div>
-                      
+
                       <div className="space-y-1">
-                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest ml-1">Mfg Date</label>
-                        <input 
-                          type="date" 
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Mfg Date</label>
+                        <input
+                          type="date"
                           value={variantForm.mfgDate}
                           onChange={(e) => handleFormChange('mfgDate', e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs" 
+                          className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-xs font-semibold outline-none focus:border-green-500"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest ml-1">Expiry Date</label>
-                        <input 
-                          type="date" 
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Expiry</label>
+                        <input
+                          type="date"
                           value={variantForm.expiryDate}
                           onChange={(e) => handleFormChange('expiryDate', e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs" 
+                          className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-xs font-semibold outline-none focus:border-green-500"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest ml-1">Inventory Notes</label>
-                        <input 
-                          type="text" 
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Notes</label>
+                        <input
+                          type="text"
                           value={variantForm.notes}
                           onChange={(e) => handleFormChange('notes', e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs" 
-                          placeholder="Warehouse arrival notes..."
+                          className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-xs font-semibold outline-none focus:border-green-500"
+                          placeholder="Arrival notes"
                         />
                       </div>
                     </div>
+                  ) : (
+                    <div className="h-8 flex items-center text-[11px] font-semibold text-gray-400">
+                      Optional batch, manufacturing, expiry, and notes.
+                    </div>
                   )}
-                </div>
+                </fieldset>
 
-                <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-50">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={resetForm}
-                    className="!py-2 !px-4 !rounded-xl text-xs font-bold"
+                    className="!py-2 !px-4 !rounded-lg text-xs font-bold"
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     isLoading={loading}
-                    className="!py-2 !px-6 !rounded-xl text-xs font-bold"
+                    className="!py-2.5 !px-6 !rounded-lg text-xs font-bold"
                   >
                     {editingVariantId ? 'Save Variant' : 'Create Variant'}
                   </Button>

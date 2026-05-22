@@ -8,6 +8,10 @@ export interface IProductVariant extends Document {
     size: number;
     weight: number;
     images?: string[];
+    imageOrder?: (
+        | { type: "existing"; url: string }
+        | { type: "new"; index: number }
+    )[];
     packaging?: Schema.Types.ObjectId[];
     sku: string;
     isDeleted?: boolean;
@@ -23,6 +27,21 @@ const productVariantSchema = new Schema<IProductVariant>({
     images: [
         {
             type: String,
+        }
+    ],
+    imageOrder: [
+        {
+            type: {
+                type: String,
+                enum: ["existing", "new"],
+                required: true
+            },
+            url: {
+                type: String
+            },
+            index: {
+                type: Number
+            }
         }
     ],
     

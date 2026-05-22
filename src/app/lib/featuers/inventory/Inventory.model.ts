@@ -8,6 +8,7 @@ export interface IInventory extends Document {
     expiryDate: Date;
     availableQty: number;
     reservedQty: number;
+    lowStockLimit: number;
     notes: string;
 }
 
@@ -41,6 +42,12 @@ const inventorySchema = new Schema<IInventory>({
     reservedQty: {
         type: Number,
         required: true
+    },
+
+    lowStockLimit: {
+        type: Number,
+        required: true,
+        default: 10
     },
 
     notes: {

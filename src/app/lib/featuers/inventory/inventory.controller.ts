@@ -1,5 +1,16 @@
 import { InventoryService } from "./inventory.service";
 import { ApiResponse } from "../../utils/ApiResponse";
+import { getUrls } from "../../utils/geturl";
+
+const formatInventoryItem = (item: any) => {
+    const obj = item?.toObject ? item.toObject() : { ...item };
+    if (obj.variantId?.images?.length) {
+        obj.variantId.images = obj.variantId.images.map(
+            (img: string) => getUrls.getUrl(img) || img
+        );
+    }
+    return obj;
+};
 
 export class InventoryController {
     /**
@@ -8,7 +19,8 @@ export class InventoryController {
     static async getAll() {
         try {
             const data = await InventoryService.getAllInventory();
-            return ApiResponse(200, data, "Inventory list fetched successfully.");
+            const formatted = data.map(formatInventoryItem);
+            return ApiResponse(200, formatted, "Inventory list fetched successfully.");
         } catch (error: any) {
             return ApiResponse(500, null, error.message);
         }

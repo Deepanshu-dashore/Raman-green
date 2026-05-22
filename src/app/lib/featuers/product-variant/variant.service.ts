@@ -41,6 +41,7 @@ export class VariantService {
         }
 
         const stockVal = Number(varData.stock) || 0;
+        const lowStockLimit = Number.isNaN(Number(varData.lowStockLimit)) ? 10 : Number(varData.lowStockLimit);
 
         // 3. Create ProductVariant (packaging included, stock omitted)
         const variant = new ProductVariant({
@@ -52,6 +53,7 @@ export class VariantService {
             size: Number(varData.size || 0),
             weight: Number(varData.weight || varData.value || 0),
             images: varData.images || [],
+            imageOrder: varData.imageOrder || [],
             sku: varData.sku
         });
         await variant.save();
@@ -69,6 +71,7 @@ export class VariantService {
             expiryDate: varData.expiryDate ? new Date(varData.expiryDate) : oneYearLater,
             availableQty: stockVal,
             reservedQty: 0,
+            lowStockLimit,
             notes: varData.notes || "Initial inventory on variant creation"
         });
         await inventory.save();
@@ -101,6 +104,7 @@ export class VariantService {
         }
 
         const stockVal = Number(varData.stock) || 0;
+        const lowStockLimit = Number.isNaN(Number(varData.lowStockLimit)) ? 10 : Number(varData.lowStockLimit);
 
         // 2. Perform updates (stock omitted)
         const variant = await ProductVariant.findByIdAndUpdate(
@@ -113,6 +117,7 @@ export class VariantService {
                 size: Number(varData.size || 0),
                 weight: Number(varData.weight || varData.value || 0),
                 images: varData.images || [],
+                imageOrder: varData.imageOrder || [],
                 sku: varData.sku
             },
             { new: true }
@@ -122,7 +127,7 @@ export class VariantService {
             // Sync inventory availableQty
             await Inventory.findOneAndUpdate(
                 { variantId: variant._id },
-                { availableQty: stockVal }
+                { availableQty: stockVal, lowStockLimit }
             );
         }
 
