@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { Button } from '@/components/shared/Button';
 import Card from '@/components/shared/Card';
 import DeleteModal from '@/components/shared/DeleteModal';
+import LabledInput from '@/components/shared/LabledInput';
 
 
 const AdminSettings = () => {
@@ -16,12 +17,12 @@ const AdminSettings = () => {
     const router = useRouter();
     const tabParam = searchParams.get('tab');
     const subParam = searchParams.get('sub');
-    
+
     const [configCategory, setConfigCategory] = useState('product');
     const [activeTab, setActiveTab] = useState('certificates');
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<{ id: string, name: string, type: 'cert' | 'pack' | 'unit' } | null>(null);
-    
+    const [selectedItem, setSelectedItem] = useState<{ id: string, name: string, type: 'cert' | 'pack' | 'unit' | 'city' } | null>(null);
+
     // Update category and sub-tab if searchParams change
     useEffect(() => {
         if (tabParam === 'branding') setConfigCategory('branding');
@@ -35,13 +36,17 @@ const AdminSettings = () => {
     const [certificates, setCertificates] = useState<any[]>([]);
     const [packaging, setPackaging] = useState<any[]>([]);
     const [units, setUnits] = useState<any[]>([]);
+    const [cities, setCities] = useState<any[]>([]);
+    const [states, setStates] = useState<string[]>([]);
+    const [selectedStateFilter, setSelectedStateFilter] = useState('');
     const [loading, setLoading] = useState(true);
-    
+
     // Form states
 
     const [packForm, setPackForm] = useState({ name: '', type: 'Box', description: '' });
     const [unitForm, setUnitForm] = useState({ name: '', shortName: '' });
-    
+    const [cityForm, setCityForm] = useState({ name: '', state: '' });
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -70,13 +75,33 @@ const AdminSettings = () => {
         } catch (error) { toast.error("Failed to load units"); }
     };
 
+    const fetchCities = async (stateFilter?: string) => {
+        try {
+            const url = stateFilter ? `/api/admin/cities?state=${encodeURIComponent(stateFilter)}` : '/api/admin/cities';
+            const res = await fetch(url);
+            const json = await res.json();
+            if (json.success) setCities(json.data);
+        } catch (error) { toast.error("Failed to load cities"); }
+    };
+
+    const fetchStates = async () => {
+        try {
+            const res = await fetch('/api/admin/cities/states');
+            const json = await res.json();
+            if (json.success) setStates(json.data);
+        } catch (error) { console.error("Failed to load states", error); }
+    };
+
     useEffect(() => {
         setLoading(true);
         if (activeTab === 'certificates' && configCategory === 'product') fetchCertificates().finally(() => setLoading(false));
         else if (activeTab === 'packaging' && configCategory === 'product') fetchPackaging().finally(() => setLoading(false));
         else if (activeTab === 'units' && configCategory === 'product') fetchUnits().finally(() => setLoading(false));
+        else if (activeTab === 'cities' && configCategory === 'product') {
+            Promise.all([fetchCities(selectedStateFilter), fetchStates()]).finally(() => setLoading(false));
+        }
         else setLoading(false);
-    }, [activeTab, configCategory]);
+    }, [activeTab, configCategory, selectedStateFilter]);
 
 
 
@@ -124,7 +149,30 @@ const AdminSettings = () => {
         finally { setIsSubmitting(false); }
     };
 
-    const handleDeleteClick = (item: any, type: 'cert' | 'pack' | 'unit') => {
+    const handleCitySubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            const url = editingId ? `/api/admin/cities/${editingId}` : '/api/admin/cities';
+            const method = editingId ? 'PATCH' : 'POST';
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cityForm)
+            });
+            const json = await res.json();
+            if (json.success) {
+                toast.success(editingId ? "City updated" : "City added");
+                setCityForm({ name: '', state: '' });
+                setEditingId(null);
+                fetchCities(selectedStateFilter);
+                fetchStates();
+            }
+        } catch (error) { toast.error("An error occurred"); }
+        finally { setIsSubmitting(false); }
+    };
+
+    const handleDeleteClick = (item: any, type: 'cert' | 'pack' | 'unit' | 'city') => {
         setSelectedItem({
             id: item._id,
             name: item.name,
@@ -142,7 +190,8 @@ const AdminSettings = () => {
             if (type === 'cert') endpoint = `/api/admin/certificates/${id}`;
             else if (type === 'pack') endpoint = `/api/admin/packaging/${id}`;
             else if (type === 'unit') endpoint = `/api/admin/units/${id}`;
-            
+            else if (type === 'city') endpoint = `/api/admin/cities/${id}`;
+
             const res = await fetch(endpoint, { method: 'DELETE' });
             const json = await res.json();
             if (json.success) {
@@ -150,12 +199,16 @@ const AdminSettings = () => {
                 if (type === 'cert') fetchCertificates();
                 else if (type === 'pack') fetchPackaging();
                 else if (type === 'unit') fetchUnits();
+                else if (type === 'city') {
+                    fetchCities(selectedStateFilter);
+                    fetchStates();
+                }
             }
         } catch (error) { toast.error("Failed to delete"); }
         finally { setSelectedItem(null); }
     };
 
-    const startEdit = (item: any, type: 'cert' | 'pack' | 'unit') => {
+    const startEdit = (item: any, type: 'cert' | 'pack' | 'unit' | 'city') => {
         if (type === 'cert') {
             router.push(`/admin/settings/certificates/form?id=${item._id}`);
             return;
@@ -163,6 +216,7 @@ const AdminSettings = () => {
         setEditingId(item._id);
         if (type === 'pack') setPackForm({ name: item.name, type: item.type, description: item.description || '' });
         else if (type === 'unit') setUnitForm({ name: item.name, shortName: item.shortName });
+        else if (type === 'city') setCityForm({ name: item.name, state: item.state || '' });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -185,6 +239,9 @@ const AdminSettings = () => {
         } else if (activeTab === 'units') {
             pageTitle = "Measurement Units";
             pageDesc = "Define weight and size units (e.g., Gram, KG).";
+        } else if (activeTab === 'cities') {
+            pageTitle = "Cities";
+            pageDesc = "Manage cultivation or operational cities.";
         } else if (activeTab === 'tags') {
             pageTitle = "Product Tags";
             pageDesc = "Manage your product tags.";
@@ -197,7 +254,7 @@ const AdminSettings = () => {
     return (
         <div className="space-y-8 pb-20">
             {/* Header */}
-            <PageHeader 
+            <PageHeader
                 title={pageTitle}
                 description={pageDesc}
                 breadcrumbs={[
@@ -206,32 +263,40 @@ const AdminSettings = () => {
                     { label: pageTitle }
                 ]}
                 actionNode={configCategory === 'product' ? (
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant={activeTab === 'certificates' ? 'edit' : 'outline'} 
-                      icon="lucide:award"
-                      onClick={() => setActiveTab('certificates')}
-                      size="sm"
-                    >
-                      Certificates
-                    </Button>
-                    <Button 
-                      variant={activeTab === 'packaging' ? 'edit' : 'outline'} 
-                      icon="lucide:package"
-                      onClick={() => setActiveTab('packaging')}
-                      size="sm"
-                    >
-                      Packaging
-                    </Button>
-                    <Button 
-                      variant={activeTab === 'units' ? 'edit' : 'outline'} 
-                      icon="lucide:scale"
-                      onClick={() => setActiveTab('units')}
-                      size="sm"
-                    >
-                      Units
-                    </Button>
-                  </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant={activeTab === 'certificates' ? 'edit' : 'outline'}
+                            icon="lucide:award"
+                            onClick={() => setActiveTab('certificates')}
+                            size="sm"
+                        >
+                            Certificates
+                        </Button>
+                        <Button
+                            variant={activeTab === 'packaging' ? 'edit' : 'outline'}
+                            icon="lucide:package"
+                            onClick={() => setActiveTab('packaging')}
+                            size="sm"
+                        >
+                            Packaging
+                        </Button>
+                        <Button
+                            variant={activeTab === 'units' ? 'edit' : 'outline'}
+                            icon="lucide:scale"
+                            onClick={() => setActiveTab('units')}
+                            size="sm"
+                        >
+                            Units
+                        </Button>
+                        <Button
+                            variant={activeTab === 'cities' ? 'edit' : 'outline'}
+                            icon="lucide:map-pin"
+                            onClick={() => setActiveTab('cities')}
+                            size="sm"
+                        >
+                            Cities
+                        </Button>
+                    </div>
                 ) : null}
             />
 
@@ -246,9 +311,9 @@ const AdminSettings = () => {
                                         <p className="text-sm text-gray-500">Manage trust markers to display on product pages.</p>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <Button 
-                                            variant="edit" 
-                                            icon="lucide:plus" 
+                                        <Button
+                                            variant="edit"
+                                            icon="lucide:plus"
                                             onClick={() => router.push('/admin/settings/certificates/form')}
                                         >
                                             New Certificate
@@ -327,8 +392,8 @@ const AdminSettings = () => {
                                 </h3>
                                 <form onSubmit={handlePackSubmit} className="space-y-5">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Type</label>
-                                        <select value={packForm.type} onChange={(e) => setPackForm({ ...packForm, type: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm cursor-pointer appearance-none">
+                                        <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Type</label>
+                                        <select value={packForm.type} onChange={(e) => setPackForm({ ...packForm, type: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm cursor-pointer appearance-none">
                                             <option value="Box">Box</option>
                                             <option value="Bottle">Bottle</option>
                                             <option value="Pouch">Pouch</option>
@@ -337,17 +402,15 @@ const AdminSettings = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Display Name</label>
-                                        <input type="text" value={packForm.name} onChange={(e) => setPackForm({ ...packForm, name: e.target.value })} required className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="e.g. Glass Bottle (250ml)" />
+                                        <LabledInput value={packForm.name} onChange={(e) => setPackForm({ ...packForm, name: e.target.value })} required label='Name' placeholder="e.g. Glass Bottle (250ml)" />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Notes (Optional)</label>
-                                        <textarea value={packForm.description} onChange={(e) => setPackForm({ ...packForm, description: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm min-h-[100px]" placeholder="Brief info..." />
+                                        <LabledInput value={packForm.description} onChange={(e) => setPackForm({ ...packForm, description: e.target.value })} label='Notes (Optional)' placeholder="Brief info..." />
                                     </div>
                                     <Button type="submit" variant="edit" fullWidth isLoading={isSubmitting} className="py-3 rounded-2xl mt-2" icon="lucide:save">
                                         {editingId ? 'Update' : 'Add'}
                                     </Button>
-                                    {editingId && <button type="button" onClick={() => {setEditingId(null); setPackForm({name:'', type:'Box', description:''});}} className="w-full py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">Cancel Edit</button>}
+                                    {editingId && <button type="button" onClick={() => { setEditingId(null); setPackForm({ name: '', type: 'Box', description: '' }); }} className="w-full py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">Cancel Edit</button>}
                                 </form>
                             </Card>
                         </div>
@@ -361,9 +424,6 @@ const AdminSettings = () => {
                                         <h3 className="font-bold text-xl text-gray-900">Measurement Units</h3>
                                         <p className="text-sm text-gray-500">Weight and size units for product variants.</p>
                                     </div>
-                                    {/* <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-blue-600 border border-gray-50">
-                                        <Icon icon="lucide:scale" className="w-6 h-6" />
-                                    </div> */}
                                 </div>
                                 <div className="p-4">
                                     <DataTable
@@ -406,7 +466,69 @@ const AdminSettings = () => {
                                     <Button type="submit" variant="edit" fullWidth isLoading={isSubmitting} className="py-3 rounded-2xl mt-2" icon="lucide:save">
                                         {editingId ? 'Update' : 'Add'}
                                     </Button>
-                                    {editingId && <button type="button" onClick={() => {setEditingId(null); setUnitForm({name:'', shortName:''});}} className="w-full py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">Cancel Edit</button>}
+                                    {editingId && <button type="button" onClick={() => { setEditingId(null); setUnitForm({ name: '', shortName: '' }); }} className="w-full py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">Cancel Edit</button>}
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+
+                    {activeTab === 'cities' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <Card className="lg:col-span-2 overflow-hidden !p-0">
+                                <div className="p-6 bg-gray-50/50 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                                    <div>
+                                        <h3 className="font-bold text-xl text-gray-900">Cities</h3>
+                                        <p className="text-sm text-gray-500">Manage cultivation or operational cities.</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">State:</label>
+                                        <select
+                                            value={selectedStateFilter}
+                                            onChange={(e) => setSelectedStateFilter(e.target.value)}
+                                            className="px-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-xs cursor-pointer appearance-none min-w-[150px]"
+                                        >
+                                            <option value="">All States</option>
+                                            {states.map((st) => (
+                                                <option key={st} value={st}>{st}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="p-4">
+                                    <DataTable
+                                        data={cities}
+                                        loading={loading}
+                                        rowKey={(row: any) => row._id}
+                                        columns={[
+                                            { key: 'name', label: 'City Name', type: 'text', sortable: true },
+                                            { key: 'state', label: 'State / Region', type: 'text', sortable: true }
+                                        ]}
+                                        onEdit={(row: any) => startEdit(row, 'city')}
+                                        onDelete={(row: any) => handleDeleteClick(row, 'city')}
+                                        hiddenActions={['view']}
+                                        searchPlaceholder="Search cities..."
+                                    />
+                                </div>
+                            </Card>
+                            {/* Form */}
+                            <Card className="h-fit sticky top-24">
+                                <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
+                                    <Icon icon={editingId ? "lucide:edit-3" : "lucide:plus-circle"} className={editingId ? "text-blue-500" : "text-green-500"} />
+                                    {editingId ? 'Edit City' : 'New City'}
+                                </h3>
+                                <form onSubmit={handleCitySubmit} className="space-y-5">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">City Name</label>
+                                        <input type="text" value={cityForm.name} onChange={(e) => setCityForm({ ...cityForm, name: e.target.value })} required className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="e.g. Indore" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">State / Region (Optional)</label>
+                                        <input type="text" value={cityForm.state} onChange={(e) => setCityForm({ ...cityForm, state: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="e.g. Madhya Pradesh" />
+                                    </div>
+                                    <Button type="submit" variant="edit" fullWidth isLoading={isSubmitting} className="py-3 rounded-2xl mt-2" icon="lucide:save">
+                                        {editingId ? 'Update' : 'Add'}
+                                    </Button>
+                                    {editingId && <button type="button" onClick={() => { setEditingId(null); setCityForm({ name: '', state: '' }); }} className="w-full py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">Cancel Edit</button>}
                                 </form>
                             </Card>
                         </div>
@@ -437,7 +559,7 @@ const AdminSettings = () => {
                     setSelectedItem(null);
                 }}
                 onConfirm={handleDeleteConfirm}
-                title={`Delete ${selectedItem?.type === 'cert' ? 'Certificate' : selectedItem?.type === 'pack' ? 'Packaging Type' : 'Measurement Unit'}`}
+                title={`Delete ${selectedItem?.type === 'cert' ? 'Certificate' : selectedItem?.type === 'pack' ? 'Packaging Type' : selectedItem?.type === 'unit' ? 'Measurement Unit' : 'City'}`}
                 message={`Are you sure you want to delete "${selectedItem?.name}"? This action cannot be undone.`}
                 confirmButtonText="Delete"
             />

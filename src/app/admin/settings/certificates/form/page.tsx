@@ -6,21 +6,22 @@ import toast from 'react-hot-toast';
 import { PageHeader } from '@/components/shared/PageHeader';
 import Card from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
+import LabledInput from '@/components/shared/LabledInput';
 
 const CertificateFormPage = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const id = searchParams.get('id');
 
-    const [certForm, setCertForm] = useState({ 
-        name: '', 
-        url: '', 
-        issueDate: '', 
-        validTill: '', 
-        issueFor: '', 
-        certificateNumber: '', 
-        issuedBy: '', 
-        description: '' 
+    const [certForm, setCertForm] = useState({
+        name: '',
+        url: '',
+        issueDate: '',
+        validTill: '',
+        issueFor: '',
+        certificateNumber: '',
+        issuedBy: '',
+        description: ''
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(!!id);
@@ -72,10 +73,10 @@ const CertificateFormPage = () => {
             } else {
                 toast.error(json.message || "Failed to save certificate");
             }
-        } catch (error) { 
-            toast.error("An error occurred"); 
-        } finally { 
-            setIsSubmitting(false); 
+        } catch (error) {
+            toast.error("An error occurred");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -85,7 +86,7 @@ const CertificateFormPage = () => {
 
     return (
         <div className="p-8 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-            <PageHeader 
+            <PageHeader
                 title={id ? "Edit Certificate" : "New Certificate"}
                 breadcrumbs={[
                     { label: 'Admin', href: '/admin' },
@@ -98,47 +99,23 @@ const CertificateFormPage = () => {
             <Card className="!p-8 border-gray-100 shadow-sm">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Display Name</label>
-                            <input type="text" value={certForm.name} onChange={(e) => setCertForm({ ...certForm, name: e.target.value })} required className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="e.g. 100% Organic" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Icon/Image URL</label>
-                            <input type="text" value={certForm.url} onChange={(e) => setCertForm({ ...certForm, url: e.target.value })} required className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="https://..." />
-                        </div>
+                        <LabledInput label='Display Name' value={certForm.name} onChange={(e) => setCertForm({ ...certForm, name: e.target.value })} required placeholder="e.g. 100% Organic" />
+                        <LabledInput label='Icon/Image URL' value={certForm.url} onChange={(e) => setCertForm({ ...certForm, url: e.target.value })} required placeholder="https://..." />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Issue Date</label>
-                            <input type="date" value={certForm.issueDate} onChange={(e) => setCertForm({ ...certForm, issueDate: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Valid Till</label>
-                            <input type="date" value={certForm.validTill} onChange={(e) => setCertForm({ ...certForm, validTill: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" />
-                        </div>
+                        <LabledInput label='Issue Date' type="date" value={certForm.issueDate} onChange={(e) => setCertForm({ ...certForm, issueDate: e.target.value })} />
+                        <LabledInput label='Valid Till' type="date" value={certForm.validTill} onChange={(e) => setCertForm({ ...certForm, validTill: e.target.value })} />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Issue For</label>
-                            <input type="text" value={certForm.issueFor} onChange={(e) => setCertForm({ ...certForm, issueFor: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="e.g. Raman Green Product" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Certificate Number</label>
-                            <input type="text" value={certForm.certificateNumber} onChange={(e) => setCertForm({ ...certForm, certificateNumber: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="e.g. CERT-12345" />
-                        </div>
+                        <LabledInput label='Issue For' value={certForm.issueFor} onChange={(e) => setCertForm({ ...certForm, issueFor: e.target.value })} placeholder="e.g. Raman Green Product" />
+                        <LabledInput label='Certificate Number' value={certForm.certificateNumber} onChange={(e) => setCertForm({ ...certForm, certificateNumber: e.target.value })} placeholder="e.g. CERT-12345" />
                     </div>
 
-                    <div className="space-y-1.5">
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Issued By</label>
-                        <input type="text" value={certForm.issuedBy} onChange={(e) => setCertForm({ ...certForm, issuedBy: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="e.g. FDA" />
-                    </div>
+                    <LabledInput label='Issued By' value={certForm.issuedBy} onChange={(e) => setCertForm({ ...certForm, issuedBy: e.target.value })} placeholder="e.g. FDA" />
 
-                    <div className="space-y-1.5">
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Description</label>
-                        <textarea value={certForm.description} onChange={(e) => setCertForm({ ...certForm, description: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm min-h-[120px]" placeholder="Certificate details..."></textarea>
-                    </div>
+                    <LabledInput label='Description' type="textarea" value={certForm.description} onChange={(e) => setCertForm({ ...certForm, description: e.target.value })} placeholder="Certificate details..." />
 
                     <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
                         <Button type="button" variant="outline" onClick={() => router.push('/admin/settings?tab=product&sub=certificates')}>

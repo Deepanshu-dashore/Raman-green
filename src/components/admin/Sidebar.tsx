@@ -32,20 +32,20 @@ interface SidebarProps {
 const NavItem = ({ item }: { item: NavItemDef }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
+
   const checkActive = (href: string) => {
     const [path, query] = href.split('?');
     if (pathname !== path) return false;
-    
+
     if (query) {
       const params = new URLSearchParams(query);
       for (const [key, value] of params.entries()) {
         if (searchParams.get(key) !== value) return false;
       }
     } else if (searchParams.toString()) {
-       if (path.includes('settings') && searchParams.toString()) return false;
+      if (path.includes('settings') && searchParams.toString()) return false;
     }
-    
+
     return true;
   };
 
@@ -57,11 +57,10 @@ const NavItem = ({ item }: { item: NavItemDef }) => {
       <div>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-200 group ${
-            isActive
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-200 group ${isActive
               ? 'bg-green-50 text-green-700'
               : 'text-[#637381] hover:bg-gray-50 hover:text-gray-900'
-          }`}
+            }`}
         >
           <div className="flex items-center gap-3">
             <Icon
@@ -85,7 +84,7 @@ const NavItem = ({ item }: { item: NavItemDef }) => {
 
         <AnimatePresence>
           {isOpen && (
-            <motion.div 
+            <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
@@ -101,8 +100,8 @@ const NavItem = ({ item }: { item: NavItemDef }) => {
                 {item.subItems.map((sub) => {
                   const isSubActive = checkActive(sub.href);
                   return (
-                    <motion.div 
-                      key={sub.name} 
+                    <motion.div
+                      key={sub.name}
                       initial={{ x: -10, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
                       className="relative"
@@ -111,11 +110,10 @@ const NavItem = ({ item }: { item: NavItemDef }) => {
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-px bg-gray-200" />
                       <Link
                         href={sub.href}
-                        className={`ml-5 flex items-center px-2.5 py-1.5 rounded-lg text-[12px] transition-all duration-150 ${
-                          isSubActive
+                        className={`ml-5 flex items-center px-2.5 py-1.5 rounded-lg text-[12px] transition-all duration-150 ${isSubActive
                             ? 'bg-gray-100 text-gray-900 font-bold'
                             : 'text-[#919eab] hover:text-gray-700 hover:bg-gray-50 font-medium'
-                        }`}
+                          }`}
                       >
                         {sub.name}
                       </Link>
@@ -133,11 +131,10 @@ const NavItem = ({ item }: { item: NavItemDef }) => {
   return (
     <Link
       href={item.href}
-      className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group ${
-        isActive
+      className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group ${isActive
           ? 'bg-green-50 text-green-700'
           : 'text-[#637381] hover:bg-gray-50 hover:text-gray-900'
-      }`}
+        }`}
     >
       <Icon
         icon={item.icon}
@@ -155,19 +152,19 @@ const SidebarGroup = ({ group }: { group: NavGroup }) => {
 
   return (
     <div key={group.label}>
-      <button 
+      <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className="w-full flex items-center justify-between px-3 mb-3 group/header cursor-pointer"
       >
         <p className="text-[11px] font-bold  group-hover/header:text-gray-900 text-gray-400 uppercase tracking-[0.1em]">
           {group.label}
         </p>
-        <Icon 
-          icon="lucide:chevron-down" 
+        <Icon
+          icon="lucide:chevron-down"
           className={`w-3.5 h-3.5 text-gray-400 transition-all duration-200 opacity-0 group-hover/header:opacity-100 ${isCollapsed ? '-rotate-90' : ''}`}
         />
       </button>
-      
+
       <AnimatePresence initial={false}>
         {!isCollapsed && (
           <motion.div
@@ -231,6 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ adminUser, handleLogout }) => 
             { name: 'Certificates', href: '/admin/settings?tab=product&sub=certificates' },
             { name: 'Packaging', href: '/admin/settings?tab=product&sub=packaging' },
             { name: 'Units', href: '/admin/settings?tab=product&sub=units' },
+            { name: 'Cities', href: '/admin/settings?tab=product&sub=cities' },
             { name: 'Branding', href: '/admin/settings?tab=branding' },
           ]
         }
@@ -242,11 +240,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ adminUser, handleLogout }) => 
     <aside className="w-64 bg-white flex flex-col fixed h-screen z-20 border-r border-gray-100 font-public">
       {/* Logo */}
       <div className="px-6 py-2 flex items-center justify-center">
-        <Image 
-          src="/logo.png" 
-          alt="Raman Green" 
-          width={180} 
-          height={90} 
+        <Image
+          src="/logo.png"
+          alt="Raman Green"
+          width={180}
+          height={90}
           className="h-20 w-auto object-contain"
           priority
         />
@@ -265,15 +263,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ adminUser, handleLogout }) => 
 
       {/* User + Logout */}
       <div className="p-4">
-        <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gray-50 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-white text-xs font-black shrink-0">
-            {(adminUser?.name || 'A')[0].toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900 truncate leading-tight">{adminUser?.name || 'Admin'}</p>
-            <p className="text-[10px] text-green-600 font-semibold">Verified Session</p>
-          </div>
-        </div>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-[#637381] hover:bg-red-50 hover:text-red-600 transition-all font-semibold text-sm group"

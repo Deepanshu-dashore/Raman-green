@@ -6,6 +6,11 @@ export interface IProduct extends Document {
     slug: string;
     description?: string;
     category: ICategory['_id'];
+    cultivation: string;
+    cultivation_city: {
+        type: Schema.Types.ObjectId,
+        ref: 'City'
+    }[];
     variants: {
         type: Schema.Types.ObjectId,
         ref: 'ProductVariant'
@@ -42,6 +47,18 @@ const productSchema = new Schema<IProduct>({
         ref: 'Category',
         required: true
     },
+
+    cultivation: {
+        type: String,
+        required: true
+    },
+
+    cultivation_city: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: 'City'
+        }
+    ],
 
     variants: [
         {
