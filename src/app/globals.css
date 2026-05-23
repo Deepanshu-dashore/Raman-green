@@ -5,6 +5,14 @@
   --foreground: #171717;
   --shadows-0: none;
   --shadows-1: 0px 2px 1px -1px rgba(145 158 171 / 20%), 0px 1px 1px 0px rgba(145 158 171 / 14%), 0px 1px 3px 0px rgba(145 158 171 / 12%);
+
+  /* Modern Botanical Design Tokens */
+  --forest-green: #1B3022;
+  --moss-green: #8FA382;
+  --warm-cream: #F9F7F2;
+  --charcoal: #2C2C2C;
+  --sage-light: #d0e9d4;
+  --cream-dark: #e4e2e1;
 }
 
 @theme inline {
@@ -14,6 +22,13 @@
   --font-mono: var(--font-geist-mono);
   --font-public: var(--font-public-sans);
   --font-lato: var(--font-lato);
+  --font-playfair: var(--font-playfair);
+  --font-inter: var(--font-inter);
+  --color-forest: #1B3022;
+  --color-moss: #8FA382;
+  --color-cream: #F9F7F2;
+  --color-charcoal: #2C2C2C;
+  --color-sage: #d0e9d4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -65,4 +80,44 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   @apply ring-2 ring-green-500/20 border-green-500 outline-none;
+}
+
+/* ===================== */
+/*  STOREFRONT STYLES    */
+/* ===================== */
+
+.storefront {
+  font-family: var(--font-inter), sans-serif;
+  background-color: var(--warm-cream);
+  color: var(--charcoal);
+}
+
+.storefront h1,
+.storefront h2,
+.storefront h3,
+.storefront h4 {
+  font-family: var(--font-playfair), serif;
+}
+
+/* Ambient shadow per design spec */
+.ambient-shadow {
+  box-shadow: 0 8px 32px rgba(27, 48, 34, 0.04);
+}
+
+/* Underline animation for nav links */
+.nav-underline {
+  position: relative;
+}
+.nav-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background: currentColor;
+  transition: width 0.3s ease;
+}
+.nav-underline:hover::after {
+  width: 100%;
 }

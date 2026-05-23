@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Public_Sans, Lato } from "next/font/google";
+import { Geist, Geist_Mono, Public_Sans, Lato, Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,9 +24,21 @@ const lato = Lato({
   weight: ["400", "700"],
 });
 
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "Raman Green | Premium Organic Products",
-  description: "Discover and manage premium organic and natural products from Raman Green.",
+  description: "Cultivating Heritage, Defining Wellness. Discover premium organic seeds, dry foods, and sustainably sourced crops from Raman Green.",
 };
 
 import { Toaster } from "react-hot-toast";
@@ -39,7 +51,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${publicSans.variable} ${lato.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${publicSans.variable} ${lato.variable} ${playfair.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}
