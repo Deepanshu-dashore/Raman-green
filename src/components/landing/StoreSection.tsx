@@ -6,7 +6,7 @@ import { Icon } from "@iconify/react";
 
 export default function StoreSection() {
   return (
-    <section className="py-20 md:py-28">
+    <section className="pt-24 md:pt-36 pb-0">
       <div className="max-w-[1280px] mx-auto px-5 md:px-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
           {/* Image */}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Public_Sans, Lato, Playfair_Display, Inter } from "next/font/google";
+import { Geist, Geist_Mono, Public_Sans, Lato, Source_Serif_4, Inter } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,10 +24,10 @@ const lato = Lato({
   weight: ["400", "700"],
 });
 
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
+const sourceSerif = Source_Serif_4({
+  variable: "--font-playfair", // Re-mapped standard serif variable to seamlessly update all headings in globals.css/Tailwind
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
 const inter = Inter({
@@ -51,7 +51,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${publicSans.variable} ${lato.variable} ${playfair.variable} ${inter.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${publicSans.variable} ${lato.variable} ${sourceSerif.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}

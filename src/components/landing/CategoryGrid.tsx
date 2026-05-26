@@ -1,117 +1,219 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
+import { motion } from "framer-motion";
 
 const categories = [
   {
     title: "Heritage Seeds",
-    subtitle: "Nutrient-dense foundations for your daily rituals.",
-    tag: "12 products",
-    image: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&q=80",
+    wellnessTag: "VITALITY",
+    image: "/category_seeds.png",
     href: "/shop?category=seeds",
-    span: "large",
+  },
+  {
+    title: "Organic Crops",
+    wellnessTag: "PERFORMANCE",
+    image: "/category_crops.png",
+    href: "/shop?category=crops",
   },
   {
     title: "Artisanal Dry Foods",
-    subtitle: "",
-    image: "https://images.unsplash.com/photo-1596591606975-97ee5cef3a1e?w=800&q=80",
+    wellnessTag: "HERITAGE",
+    image: "/category_dry_foods.png",
     href: "/shop?category=dry-foods",
-    span: "small",
   },
   {
-    title: "Sustainably Sourced Crops",
-    subtitle: "",
-    image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&q=80",
-    href: "/shop?category=crops",
-    span: "small",
+    title: "Instant Food Grains",
+    wellnessTag: "PURITY",
+    image: "/category_instant.png",
+    href: "/shop?category=instant",
   },
 ];
 
+// Duplicate the array 3 times for a seamless infinite scroll loop
+const extendedCategories = [...categories, ...categories, ...categories];
+
 export default function CategoryGrid() {
+  const [currentIndex, setCurrentIndex] = useState(categories.length); // Start at the middle block (index 4)
+  const [cardWidth, setCardWidth] = useState(320);
+  const [isTransitioning, setIsTransitioning] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Measure card sizes and gaps dynamically on load/resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640) {
+        setCardWidth(230); // Very compact mobile width for peeking
+      } else if (window.innerWidth < 1024) {
+        setCardWidth(260);
+      } else {
+        // Fits all 4 categories completely side-by-side inside the 1152px inner container content width!
+        // 4 * 268px + 3 * 20px (gap-5) = 1132px, which fits beautifully.
+        setCardWidth(268);
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Auto-sliding logic with pause-on-hover
+  useEffect(() => {
+    if (isHovered) return;
+    
+    const interval = setInterval(() => {
+      handleNext();
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [isHovered, currentIndex]);
+
+  // Snapping logic for seamless infinite scroll loop
+  useEffect(() => {
+    const totalItems = categories.length;
+    
+    // Snapping forward: if we scroll into the third block, snap instantly to the second (middle) block
+    if (currentIndex >= totalItems * 2) {
+      const timeout = setTimeout(() => {
+        setIsTransitioning(false);
+        setCurrentIndex(currentIndex - totalItems);
+      }, 500); // matches Framer Motion transition duration
+      return () => clearTimeout(timeout);
+    }
+    
+    // Snapping backward: if we scroll below the middle block into the first block, snap instantly to the second block
+    if (currentIndex < totalItems) {
+      const timeout = setTimeout(() => {
+        setIsTransitioning(false);
+        setCurrentIndex(currentIndex + totalItems);
+      }, 500);
+      return () => clearTimeout(timeout);
+    }
+    
+    setIsTransitioning(true);
+  }, [currentIndex]);
+
+  const handleNext = () => {
+    if (!isTransitioning) return;
+    setCurrentIndex((prev) => prev + 1);
+  };
+
+  const handlePrev = () => {
+    if (!isTransitioning) return;
+    setCurrentIndex((prev) => prev - 1);
+  };
+
   return (
-    <section className="py-20 md:py-28">
+    <section className="py-20 md:py-28 storefront bg-cream text-charcoal overflow-hidden">
       <div className="max-w-[1280px] mx-auto px-5 md:px-16">
-        {/* Header */}
-        <div className="flex items-end justify-between mb-10">
-          <div>
-            <h2 className="font-playfair text-3xl md:text-4xl font-semibold text-charcoal tracking-tight">
-              Shop by Category
-            </h2>
-            <p className="text-sm font-inter text-charcoal/60 mt-2 max-w-md leading-relaxed">
-              Explore our meticulously sourced categories, each offering unparalleled purity and nutritional integrity.
-            </p>
-          </div>
-          <Link
-            href="/shop"
-            className="hidden md:inline-flex items-center gap-1.5 text-sm font-inter font-semibold text-charcoal/70 hover:text-forest transition-colors"
-          >
-            View All Categories
-            <Icon icon="lucide:arrow-right" className="w-4 h-4" />
-          </Link>
+        
+        {/* Header Block exactly styled like design image */}
+        <div className="text-center mb-12 md:mb-16">
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#8FA382] block mb-3">
+            Shop by Category
+          </span>
+          <h2 className="font-playfair text-3.5xl md:text-5xl font-semibold text-forest tracking-tight leading-tight">
+            Browse our Collections
+          </h2>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Large card */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+        {/* Carousel Slider Container */}
+        <div 
+          className="relative group/carousel"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          {/* Previous Button (Fades in on Hover) */}
+          <button
+            onClick={handlePrev}
+            className="absolute -left-2 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-white/95 border border-charcoal/10 flex items-center justify-center text-charcoal hover:bg-forest hover:text-white shadow-md transition-all duration-300 pointer-events-none opacity-0 group-hover/carousel:opacity-100 group-hover/carousel:pointer-events-auto group-hover/carousel:translate-x-4 disabled:opacity-0 disabled:pointer-events-none cursor-pointer"
+            aria-label="Previous categories"
           >
-            <Link href={categories[0].href} className="group block relative h-[400px] md:h-[480px] rounded-lg overflow-hidden">
-              <img
-                src={categories[0].image}
-                alt={categories[0].title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-6 left-6 right-6">
-                {categories[0].tag && (
-                  <span className="inline-block px-3 py-1 mb-3 text-[10px] font-inter font-semibold uppercase tracking-wider bg-moss text-white rounded">
-                    {categories[0].tag}
-                  </span>
-                )}
-                <h3 className="font-playfair text-2xl md:text-3xl font-semibold text-white">{categories[0].title}</h3>
-                <p className="text-sm font-inter text-white/80 mt-1">{categories[0].subtitle}</p>
-              </div>
-            </Link>
-          </motion.div>
+            <Icon icon="solar:alt-arrow-left-linear" className="w-5 h-5" />
+          </button>
 
-          {/* Right column — 2 stacked */}
-          <div className="flex flex-col gap-4">
-            {categories.slice(1).map((cat, i) => (
-              <motion.div
-                key={cat.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.15 * (i + 1) }}
-              >
-                <Link href={cat.href} className="group block relative h-[230px] rounded-lg overflow-hidden">
-                  <img
-                    src={cat.image}
-                    alt={cat.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                  <div className="absolute bottom-5 left-5 right-5">
-                    <h3 className="font-playfair text-xl font-semibold text-white">{cat.title}</h3>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
+          {/* Next Button (Fades in on Hover) */}
+          <button
+            onClick={handleNext}
+            className="absolute -right-2 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-white/95 border border-charcoal/10 flex items-center justify-center text-charcoal hover:bg-forest hover:text-white shadow-md transition-all duration-300 pointer-events-none opacity-0 group-hover/carousel:opacity-100 group-hover/carousel:pointer-events-auto group-hover/carousel:-translate-x-4 disabled:opacity-0 disabled:pointer-events-none cursor-pointer"
+            aria-label="Next categories"
+          >
+            <Icon icon="solar:alt-arrow-right-linear" className="w-5 h-5" />
+          </button>
+
+          {/* Viewport for smooth sliding */}
+          <div ref={containerRef} className="overflow-hidden px-2 -mx-2 pb-4">
+            <motion.div
+              animate={{ x: -currentIndex * (cardWidth + 20) }}
+              transition={
+                isTransitioning 
+                  ? { type: "spring", stiffness: 180, damping: 24 } 
+                  : { duration: 0 } // Snap instantly without animation
+              }
+              className="flex gap-5"
+            >
+              {extendedCategories.map((cat, i) => (
+                <div
+                  key={`${cat.title}-${i}`}
+                  style={{ width: `${cardWidth}px` }}
+                  className="shrink-0 py-2 h-[290px] md:h-[340px]" // Compact elegant height allowing 4 to fit perfectly side-by-side
+                >
+                  <Link 
+                    href={cat.href} 
+                    className="group block relative h-full rounded-2xl overflow-hidden shadow-sm border border-gray-100/50"
+                  >
+                    {/* Background Category Image */}
+                    <img
+                      src={cat.image}
+                      alt={cat.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+                    />
+
+                    {/* Dark gradient overlay for text legibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 transition-opacity duration-300 group-hover:from-black/90 pointer-events-none" />
+
+                    {/* Content text and green tags bottom-left overlay */}
+                    <div className="absolute bottom-6 left-6 right-6 z-20 pointer-events-none">
+                      <span className="inline-block px-3 py-1.5 mb-3 text-[9px] font-black uppercase tracking-[0.18em] bg-[#C9EC6F] text-forest rounded font-inter">
+                        {cat.wellnessTag}
+                      </span>
+                      <h3 className="font-inter font-bold text-white text-base md:text-lg tracking-wider uppercase">
+                        {cat.title}
+                      </h3>
+                    </div>
+                  </Link>
+                </div>
+              ))}
+            </motion.div>
           </div>
-        </div>
 
-        {/* Mobile link */}
-        <div className="md:hidden mt-6 text-center">
-          <Link href="/shop" className="inline-flex items-center gap-1.5 text-sm font-inter font-semibold text-charcoal/70 hover:text-forest transition-colors">
-            View All Categories
-            <Icon icon="lucide:arrow-right" className="w-4 h-4" />
-          </Link>
+          {/* Navigation Dots Indicator for the main 4 categories */}
+          <div className="flex justify-center items-center gap-2 mt-8">
+            {categories.map((_, i) => {
+              const activeDotIndex = (currentIndex - categories.length) % categories.length;
+              const isDotActive = activeDotIndex === i || (activeDotIndex < 0 && (activeDotIndex + categories.length) === i);
+              return (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setIsTransitioning(true);
+                    setCurrentIndex(i + categories.length);
+                  }}
+                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    isDotActive
+                      ? "w-6 bg-forest"
+                      : "w-1.5 bg-charcoal/20 hover:bg-charcoal/40"
+                  }`}
+                  aria-label={`Go to slide ${i + 1}`}
+                />
+              );
+            })}
+          </div>
+
         </div>
       </div>
     </section>
