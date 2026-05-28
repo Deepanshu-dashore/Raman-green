@@ -217,7 +217,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ adminUser, handleLogout }) => 
         {
           name: 'Inventory',
           href: '/admin/inventory',
-          icon: 'solar:clipboard-list-bold-duotone'
+          icon: 'solar:clipboard-list-bold-duotone',
+          subItems: [
+            { name: 'List', href: '/admin/inventory' },
+            { name: 'Add Stock', href: '/admin/inventory/add' },
+          ]
         },
         {
           name: 'Settings',

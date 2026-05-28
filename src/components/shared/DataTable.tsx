@@ -12,6 +12,7 @@ import {
   PencilIcon,
   TrashIcon
 } from "@heroicons/react/24/outline";
+import { Icon } from "@iconify/react";
 import { StatusBadge } from "./StatusBadge";
 
 export type ColumnType = 'text' | 'user' | 'date' | 'status' | 'custom';
@@ -44,7 +45,7 @@ export interface ColumnDef<T> {
 
 export interface ActionDef<T> {
   label: string;
-  icon?: React.ElementType;
+  icon?: React.ElementType | string;
   isDanger?: boolean;
   disabled?: (row: T) => boolean;
   onClick: (row: T) => void;
@@ -72,6 +73,7 @@ export interface DataTableProps<T> {
   onTabChange?: (tabValue: string) => void;
   showCheckBox?: boolean;
   showPagination?: boolean;
+  showSearch?: boolean;
 
   // Actions
   onView?: (row: T) => void;
@@ -101,10 +103,10 @@ function DropdownMenu<T>({
   useEffect(() => {
     if (triggerRef.current && menuRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      // display slightly below and left of the trigger
+      // Display slightly below and align right edge of the menu with the right edge of the trigger button
       setStyle({
-        top: rect.bottom + window.scrollY,
-        left: rect.left - 150 + window.scrollX, // 150 is approx menu width
+        top: rect.bottom + window.scrollY + 6,
+        left: rect.right - 176 + window.scrollX, // 176 is w-44 width
         opacity: 1
       });
     }
@@ -130,30 +132,58 @@ function DropdownMenu<T>({
     <div
       ref={menuRef}
       style={style}
-      className="fixed z-50 w-40 bg-white rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.08)] border border-gray-100 py-2 animate-in fade-in zoom-in-95 duration-200"
+      className="fixed z-50 w-44 bg-white/80 backdrop-blur-md rounded-2xl border border-gray-200/50 shadow-[0_12px_24px_rgba(0,0,0,0.06)] p-1.5 animate-in fade-in zoom-in-95 duration-200 flex flex-col gap-0.5"
     >
       {actions.map((action, idx) => {
         const isDisabled = action.disabled?.(row);
+        const showDivider = action.isDanger && idx > 0;
+
         return (
-          <button
-            key={idx}
-            disabled={isDisabled}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isDisabled) return;
-              action.onClick(row);
-              onClose();
-            }}
-            className={`w-full text-left px-4 py-2.5 text-sm font-semibold tracking-wide flex items-center gap-3 transition-colors ${isDisabled
-              ? 'opacity-40 cursor-not-allowed text-gray-400'
-              : action.isDanger
-                ? 'text-red-500 hover:bg-red-50 cursor-pointer'
-                : 'text-gray-700 hover:bg-gray-50 cursor-pointer'
-              }`}
-          >
-            {action.icon && <action.icon className="w-4 h-4" strokeWidth={2.5} />}
-            {action.label}
-          </button>
+          <React.Fragment key={idx}>
+            {showDivider && <div className="h-px bg-gray-200/50 my-1 mx-1" />}
+            <button
+              disabled={isDisabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isDisabled) return;
+                action.onClick(row);
+                onClose();
+              }}
+              className={`w-full text-left px-3 py-2 text-[13px] font-semibold tracking-wide flex items-center gap-2.5 rounded-xl transition-all duration-150 ${isDisabled
+                ? 'opacity-30 cursor-not-allowed text-gray-400'
+                : action.isDanger
+                  ? 'hover:bg-red-50/80 active:bg-red-100/80 text-red-500 cursor-pointer'
+                  : 'hover:bg-slate-100/80 active:bg-slate-200/80 text-gray-700 hover:text-gray-900 cursor-pointer'
+                }`}
+            >
+              {action.icon && (
+                typeof action.icon === 'string' ? (
+                  <Icon 
+                    icon={action.icon}
+                    className={`w-[17.5px] h-[17.5px] shrink-0 transition-colors ${
+                      isDisabled 
+                        ? 'text-gray-300' 
+                        : action.isDanger 
+                          ? 'text-red-500' 
+                          : 'text-gray-400 group-hover:text-gray-700'
+                    }`}
+                  />
+                ) : (
+                  <action.icon 
+                    className={`w-[17px] h-[17px] shrink-0 transition-colors ${
+                      isDisabled 
+                        ? 'text-gray-300' 
+                        : action.isDanger 
+                          ? 'text-red-500' 
+                          : 'text-gray-400 group-hover:text-gray-700'
+                    }`} 
+                    strokeWidth={2} 
+                  />
+                )
+              )}
+              <span>{action.label}</span>
+            </button>
+          </React.Fragment>
         );
       })}
     </div>
@@ -177,6 +207,7 @@ export function DataTable<T>({
   rowKey,
   showCheckBox = false,
   showPagination = true,
+  showSearch = true,
 }: DataTableProps<T>) {
 
   const [searchInput, setSearchInput] = useState("");
@@ -193,13 +224,13 @@ export function DataTable<T>({
   // Build final actions list
   const finalActions: ActionDef<T>[] = [];
   if (!hiddenActions.includes('view')) {
-    finalActions.push({ label: 'View', icon: EyeIcon, onClick: (row) => onView?.(row) });
+    finalActions.push({ label: 'View', icon: "material-symbols-light:view-in-ar-rounded", onClick: (row) => onView?.(row) });
   }
   if (!hiddenActions.includes('edit')) {
-    finalActions.push({ label: 'Edit', icon: PencilIcon, onClick: (row) => onEdit?.(row) });
+    finalActions.push({ label: 'Edit', icon: "fa7-solid:edit", onClick: (row) => onEdit?.(row) });
   }
   if (!hiddenActions.includes('delete')) {
-    finalActions.push({ label: 'Delete', icon: TrashIcon, isDanger: true, onClick: (row) => onDelete?.(row) });
+    finalActions.push({ label: 'Delete', icon: "mdi:shop-delete-outline", isDanger: true, onClick: (row) => onDelete?.(row) });
   }
   if (additionalActions && additionalActions.length > 0) {
     finalActions.push(...additionalActions);
@@ -274,34 +305,36 @@ export function DataTable<T>({
       )}
 
       {/* 2. Top Toolbar (Search, Filter, actions) */}
-      <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <form
-          className="relative w-full max-w-md flex items-center gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setQuery(searchInput);
-            onSearch?.(searchInput);
-          }}
-        >
-          <div className="relative w-full">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder={searchPlaceholder}
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 outline-none border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-[13px] text-gray-800 font-medium font-sans"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="px-5 py-2.5 cursor-pointer bg-gray-900 text-white text-[13px] font-bold rounded-xl hover:bg-gray-800 transition-colors shadow-sm whitespace-nowrap"
+      {showSearch && (
+        <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <form
+            className="relative w-full max-w-md flex items-center gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setQuery(searchInput);
+              onSearch?.(searchInput);
+            }}
           >
-            Search
-          </button>
-        </form>
-        {/* Placeholder for Add/Export buttons if needed from parent */}
-      </div>
+            <div className="relative w-full">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 outline-none border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-[13px] text-gray-800 font-medium font-sans"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="px-5 py-2.5 cursor-pointer bg-gray-900 text-white text-[13px] font-bold rounded-xl hover:bg-gray-800 transition-colors shadow-sm whitespace-nowrap"
+            >
+              Search
+            </button>
+          </form>
+          {/* Placeholder for Add/Export buttons if needed from parent */}
+        </div>
+      )}
 
       {/* 3. Main Data Table */}
       <div className="w-full overflow-x-auto relative min-h-[300px]">

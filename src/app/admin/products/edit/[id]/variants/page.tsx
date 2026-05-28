@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Icon } from '@iconify/react';
 import { useDropzone } from 'react-dropzone';
@@ -11,6 +11,7 @@ import { Button } from '@/components/shared/Button';
 import { MultiSelectDropdown } from '@/components/shared/MultiSelectDropdown';
 import { DataTable } from '@/components/shared/DataTable';
 import type { VariantImageOrderItem } from '@/app/lib/featuers/product-variant/variant.form';
+import DeleteModal from '@/components/shared/DeleteModal';
 
 
 type GalleryItem =
@@ -41,6 +42,8 @@ interface ProductVariantsPageProps {
 
 const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const variantIdParam = searchParams.get("variantId");
   const resolvedParams = React.use(params);
   const productId = resolvedParams.id;
 
@@ -53,6 +56,12 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
+  const [variantLoading, setVariantLoading] = useState(false);
+  const [variantNotFound, setVariantNotFound] = useState(false);
+
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [variantIdToDelete, setVariantIdToDelete] = useState<string | null>(null);
 
   const [variantForm, setVariantForm] = useState<VariantState>({
     value: '',
@@ -90,9 +99,6 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       .finally(() => setFetching(false));
   };
 
-  useEffect(() => {
-    loadData();
-  }, [productId]);
 
   const clearFormFields = () => {
     setVariantForm({
@@ -117,6 +123,9 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     setGallery([]);
     clearFormFields();
     setIsFormOpen(false);
+    if (variantIdParam) {
+      router.push(`/admin/products/edit/${productId}`);
+    }
   };
 
   const handleOpenAdd = () => {
@@ -158,6 +167,30 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     );
     setIsFormOpen(true);
   };
+
+  useEffect(() => {
+    loadData();
+    if (variantIdParam) {
+      setVariantLoading(true);
+      setVariantNotFound(false);
+      fetch(`/api/products/${productId}/variants/${variantIdParam}`)
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success && json.data) {
+            handleOpenEdit(json.data);
+          } else {
+            setVariantNotFound(true);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load specific variant:", err);
+          setVariantNotFound(true);
+        })
+        .finally(() => {
+          setVariantLoading(false);
+        });
+    }
+  }, [productId, variantIdParam]);
 
   const handleFormChange = (field: keyof VariantState, value: any) => {
     setVariantForm(prev => ({
@@ -284,7 +317,9 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       if (json.success) {
         toast.success(editingVariantId ? 'Variant updated successfully!' : 'Variant added successfully!');
         resetForm();
-        loadData();
+        if (!variantIdParam) {
+          loadData();
+        }
       } else {
         toast.error(json.message || 'Failed to save variant.');
       }
@@ -296,18 +331,26 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     }
   };
 
-  const handleDelete = async (variantId: string) => {
-    if (!confirm("Are you sure you want to delete this variant? This will permanently wipe its warehouse inventory.")) return;
+  const handleDelete = (v: any) => {
+    const id = typeof v === 'object' && v ? v._id : v;
+    setVariantIdToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!variantIdToDelete) return;
+    setDeleteModalOpen(false);
 
     const toastId = toast.loading("Deleting variant...");
     try {
-      const res = await fetch(`/api/products/variants/${variantId}`, {
+      const res = await fetch(`/api/products/variants/${variantIdToDelete}`, {
         method: 'DELETE'
       });
 
       const json = await res.json();
       if (json.success) {
         toast.success("Variant deleted successfully!", { id: toastId });
+        setVariantIdToDelete(null);
         loadData();
       } else {
         throw new Error(json.message || "Deletion failed");
@@ -317,11 +360,30 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     }
   };
 
-  if (fetching) {
+  if (fetching || variantLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-600"></div>
-        <p className="text-sm font-bold text-gray-500">Loading variant portal...</p>
+        <p className="text-sm font-bold text-gray-500">
+          {variantLoading ? "Loading variant information..." : "Loading variant portal..."}
+        </p>
+      </div>
+    );
+  }
+
+  if (variantNotFound) {
+    return (
+      <div className="max-w-lg mx-auto text-center py-20 space-y-6">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 text-red-500">
+          <Icon icon="lucide:alert-circle" className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-800">Variant not found</h2>
+        <p className="text-sm text-gray-500">
+          This variant may have been removed or the link is invalid.
+        </p>
+        <Button onClick={() => router.push(`/admin/products/edit/${productId}`)} icon="lucide:arrow-left">
+          Back to base product
+        </Button>
       </div>
     );
   }
@@ -337,7 +399,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
           { label: 'Edit Product', href: `/admin/products/edit/${productId}` },
           { label: 'Manage Variants' }
         ]}
-        backLink={`/admin/products/edit/${productId}`}
+        backLink={-1}
         actionNode={
           !isFormOpen && (
             <Button
@@ -411,11 +473,15 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                   key: 'packaging',
                   label: 'Packaging',
                   render: (row: any) =>
-                    row.packaging?.map((pack: any) => (
-                      <span key={pack._id} className="text-[9px] font-semibold uppercase text-purple-600 bg-purple-50 border border-purple-100/50 px-2 py-0.5 rounded-lg mr-1">
-                        {pack.name} ({pack.type})
-                      </span>
-                    )),
+                    row.packaging?.map((pack: any, pIdx: number) => {
+                      const key = typeof pack === 'object' && pack ? (pack._id || pack.id || `pack-${pIdx}`) : (pack || `pack-${pIdx}`);
+                      const label = typeof pack === 'object' && pack ? `${pack.name} (${pack.type})` : `Packaging ID: ${pack}`;
+                      return (
+                        <span key={key} className="text-[9px] font-semibold uppercase text-purple-600 bg-purple-50 border border-purple-100/50 px-2 py-0.5 rounded-lg mr-1">
+                          {label}
+                        </span>
+                      );
+                    }),
                 },
               ]}
               loading={loading}
@@ -708,6 +774,17 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
           )}
         </div>
       </div>
+      <DeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setVariantIdToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Delete Variant"
+        message="Are you sure you want to delete this variant? This will permanently wipe its warehouse inventory."
+        confirmButtonText="Delete Variant"
+      />
     </div>
   );
 };

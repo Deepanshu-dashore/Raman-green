@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Icon } from '@iconify/react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTable } from '@/components/shared/DataTable';
 import { Button } from '@/components/shared/Button';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import DeleteModal from '@/components/shared/DeleteModal';
 
 interface InventoryItem {
   _id: string;
@@ -39,6 +41,7 @@ interface InventoryItem {
 }
 
 const AdminInventory = () => {
+  const router = useRouter();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +59,10 @@ const AdminInventory = () => {
     notes: ''
   });
   const [saving, setSaving] = useState(false);
+
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
 
   const fetchInventory = () => {
     setLoading(true);
@@ -152,6 +159,34 @@ const AdminInventory = () => {
     }
   };
 
+  const handleDelete = (item: InventoryItem) => {
+    setItemToDelete(item);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    setDeleteModalOpen(false);
+
+    const toastId = toast.loading("Deleting inventory record...");
+    try {
+      const res = await fetch(`/api/inventory/${itemToDelete._id}`, {
+        method: 'DELETE'
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Inventory record deleted successfully!", { id: toastId });
+        setItemToDelete(null);
+        fetchInventory();
+      } else {
+        throw new Error(json.message || "Failed to delete inventory record");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete inventory record", { id: toastId });
+    }
+  };
+
   const getStockBadge = (qty: number, lowStockLimit = 10) => {
     if (qty === 0) {
       return (
@@ -194,14 +229,23 @@ const AdminInventory = () => {
           />
         </div>
 
-        <Button
-          variant="outline"
-          onClick={fetchInventory}
-          icon="lucide:refresh-cw"
-          className="border-gray-200 hover:bg-gray-50 font-bold"
-        >
-          Refresh Stock
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={fetchInventory}
+            icon="lucide:refresh-cw"
+            className="border-gray-200 hover:bg-gray-50 font-bold"
+          >
+            Refresh Stock
+          </Button>
+          <Button
+            onClick={() => router.push('/admin/inventory/add')}
+            icon="lucide:plus"
+            className="font-bold shadow-md"
+          >
+            Add Stock
+          </Button>
+        </div>
       </div>
 
       {/* Data Table */}
@@ -210,7 +254,10 @@ const AdminInventory = () => {
           data={filteredItems}
           loading={loading}
           rowKey={(item) => item._id}
-          hiddenActions={['view', 'edit', 'delete']}
+          showSearch={false}
+          onView={(item) => router.push(`/admin/inventory/${item._id}`)}
+          onEdit={(item) => handleEditClick(item)}
+          onDelete={(item) => handleDelete(item)}
           columns={[
             {
               key: 'product',
@@ -306,22 +353,6 @@ const AdminInventory = () => {
               label: 'Status',
               custom: true,
               render: (item) => getStockBadge(item.availableQty, item.lowStockLimit)
-            },
-            {
-              key: 'actions',
-              label: 'Action',
-              align: 'right',
-              custom: true,
-              render: (item) => (
-                <button
-                  type="button"
-                  onClick={() => handleEditClick(item)}
-                  className="px-3.5 py-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5"
-                >
-                  <Icon icon="lucide:edit-2" className="w-3.5 h-3.5" />
-                  Edit Stock
-                </button>
-              )
             },
           ]}
         />
@@ -450,6 +481,17 @@ const AdminInventory = () => {
           </div>
         </div>
       )}
+      <DeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setItemToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Delete Inventory Record"
+        message={`Are you sure you want to delete this inventory record for "${itemToDelete?.productId?.name || 'Unknown Product'}" (SKU: ${itemToDelete?.variantId?.sku || 'N/A'})?`}
+        confirmButtonText="Delete Record"
+      />
     </div>
   );
 };

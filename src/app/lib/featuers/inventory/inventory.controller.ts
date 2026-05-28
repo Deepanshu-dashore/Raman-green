@@ -29,9 +29,9 @@ export class InventoryController {
     /**
      * Update warehouse inventory item
      */
-    static async update(id: string, bodyData: any) {
+    static async update(id: string, bodyData: any, adminId?: string) {
         try {
-            const updated = await InventoryService.updateInventory(id, bodyData);
+            const updated = await InventoryService.updateInventory(id, bodyData, adminId);
             if (!updated) {
                 return ApiResponse(404, null, "Inventory item not found.");
             }
@@ -50,7 +50,8 @@ export class InventoryController {
             if (!data) {
                 return ApiResponse(404, null, "Inventory item not found.");
             }
-            return ApiResponse(200, data, "Inventory item fetched successfully.");
+            const formatted = formatInventoryItem(data);
+            return ApiResponse(200, formatted, "Inventory item fetched successfully.");
         } catch (error: any) {
             return ApiResponse(500, null, error.message);
         }
@@ -59,9 +60,9 @@ export class InventoryController {
     /**
      * Create a new inventory item
      */
-    static async create(bodyData: any) {
+    static async create(bodyData: any, adminId?: string) {
         try {
-            const created = await InventoryService.createInventory(bodyData);
+            const created = await InventoryService.createInventory(bodyData, adminId);
             return ApiResponse(201, created, "Inventory item created successfully.");
         } catch (error: any) {
             return ApiResponse(500, null, error.message);
@@ -78,6 +79,18 @@ export class InventoryController {
                 return ApiResponse(404, null, "Inventory item not found.");
             }
             return ApiResponse(200, null, "Inventory item deleted successfully.");
+        } catch (error: any) {
+            return ApiResponse(500, null, error.message);
+        }
+    }
+
+    /**
+     * Get stock history for a specific inventory item
+     */
+    static async getHistory(inventoryId: string) {
+        try {
+            const data = await InventoryService.getHistoryByInventoryId(inventoryId);
+            return ApiResponse(200, data, "Inventory history fetched successfully.");
         } catch (error: any) {
             return ApiResponse(500, null, error.message);
         }

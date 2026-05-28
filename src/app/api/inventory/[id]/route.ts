@@ -22,7 +22,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
     const { id } = await params;
     const body = await req.json();
-    return InventoryController.update(id, body);
+    return InventoryController.update(id, body, user.id);
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

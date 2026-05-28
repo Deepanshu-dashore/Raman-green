@@ -152,7 +152,7 @@ const AdminProducts = () => {
           }
         ]}
         onView={(p) => router.push(`/admin/products/${p._id}`)}
-        onEdit={(p) => router.push(`/admin/products/edit/${p._id}`)}
+        onEdit={(p) => router.push(`/admin/products/edit/${p._id}/variants`)}
         onDelete={handleDeleteClick}
         hiddenActions={[]}
       />

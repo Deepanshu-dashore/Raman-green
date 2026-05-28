@@ -12,6 +12,7 @@ import { Button } from '@/components/shared/Button';
 import { Icon } from '@iconify/react';
 import { getStatusStyle } from '@/constants/status';
 import { div } from 'framer-motion/client';
+import DeleteModal from '@/components/shared/DeleteModal';
 
 interface EditProductProps {
   params: Promise<{ id: string }>;
@@ -24,6 +25,7 @@ const EditProduct = ({ params }: EditProductProps) => {
 
   const [categories, setCategories] = useState<any[]>([]);
   const [certificateOptions, setCertificateOptions] = useState<any[]>([]);
+  const [cities, setCities] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
@@ -32,6 +34,8 @@ const EditProduct = ({ params }: EditProductProps) => {
     slug: '',
     description: '',
     category: '',
+    cultivation: '',
+    cultivation_city: [] as string[],
     brand: 'Raman Green',
     isFeatured: false,
     certificates: [] as string[]
@@ -39,13 +43,47 @@ const EditProduct = ({ params }: EditProductProps) => {
 
   const [existingVariants, setExistingVariants] = useState<any[]>([]);
 
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [variantToDelete, setVariantToDelete] = useState<any | null>(null);
+
+  const promptDeleteVariant = (v: any) => {
+    setVariantToDelete(v);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDeleteVariant = () => {
+    if (!variantToDelete) return;
+    setDeleteModalOpen(false);
+
+    toast.promise(
+      fetch(`/api/products/variants/${variantToDelete._id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(json => {
+          if (json.success) {
+            setExistingVariants(prev => prev.filter((item: any) => item._id !== variantToDelete._id));
+            setVariantToDelete(null);
+          } else {
+            throw new Error(json.message || 'Failed to delete variant');
+          }
+        }),
+      {
+        loading: 'Deleting variant...',
+        success: 'Variant deleted successfully',
+        error: (err) => err.message || 'Failed to delete variant'
+      }
+    );
+  };
+
   useEffect(() => {
     Promise.all([
       fetch('/api/categories').then(res => res.json()),
       fetch('/api/admin/certificates').then(res => res.json()),
-    ]).then(([cat, cert]) => {
+      fetch('/api/admin/cities').then(res => res.json()),
+    ]).then(([cat, cert, cit]) => {
       if (cat.success) setCategories(cat.data);
       if (cert.success) setCertificateOptions(cert.data);
+      if (cit.success) setCities(cit.data);
 
       return fetch(`/api/products/${productId}`).then(res => res.json());
     }).then((prodJson) => {
@@ -59,6 +97,8 @@ const EditProduct = ({ params }: EditProductProps) => {
           slug: prod.slug || '',
           description: prod.description || '',
           category: prod.category?._id || prod.category || '',
+          cultivation: prod.cultivation || '',
+          cultivation_city: (prod.cultivation_city || []).map((c: any) => c._id || c),
           brand: prod.brand || 'Raman Green',
           isFeatured: !!prod.isFeatured,
           certificates: (prod.certificates || []).map((c: any) => c._id || c)
@@ -93,6 +133,16 @@ const EditProduct = ({ params }: EditProductProps) => {
       if (index > -1) list.splice(index, 1);
       else list.push(id);
       return { ...prev, certificates: list };
+    });
+  };
+
+  const toggleCity = (id: string) => {
+    setFormData(prev => {
+      const list = [...prev.cultivation_city];
+      const index = list.indexOf(id);
+      if (index > -1) list.splice(index, 1);
+      else list.push(id);
+      return { ...prev, cultivation_city: list };
     });
   };
 
@@ -205,6 +255,36 @@ const EditProduct = ({ params }: EditProductProps) => {
                 />
               </div>
 
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Cultivation Type</label>
+                <select 
+                  name="cultivation"
+                  required
+                  value={formData.cultivation}
+                  onChange={handleInputChange}
+                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm cursor-pointer"
+                >
+                  <option value="">Select Cultivation</option>
+                  <option value="Organic">Organic</option>
+                  <option value="Natural">Natural</option>
+                  <option value="Hydroponic">Hydroponic</option>
+                  <option value="Aquaponic">Aquaponic</option>
+                  <option value="Polyhouse">Polyhouse</option>
+                  <option value="Open Field">Open Field</option>
+                  <option value="Soil-less">Soil-less</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5 flex flex-col justify-center min-h-[80px]">
+                <MultiSelectDropdown 
+                   label="Cultivation Cities"
+                   options={cities.map(c => ({ id: c._id, label: `${c.name} (${c.state || ''})` }))}
+                   selectedValues={formData.cultivation_city}
+                   onChange={toggleCity}
+                   placeholder="Select cities"
+                />
+              </div>
+
               <div className="col-span-2 space-y-1.5">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Product Description</label>
                 <textarea
@@ -289,7 +369,7 @@ const EditProduct = ({ params }: EditProductProps) => {
 
           <div className="space-y-4">
             <h4 className="text-sm font-bold text-gray-900 pl-1">Variant Options</h4>
-            <DataTable
+             <DataTable
               data={existingVariants}
               loading={false}
               rowKey={(v) => v._id || ''}
@@ -298,8 +378,7 @@ const EditProduct = ({ params }: EditProductProps) => {
                   key: "image",
                   label: "Variant",
                   type: "user",
-
-                  // getAvatar: (v) => v.images?.[0] ?? v.sku?.charAt(0) ?? "?",
+                  getAvatar: (v: any) => v.images?.[0] || v.sku?.charAt(0) || "?",
                   getTitle: (v) => v.sku,
                   getSubtitle: (v) => {
                     const size = [v.weight || v.value, v.unit?.shortName || v.unit?.name]
@@ -308,21 +387,6 @@ const EditProduct = ({ params }: EditProductProps) => {
                     return size || "—";
                   },
                 },
-                // {
-                //   key: "price",
-                //   label: "Price",
-                //   custom: true,
-                //   render: (v) => (
-                //     <div className="text-sm">
-                //       <span className="font-bold text-gray-900">₹{v.basePrice}</span>
-                //       {v.discountedPrice && (
-                //         <span className="block text-xs font-medium text-green-600">
-                //           ₹{v.discountedPrice} sale
-                //         </span>
-                //       )}
-                //     </div>
-                //   ),
-                // },
                 {
                   key: "stock",
                   label: "Stock",
@@ -352,20 +416,56 @@ const EditProduct = ({ params }: EditProductProps) => {
                     );
                   },
                 },
+                {
+                  key: "actions",
+                  label: "Actions",
+                  custom: true,
+                  align: "right",
+                  render: (v) => (
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/admin/products/edit/${productId}/variants?variantId=${v._id}`);
+                        }}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        title="Edit Variant"
+                      >
+                        <Icon icon="lucide:edit" className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          promptDeleteVariant(v);
+                        }}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        title="Delete Variant"
+                      >
+                        <Icon icon="lucide:trash-2" className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ),
+                },
               ]}
-              // additionalActions={[
-              //   {
-              //     label: "Manage",
-              //     icon: PencilIcon,
-              //     onClick: (row) => router.push(`/admin/products/edit/${productId}/variants/${row._id}`),
-              //   },
-              // ]}
               showPagination={false}
               hiddenActions={["view", "edit", "delete"]}
             />
           </div>
         </div>
       </div>
+      <DeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setVariantToDelete(null);
+        }}
+        onConfirm={confirmDeleteVariant}
+        title="Delete Variant"
+        message={`Are you sure you want to delete variant "${variantToDelete?.sku || ''}"? This will permanently wipe its warehouse inventory and delete all of its images.`}
+        confirmButtonText="Delete Variant"
+      />
     </div>
   );
 };

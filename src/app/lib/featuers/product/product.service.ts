@@ -2,6 +2,7 @@ import { Product, IProduct } from "./product.model";
 import { ProductVariant, IProductVariant } from "../product-variant/ProductVariants.model";
 import { Inventory } from "../inventory/Inventory.model";
 import { notDeletedFilter, variantPopulate } from "../../utils/softDelete";
+import { CloudinaryService } from "../../services/cloudinary.service";
 
 export class ProductService {
     /**
@@ -85,7 +86,7 @@ export class ProductService {
 
         // Return fully populated product
         const populatedProduct = await Product.findById(product._id)
-            .populate("category")
+            .populate("category certificates")
             .populate(variantPopulate);
         return populatedProduct as IProduct;
     }
@@ -154,7 +155,7 @@ export class ProductService {
      */
     static async getAllProducts(query: any = {}): Promise<IProduct[]> {
         return await Product.find({ ...query, ...notDeletedFilter })
-            .populate("category")
+            .populate("category certificates")
             .populate(variantPopulate);
     }
 
@@ -164,12 +165,12 @@ export class ProductService {
     static async getProductBySlug(slug: string): Promise<IProduct | null> {
         if (slug.match(/^[0-9a-fA-F]{24}$/)) {
             const product = await Product.findOne({ _id: slug, ...notDeletedFilter })
-                .populate("category")
+                .populate("category certificates")
                 .populate(variantPopulate);
             if (product) return product;
         }
         return await Product.findOne({ slug, ...notDeletedFilter })
-            .populate("category")
+            .populate("category certificates")
             .populate(variantPopulate);
     }
 
@@ -178,7 +179,7 @@ export class ProductService {
      */
     static async getProductById(id: string): Promise<IProduct | null> {
         return await Product.findOne({ _id: id, ...notDeletedFilter })
-            .populate("category")
+            .populate("category certificates")
             .populate(variantPopulate);
     }
 
@@ -291,7 +292,7 @@ export class ProductService {
 
         // Return fully populated updated product
         return await Product.findById(product._id)
-            .populate("category")
+            .populate("category certificates")
             .populate(variantPopulate);
     }
 
@@ -343,7 +344,7 @@ export class ProductService {
     }
 
     /**
-     * Soft-delete standalone variant
+     * Soft-delete standalone variant and delete its Cloudinary images
      */
     static async deleteVariant(variantId: string): Promise<boolean> {
         const variant = await ProductVariant.findOne({ _id: variantId, ...notDeletedFilter });
@@ -351,21 +352,32 @@ export class ProductService {
 
         const now = new Date();
 
+        // 1. Delete variant images from Cloudinary
+        const imageUrls = variant.images || [];
+        for (const url of imageUrls) {
+            if (url) {
+                try {
+                    await CloudinaryService.delete(url, "image");
+                } catch (err) {
+                    console.error(`Failed to delete Cloudinary image: ${url}`, err);
+                }
+            }
+        }
+
+        // 2. Soft-delete the variant record
         await ProductVariant.findByIdAndUpdate(variantId, {
             isDeleted: true,
             deletedAt: now
         });
 
-        await Inventory.updateMany(
-            { variantId },
-            { $set: { availableQty: 0, notes: "Archived: variant deleted" } }
-        );
+        // 3. Delete its inventory records
+        await Inventory.deleteMany({ variantId });
 
         return true;
     }
 
     /**
-     * Soft-delete product and all associated variants
+     * Soft-delete product, all its variants, and their Cloudinary images
      */
     static async deleteProduct(id: string): Promise<IProduct | null> {
         const product = await Product.findOne({ _id: id, ...notDeletedFilter });
@@ -373,16 +385,31 @@ export class ProductService {
 
         const now = new Date();
 
+        // 1. Fetch all associated variants
+        const variants = await ProductVariant.find({ productId: product._id, ...notDeletedFilter });
+
+        // 2. Delete all variant images from Cloudinary
+        const imageUrls = variants.flatMap((v: any) => v.images || []);
+        for (const url of imageUrls) {
+            if (url) {
+                try {
+                    await CloudinaryService.delete(url, "image");
+                } catch (err) {
+                    console.error(`Failed to delete Cloudinary image: ${url}`, err);
+                }
+            }
+        }
+
+        // 3. Soft-delete all associated variants
         await ProductVariant.updateMany(
             { productId: product._id, ...notDeletedFilter },
             { $set: { isDeleted: true, deletedAt: now } }
         );
 
-        await Inventory.updateMany(
-            { productId: product._id },
-            { $set: { availableQty: 0, notes: "Archived: product deleted" } }
-        );
+        // 4. Delete all associated inventories
+        await Inventory.deleteMany({ productId: product._id });
 
+        // 5. Soft-delete the product itself
         product.isDeleted = true;
         product.deletedAt = now;
         product.isPublished = false;

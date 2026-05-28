@@ -9,7 +9,7 @@ export interface IInventory extends Document {
     availableQty: number;
     reservedQty: number;
     lowStockLimit: number;
-    notes: string;
+    notes?: string;
 }
 
 const inventorySchema = new Schema<IInventory>({
@@ -25,7 +25,8 @@ const inventorySchema = new Schema<IInventory>({
     },
     batchNumber: {
         type: String,
-        required: true
+        required: true,
+        trim: true
     },
     mfgDate: {
         type: Date,
@@ -37,22 +38,31 @@ const inventorySchema = new Schema<IInventory>({
     },
     availableQty: {
         type: Number,
-        required: true
+        required: true,
+        min: 0
     },
     reservedQty: {
         type: Number,
-        required: true
+        required: true,
+        min: 0,
+        default: 0
     },
 
     lowStockLimit: {
         type: Number,
         required: true,
+        min: 0,
         default: 10
     },
 
     notes: {
         type: String,
+        trim: true
     }
 }, { timestamps: true });
 
-export const Inventory = models.Inventory || model<IInventory>('Inventory', inventorySchema);       
+// Removed the post('save') hook that auto-created InventoryHistory.
+// History is now pushed explicitly from the service layer with proper
+// createdBy tracking and transaction support.
+
+export const Inventory = models.Inventory || model<IInventory>('Inventory', inventorySchema);

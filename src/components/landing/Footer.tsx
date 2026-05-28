@@ -31,18 +31,17 @@ export default function Footer() {
     <footer className="bg-white border-t border-gray-100 font-inter relative">
       {/* 0. Brand Wave/Forest SVG Overlap Transition */}
       <div className="w-full relative z-20 -mt-20 md:-mt-28 -mb-px overflow-hidden select-none pointer-events-none">
-        <img 
-          src="/footer-overlap.svg" 
-          alt="" 
-          className="w-full h-auto object-cover"
-          onError={(e) => {
-            // Gracefully hide the overlay container if the asset has not been uploaded yet
-            const target = e.target as HTMLElement;
-            if (target && target.parentElement) {
-              target.parentElement.style.display = 'none';
-            }
-          }}
-        />
+        <svg 
+          viewBox="0 0 1440 120" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg" 
+          className="w-full h-auto block"
+        >
+          <path 
+            d="M0,32 C240,75 480,96 720,64 C960,32 1200,16 1440,48 L1440,120 L0,120 Z" 
+            fill="#F9F7F2" 
+          />
+        </svg>
       </div>
 
       {/* 1. Sprout-Green Infinite Scrolling Marquee / Scrollable Line */}

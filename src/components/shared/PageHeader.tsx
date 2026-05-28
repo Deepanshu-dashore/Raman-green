@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeftIcon } from "@heroicons/react/24/outline";
 
 export interface BreadcrumbItem {
@@ -14,10 +15,11 @@ export interface PageHeaderProps {
   description?: string;
   breadcrumbs: BreadcrumbItem[];
   actionNode?: React.ReactNode;
-  backLink?: string;
+  backLink?: string | number;
 }
 
 export function PageHeader({ title, description, breadcrumbs, actionNode, backLink }: PageHeaderProps) {
+  const router = useRouter();
   return (
     <div className="flex flex-col gap-4 w-full mb-8">
       {/* Main Bar */}
@@ -59,15 +61,26 @@ export function PageHeader({ title, description, breadcrumbs, actionNode, backLi
             )}
         {backLink && (
           <div className="flex">
-          <Link 
-            href={backLink}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50/80 hover:bg-gray-200/80 text-gray-800 text-sm font-semibold rounded-lg transition-colors border border-gray-100"
-            >
-            <ChevronLeftIcon className="w-3 h-3 text-gray-600 stroke-[3.5px]" />
-            Back
-          </Link>
-        </div>
-      )}
+            {typeof backLink === "number" || backLink === "back" ? (
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50/80 hover:bg-gray-200/80 text-gray-800 text-sm font-semibold rounded-lg transition-colors border border-gray-100"
+              >
+                <ChevronLeftIcon className="w-3 h-3 text-gray-600 stroke-[3.5px]" />
+                Back
+              </button>
+            ) : (
+              <Link 
+                href={backLink}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50/80 hover:bg-gray-200/80 text-gray-800 text-sm font-semibold rounded-lg transition-colors border border-gray-100"
+              >
+                <ChevronLeftIcon className="w-3 h-3 text-gray-600 stroke-[3.5px]" />
+                Back
+              </Link>
+            )}
+          </div>
+        )}
       </div>
       </div>
     </div>

@@ -16,5 +16,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         return ApiResponse(400, null, "Content-Type must be multipart/form-data.");
     }
     const formData = await req.formData();
-    return VariantController.create(id, formData);
+    return VariantController.create(id, formData, user.id);
 }

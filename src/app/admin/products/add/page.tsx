@@ -12,6 +12,7 @@ const AddProduct = () => {
   const router = useRouter();
   const [categories, setCategories] = useState<any[]>([]);
   const [certificateOptions, setCertificateOptions] = useState<any[]>([]);
+  const [cities, setCities] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -19,6 +20,8 @@ const AddProduct = () => {
     slug: '',
     description: '',
     category: '',
+    cultivation: '',
+    cultivation_city: [] as string[],
     brand: 'Raman Green',
     isFeatured: false,
     certificates: [] as string[]
@@ -28,10 +31,12 @@ const AddProduct = () => {
     Promise.all([
       fetch('/api/categories').then(res => res.json()),
       fetch('/api/admin/certificates').then(res => res.json()),
-    ]).then(([cat, cert]) => {
+      fetch('/api/admin/cities').then(res => res.json()),
+    ]).then(([cat, cert, cit]) => {
       if (cat.success) setCategories(cat.data);
       if (cert.success) setCertificateOptions(cert.data);
-    }).catch(() => toast.error("Failed to load category/certificate parameters"));
+      if (cit.success) setCities(cit.data);
+    }).catch(() => toast.error("Failed to load category/certificate/city parameters"));
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -52,6 +57,16 @@ const AddProduct = () => {
       if (index > -1) list.splice(index, 1);
       else list.push(id);
       return { ...prev, certificates: list };
+    });
+  };
+
+  const toggleCity = (id: string) => {
+    setFormData(prev => {
+      const list = [...prev.cultivation_city];
+      const index = list.indexOf(id);
+      if (index > -1) list.splice(index, 1);
+      else list.push(id);
+      return { ...prev, cultivation_city: list };
     });
   };
 
@@ -152,6 +167,36 @@ const AddProduct = () => {
                 onChange={handleInputChange}
                 className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm" 
                 placeholder="Brand name"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Cultivation Type</label>
+              <select 
+                name="cultivation"
+                required
+                value={formData.cultivation}
+                onChange={handleInputChange}
+                className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm cursor-pointer"
+              >
+                <option value="">Select Cultivation</option>
+                <option value="Organic">Organic</option>
+                <option value="Natural">Natural</option>
+                <option value="Hydroponic">Hydroponic</option>
+                <option value="Aquaponic">Aquaponic</option>
+                <option value="Polyhouse">Polyhouse</option>
+                <option value="Open Field">Open Field</option>
+                <option value="Soil-less">Soil-less</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5 flex flex-col justify-center min-h-[80px]">
+              <MultiSelectDropdown 
+                 label="Cultivation Cities"
+                 options={cities.map(c => ({ id: c._id, label: `${c.name} (${c.state || ''})` }))}
+                 selectedValues={formData.cultivation_city}
+                 onChange={toggleCity}
+                 placeholder="Select cities"
               />
             </div>
 

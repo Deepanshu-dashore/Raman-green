@@ -113,4 +113,4 @@ const productSchema = new Schema<IProduct>({
 
 delete models.Product;
 export const Product = models.Product || model<IProduct>('Product', productSchema);
-Product.syncIndexes().catch(err => console.log("Product index sync skipped:", err));
+// Product.syncIndexes().catch(err => console.log("Product index sync skipped:", err));

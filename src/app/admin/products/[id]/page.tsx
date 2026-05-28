@@ -43,6 +43,33 @@ const ProductViewPage = ({ params }: ProductViewPageProps) => {
       })
       .finally(() => setLoading(false));
   }, [productId]);
+  
+  const handleDeleteVariant = (v: any) => {
+    if (!confirm(`Are you sure you want to delete variant "${v.sku}"? This will permanently wipe its warehouse inventory and delete all of its images.`)) return;
+
+    toast.promise(
+      fetch(`/api/products/variants/${v._id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(json => {
+          if (json.success) {
+            setProduct((prev: any) => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                variants: (prev.variants || []).filter((item: any) => item._id !== v._id)
+              };
+            });
+          } else {
+            throw new Error(json.message || 'Failed to delete variant');
+          }
+        }),
+      {
+        loading: 'Deleting variant...',
+        success: 'Variant deleted successfully',
+        error: (err) => err.message || 'Failed to delete variant'
+      }
+    );
+  };
 
   const allImages: string[] = useMemo(
     () =>
@@ -278,14 +305,19 @@ const ProductViewPage = ({ params }: ProductViewPageProps) => {
                 Certificates
               </p>
               <div className="flex flex-wrap gap-2">
-                {product.certificates.map((cert: any) => (
-  <div key={cert._id} className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg">
-    {cert.url && (
-      <img src={cert.url} alt={cert.name} className="w-5 h-5 object-contain" />
-    )}
-    <span className="text-xs font-semibold text-gray-700">{cert.name}</span>
-  </div>
-))}
+                {product.certificates.map((cert: any, idx: number) => {
+                  const key = typeof cert === 'object' && cert ? (cert._id || cert.id || `cert-${idx}`) : (cert || `cert-${idx}`);
+                  const name = typeof cert === 'object' && cert ? cert.name : `Certificate ID: ${cert}`;
+                  const url = typeof cert === 'object' && cert ? cert.url : null;
+                  return (
+                    <div key={key} className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg">
+                      {url && (
+                        <img src={url} alt={name} className="w-5 h-5 object-contain" />
+                      )}
+                      <span className="text-xs font-semibold text-gray-700">{name}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -378,26 +410,52 @@ const ProductViewPage = ({ params }: ProductViewPageProps) => {
               render: (v: any) =>
                 v.packaging?.length ? (
                   <div className="flex flex-wrap gap-1 max-w-[180px]">
-                    {v.packaging.map((pack: any) => (
-                      <span
-                        key={pack._id}
-                        className="text-[9px] font-bold uppercase text-purple-600 bg-purple-50 border border-purple-100 px-1.5 py-0.5 rounded"
-                      >
-                        {pack.name}
-                      </span>
-                    ))}
+                    {v.packaging.map((pack: any, pIdx: number) => {
+                      const key = typeof pack === 'object' && pack ? (pack._id || pack.id || `pack-${pIdx}`) : (pack || `pack-${pIdx}`);
+                      const label = typeof pack === 'object' && pack ? pack.name : `Packaging ID: ${pack}`;
+                      return (
+                        <span
+                          key={key}
+                          className="text-[9px] font-bold uppercase text-purple-600 bg-purple-50 border border-purple-100 px-1.5 py-0.5 rounded"
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
                   </div>
                 ) : (
                   <span className="text-xs text-gray-400">—</span>
                 ),
             },
-          ]}
-          additionalActions={[
             {
-              label: "Manage",
-              icon: PencilIcon,
-              onClick: () =>
-                router.push(`/admin/products/edit/${productId}/variants`),
+              key: "actions",
+              label: "Actions",
+              custom: true,
+              align: "right",
+              render: (v: any) => (
+                <div className="flex items-center justify-end gap-1.5">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/admin/products/edit/${productId}/variants?variantId=${v._id}`);
+                    }}
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                    title="Edit Variant"
+                  >
+                    <Icon icon="lucide:edit" className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteVariant(v);
+                    }}
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    title="Delete Variant"
+                  >
+                    <Icon icon="lucide:trash-2" className="w-4 h-4" />
+                  </button>
+                </div>
+              ),
             },
           ]}
           hiddenActions={["view", "edit", "delete"]}

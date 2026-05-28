@@ -39,14 +39,14 @@ export class VariantController {
         }
     }
 
-    static async create(productId: string, formData: FormData) {
+    static async create(productId: string, formData: FormData, adminId?: string) {
         let uploadedUrls: string[] = [];
 
         try {
             const parsed = await parseVariantFormData(formData);
             uploadedUrls = parsed.uploadedUrls;
 
-            const variant = await VariantService.create(productId, parsed.data);
+            const variant = await VariantService.create(productId, parsed.data, adminId);
             const formatted = await formatVariant(variant);
             return ApiResponse(201, formatted, "Product variant and inventory created successfully.");
         } catch (error: unknown) {
