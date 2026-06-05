@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 const exploreLinks = [
   { label: "Provenance", href: "/about" },
   { label: "Sustainability", href: "/about" },
+  { label: "Visit Our Store", href: "/store" },
   { label: "Lab Reports", href: "/about" },
   { label: "Wholesale", href: "/about" },
 ];
@@ -14,7 +15,7 @@ const exploreLinks = [
 const supportLinks = [
   { label: "Shipping", href: "/contact" },
   { label: "Contact Us", href: "/contact" },
-  { label: "Returns Policy", href: "/contact" },
+  { label: "Returns Policy", href: "/returns" },
   { label: "Privacy", href: "/privacy" },
 ];
 

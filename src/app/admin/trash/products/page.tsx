@@ -1,20 +1,59 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/shared/DataTable';
-import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { Button } from '@/components/shared/Button';
 import DeleteModal from '@/components/shared/DeleteModal';
 
-const AdminProducts = () => {
-  const router = useRouter();
+export default function ProductsTrashPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+
+  const fetchTrashProducts = () => {
+    setLoading(true);
+    fetch('/api/products/trash')
+      .then(res => res.json())
+      .then(json => {
+        if (json.success) {
+          setProducts(json.data);
+        } else {
+          toast.error(json.message || "Failed to load trash products.");
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        toast.error("Error fetching products from trash.");
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchTrashProducts();
+  }, []);
+
+  const handleRestoreClick = (product: any) => {
+    toast.promise(
+      fetch(`/api/products/restore/${product._id}`, { method: 'PUT' })
+        .then(res => res.json())
+        .then(json => {
+          if (json.success) {
+            setProducts(prev => prev.filter(item => item._id !== product._id));
+            return json;
+          } else {
+            throw new Error(json.message);
+          }
+        }),
+      {
+        loading: 'Restoring product...',
+        success: 'Product restored successfully',
+        error: (err) => err.message || 'Failed to restore product'
+      }
+    );
+  };
 
   const handleDeleteClick = (product: any) => {
     setSelectedProduct(product);
@@ -26,7 +65,7 @@ const AdminProducts = () => {
     const p = selectedProduct;
     setDeleteModalOpen(false);
     toast.promise(
-      fetch(`/api/products/softDelete/${p._id}`, { method: 'PUT' })
+      fetch(`/api/products/${p._id}`, { method: 'DELETE' })
         .then(res => res.json())
         .then(json => {
           if (json.success) {
@@ -36,57 +75,27 @@ const AdminProducts = () => {
           }
         }),
       {
-        loading: 'Moving to trash...',
-        success: 'Product moved to trash',
-        error: (err) => err.message || 'Failed to move to trash'
+        loading: 'Permanently deleting...',
+        success: 'Product deleted permanently',
+        error: (err) => err.message || 'Failed to delete product'
       }
     );
   };
-
-  useEffect(() => {
-    fetch('/api/products')
-      .then(res => res.json())
-      .then(json => {
-        if (json.success) {
-          setProducts(json.data);
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        toast.error("Failed to load products.");
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <PageHeader
-        title="Products"
+        title="Products Trash"
+        description="Permanently delete or restore soft-deleted products and their variants."
         breadcrumbs={[
           { label: 'Admin', href: '/admin' },
+          { label: 'Trash', href: '/admin/trash/products' },
           { label: 'Products' }
         ]}
-        actionNode={
-          <Button
-            onClick={() => router.push('/admin/products/add')}
-            icon="lucide:plus"
-          >
-            Add Product
-          </Button>
-        }
       />
 
-      {/* Product Table */}
+      {/* Table */}
       <DataTable
         data={products}
         loading={loading}
@@ -122,39 +131,22 @@ const AdminProducts = () => {
             )
           },
           {
-            key: 'basePrice',
-            label: 'Price',
+            key: 'deletedAt',
+            label: 'Deleted At',
+            type: 'date',
             sortable: true,
-            custom: true,
-            render: (p) => {
-              // Compute price range from variant prices
-              const prices = p.variants?.map((v: any) => v.basePrice).filter((pr: any) => pr != null) || [];
-              const priceDisplay = (() => {
-                if (prices.length === 0) return 'N/A';
-                const min = Math.min(...prices);
-                const max = Math.max(...prices);
-                return min === max ? `₹${min}` : `₹${min} - ₹${max}`;
-              })();
-              return (
-                <div className="text-xs font-medium text-gray-600">{priceDisplay}</div>
-              );
-            }
-          },
-          {
-            key: 'status',
-            label: 'Status',
-            custom: true,
-            render: (p) => (
-              <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${p.isFeatured ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
-                {p.isFeatured ? 'Featured' : 'Active'}
-              </span>
-            )
+            getDate: (p) => p.deletedAt || new Date()
           }
         ]}
-        onView={(p) => router.push(`/admin/products/${p._id}`)}
-        onEdit={(p) => router.push(`/admin/products/edit/${p._id}/variants`)}
+        hiddenActions={['view', 'edit']}
         onDelete={handleDeleteClick}
-        hiddenActions={[]}
+        additionalActions={[
+          {
+            label: 'Restore',
+            icon: 'solar:square-arrow-left-bold-duotone',
+            onClick: handleRestoreClick
+          }
+        ]}
       />
 
       <DeleteModal
@@ -164,12 +156,10 @@ const AdminProducts = () => {
           setSelectedProduct(null);
         }}
         onConfirm={handleDeleteConfirm}
-        title="Delete Product"
-        message={`Are you sure you want to delete "${selectedProduct?.name}"? This action cannot be undone.`}
-        confirmButtonText="Delete"
+        title="Delete Product Permanently"
+        message={`Are you sure you want to permanently delete "${selectedProduct?.name}"? This will delete all associated variants and cannot be undone.`}
+        confirmButtonText="Delete Permanently"
       />
     </div>
   );
-};
-
-export default AdminProducts;
+}

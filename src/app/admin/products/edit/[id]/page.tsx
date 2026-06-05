@@ -10,6 +10,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { PencilIcon } from "@heroicons/react/24/outline";
 import { Button } from '@/components/shared/Button';
 import { Icon } from '@iconify/react';
+import LabledInput from '@/components/shared/LabledInput';
 import { getStatusStyle } from '@/constants/status';
 import { div } from 'framer-motion/client';
 import DeleteModal from '@/components/shared/DeleteModal';
@@ -201,31 +202,24 @@ const EditProduct = ({ params }: EditProductProps) => {
             <h2 className="text-lg font-bold border-b border-gray-100 pb-4 text-gray-800">Basic Information</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="col-span-2 space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Product Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  required
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm"
-                  placeholder="e.g. Premium Broccoli Microgreens"
-                />
-              </div>
+              <LabledInput
+                label="Product Name"
+                name="name"
+                required
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="e.g. Premium Broccoli Microgreens"
+                className="col-span-2"
+              />
 
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Slug (URL)</label>
-                <input
-                  type="text"
-                  name="slug"
-                  required
-                  value={formData.slug}
-                  onChange={handleInputChange}
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm"
-                  placeholder="slug-url"
-                />
-              </div>
+              <LabledInput
+                label="Slug (URL)"
+                name="slug"
+                required
+                value={formData.slug}
+                onChange={handleInputChange}
+                placeholder="slug-url"
+              />
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Category</label>
@@ -243,17 +237,13 @@ const EditProduct = ({ params }: EditProductProps) => {
                 </select>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Brand</label>
-                <input
-                  type="text"
-                  name="brand"
-                  value={formData.brand}
-                  onChange={handleInputChange}
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm"
-                  placeholder="Brand name"
-                />
-              </div>
+              <LabledInput
+                label="Brand"
+                name="brand"
+                value={formData.brand}
+                onChange={handleInputChange}
+                placeholder="Brand name"
+              />
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Cultivation Type</label>
@@ -285,17 +275,16 @@ const EditProduct = ({ params }: EditProductProps) => {
                 />
               </div>
 
-              <div className="col-span-2 space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Product Description</label>
-                <textarea
-                  name="description"
-                  rows={4}
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm min-h-[100px]"
-                  placeholder="Write detailed product descriptions..."
-                />
-              </div>
+              <LabledInput
+                label="Product Description"
+                type="textarea"
+                name="description"
+                rows={4}
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Write detailed product descriptions..."
+                className="col-span-2"
+              />
 
               <div className="flex items-center space-x-3 mt-2 col-span-2">
                 <input
@@ -328,7 +317,7 @@ const EditProduct = ({ params }: EditProductProps) => {
               type="button"
               variant="outline"
               onClick={() => router.push('/admin/products')}
-              className="px-8 font-bold"
+              className="!py-2 !px-4 !rounded-lg text-xs font-bold"
             >
               Cancel
             </Button>
@@ -336,7 +325,7 @@ const EditProduct = ({ params }: EditProductProps) => {
               type="submit"
               isLoading={loading}
               icon="lucide:save"
-              className=" px-10 shadow-lg font-bold"
+              className="!py-2.5 !px-6 !rounded-lg text-xs font-bold"
             >
               Save Product Details
             </Button>

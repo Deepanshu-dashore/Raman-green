@@ -7,15 +7,19 @@ export default function LabledInput({
     disabled = false,
     className = "",
     required = false,
+    name,
+    ...props
 }: {
     label: string;
     value: string | number;
     required?: boolean;
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+    onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
     type?: string;
     placeholder?: string;
     disabled?: boolean;
     className?: string;
+    name?: string;
+    [key: string]: any;
 }) {
     const sharedClasses = "w-full h-11 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-sm transition-all";
     return (
@@ -28,7 +32,9 @@ export default function LabledInput({
                     placeholder={placeholder}
                     disabled={disabled}
                     required={required}
+                    name={name}
                     className={sharedClasses.replace("h-11", "min-h-[120px]")}
+                    {...props}
                 />
             ) : (
                 <input
@@ -38,7 +44,9 @@ export default function LabledInput({
                     onChange={onChange}
                     placeholder={placeholder}
                     disabled={disabled}
+                    name={name}
                     className={sharedClasses}
+                    {...props}
                 />
             )}
         </div>

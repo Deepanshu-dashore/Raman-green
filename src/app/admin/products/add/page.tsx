@@ -7,6 +7,7 @@ import { MultiSelectDropdown } from '@/components/shared/MultiSelectDropdown';
 import { PageHeader } from '@/components/shared/PageHeader';
 import Card from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
+import LabledInput from '@/components/shared/LabledInput';
 
 const AddProduct = () => {
   const router = useRouter();
@@ -116,31 +117,24 @@ const AddProduct = () => {
           <h2 className="text-lg font-bold border-b border-gray-100 pb-4 text-gray-800">Product Metadata</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="col-span-2 space-y-1.5">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Product Name</label>
-              <input 
-                type="text" 
-                name="name"
-                required
-                value={formData.name}
-                onChange={handleInputChange}
-                className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm" 
-                placeholder="e.g. Organic Broccoli Microgreens"
-              />
-            </div>
+            <LabledInput
+              label="Product Name"
+              name="name"
+              required
+              value={formData.name}
+              onChange={handleInputChange}
+              placeholder="e.g. Organic Broccoli Microgreens"
+              className="col-span-2"
+            />
 
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Slug (URL)</label>
-              <input 
-                type="text" 
-                name="slug"
-                required
-                value={formData.slug}
-                onChange={handleInputChange}
-                className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm" 
-                placeholder="slug-url"
-              />
-            </div>
+            <LabledInput
+              label="Slug (URL)"
+              name="slug"
+              required
+              value={formData.slug}
+              onChange={handleInputChange}
+              placeholder="slug-url"
+            />
 
             <div className="space-y-1.5">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Category</label>
@@ -158,17 +152,13 @@ const AddProduct = () => {
               </select>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Brand</label>
-              <input 
-                type="text" 
-                name="brand"
-                value={formData.brand}
-                onChange={handleInputChange}
-                className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm" 
-                placeholder="Brand name"
-              />
-            </div>
+            <LabledInput
+              label="Brand"
+              name="brand"
+              value={formData.brand}
+              onChange={handleInputChange}
+              placeholder="Brand name"
+            />
 
             <div className="space-y-1.5">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Cultivation Type</label>
@@ -200,17 +190,16 @@ const AddProduct = () => {
               />
             </div>
 
-            <div className="col-span-2 space-y-1.5">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Product Description</label>
-              <textarea 
-                name="description"
-                rows={4}
-                value={formData.description}
-                onChange={handleInputChange}
-                className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-semibold text-sm min-h-[100px]" 
-                placeholder="Write detailed product descriptions, highlights, nutritional value..."
-              />
-            </div>
+            <LabledInput
+              label="Product Description"
+              type="textarea"
+              name="description"
+              rows={4}
+              value={formData.description}
+              onChange={handleInputChange}
+              placeholder="Write detailed product descriptions, highlights, nutritional value..."
+              className="col-span-2"
+            />
 
             <div className="flex items-center space-x-3 mt-2 col-span-2">
               <input 
@@ -243,7 +232,7 @@ const AddProduct = () => {
             type="button"
             variant="outline"
             onClick={() => router.push('/admin/products')}
-            className="!rounded-2xl px-8 font-bold"
+            className="!py-2 !px-4 !rounded-lg text-xs font-bold"
           >
             Cancel
           </Button>
@@ -251,7 +240,7 @@ const AddProduct = () => {
             type="submit"
             isLoading={loading}
             icon="lucide:check"
-            className="!rounded-2xl px-10 shadow-lg font-bold"
+            className="!py-2.5 !px-6 !rounded-lg text-xs font-bold"
           >
             Create Base Product
           </Button>

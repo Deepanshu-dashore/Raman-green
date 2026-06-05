@@ -17,8 +17,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         return ApiResponse(401, null, "Admin access required.");
     }
     const { id } = await params;
-    const body = await req.json();
-    return CategoryController.update(id, body);
+    const contentType = req.headers.get("content-type") || "";
+    if (contentType.includes("multipart/form-data")) {
+        const formData = await req.formData();
+        return CategoryController.update(id, formData);
+    } else {
+        const body = await req.json();
+        return CategoryController.update(id, body);
+    }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

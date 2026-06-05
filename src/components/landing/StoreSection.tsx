@@ -46,10 +46,10 @@ export default function StoreSection() {
               sustainable living.
             </p>
             <Link
-              href="/contact"
+              href="/store"
               className="inline-flex items-center gap-1.5 mt-8 text-sm font-inter font-semibold text-forest hover:text-moss transition-colors"
             >
-              Find a Location Near You
+              Explore Our Flagship Store
               <Icon icon="lucide:arrow-right" className="w-4 h-4" />
             </Link>
           </motion.div>

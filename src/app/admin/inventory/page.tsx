@@ -9,6 +9,7 @@ import { DataTable } from '@/components/shared/DataTable';
 import { Button } from '@/components/shared/Button';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import DeleteModal from '@/components/shared/DeleteModal';
+import LabledInput from '@/components/shared/LabledInput';
 
 interface InventoryItem {
   _id: string;
@@ -385,76 +386,63 @@ const AdminInventory = () => {
 
             <form onSubmit={handleSave} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5 col-span-2">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Available Quantity</label>
-                  <input
-                    type="number"
-                    required
-                    min={0}
-                    value={editForm.availableQty}
-                    onChange={(e) => setEditForm({ ...editForm, availableQty: Number(e.target.value) })}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold"
-                    placeholder="Enter stock quantity"
-                  />
-                </div>
+                <LabledInput
+                  label="Available Quantity"
+                  type="number"
+                  required
+                  min={0}
+                  value={editForm.availableQty}
+                  onChange={(e) => setEditForm({ ...editForm, availableQty: Number(e.target.value) })}
+                  placeholder="Enter stock quantity"
+                  className="col-span-2"
+                />
 
-                <div className="space-y-1.5 col-span-2">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Batch Number</label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.batchNumber}
-                    onChange={(e) => setEditForm({ ...editForm, batchNumber: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold"
-                    placeholder="e.g. BATCH-01"
-                  />
-                </div>
+                <LabledInput
+                  label="Batch Number"
+                  type="text"
+                  required
+                  value={editForm.batchNumber}
+                  onChange={(e) => setEditForm({ ...editForm, batchNumber: e.target.value })}
+                  placeholder="e.g. BATCH-01"
+                  className="col-span-2"
+                />
 
-                <div className="space-y-1.5 col-span-2">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Low Stock Limit</label>
-                  <input
-                    type="number"
-                    required
-                    min={0}
-                    value={editForm.lowStockLimit}
-                    onChange={(e) => setEditForm({ ...editForm, lowStockLimit: Number(e.target.value) })}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold"
-                    placeholder="Alert threshold"
-                  />
-                </div>
+                <LabledInput
+                  label="Low Stock Limit"
+                  type="number"
+                  required
+                  min={0}
+                  value={editForm.lowStockLimit}
+                  onChange={(e) => setEditForm({ ...editForm, lowStockLimit: Number(e.target.value) })}
+                  placeholder="Alert threshold"
+                  className="col-span-2"
+                />
 
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Mfg Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={editForm.mfgDate}
-                    onChange={(e) => setEditForm({ ...editForm, mfgDate: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-xs font-semibold"
-                  />
-                </div>
+                <LabledInput
+                  label="Mfg Date"
+                  type="date"
+                  required
+                  value={editForm.mfgDate}
+                  onChange={(e) => setEditForm({ ...editForm, mfgDate: e.target.value })}
+                />
 
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Expiry Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={editForm.expiryDate}
-                    onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-xs font-semibold"
-                  />
-                </div>
+                <LabledInput
+                  label="Expiry Date"
+                  type="date"
+                  required
+                  value={editForm.expiryDate}
+                  onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })}
+                />
 
-                <div className="space-y-1.5 col-span-2">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Inventory Notes</label>
-                  <textarea
-                    rows={3}
-                    value={editForm.notes}
-                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold min-h-[80px]"
-                    placeholder="Batch shipment notes, quality review, etc."
-                  />
-                </div>
+                <LabledInput
+                  label="Inventory Notes"
+                  type="textarea"
+                  rows={3}
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  placeholder="Batch shipment notes, quality review, etc."
+                  className="col-span-2"
+                />
               </div>
 
               {/* Form buttons */}
@@ -463,7 +451,7 @@ const AdminInventory = () => {
                   type="button"
                   variant="outline"
                   onClick={() => setIsEditOpen(false)}
-                  className="!rounded-2xl px-6 font-bold"
+                  className="!py-2 !px-4 !rounded-lg text-xs font-bold"
                 >
                   Cancel
                 </Button>
@@ -472,7 +460,7 @@ const AdminInventory = () => {
                   variant="edit"
                   isLoading={saving}
                   icon="lucide:save"
-                  className="!rounded-2xl px-8 shadow-lg font-bold"
+                  className="!py-2.5 !px-6 !rounded-lg text-xs font-bold"
                 >
                   Save Changes
                 </Button>

@@ -12,6 +12,7 @@ import { MultiSelectDropdown } from '@/components/shared/MultiSelectDropdown';
 import { DataTable } from '@/components/shared/DataTable';
 import type { VariantImageOrderItem } from '@/app/lib/featuers/product-variant/variant.form';
 import DeleteModal from '@/components/shared/DeleteModal';
+import LabledInput from '@/components/shared/LabledInput';
 
 
 type GalleryItem =
@@ -525,17 +526,14 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
 
               <form onSubmit={handleSave} className="p-5 space-y-5">
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Size</label>
-                    <input
-                      type="number"
-                      required
-                      value={variantForm.value}
-                      onChange={(e) => handleFormChange('value', e.target.value)}
-                      className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-sm transition-all"
-                      placeholder="50"
-                    />
-                  </div>
+                  <LabledInput
+                    label="Size"
+                    type="number"
+                    required
+                    value={variantForm.value}
+                    onChange={(e) => handleFormChange('value', e.target.value)}
+                    placeholder="50"
+                  />
 
                   <div className="space-y-1">
                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Unit</label>
@@ -552,54 +550,43 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                     </select>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Price (₹)</label>
-                    <input
-                      type="number"
-                      required
-                      value={variantForm.price}
-                      onChange={(e) => handleFormChange('price', e.target.value)}
-                      className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-sm transition-all"
-                      placeholder="299"
-                    />
-                  </div>
+                  <LabledInput
+                    label="Price (₹)"
+                    type="number"
+                    required
+                    value={variantForm.price}
+                    onChange={(e) => handleFormChange('price', e.target.value)}
+                    placeholder="299"
+                  />
 
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Stock</label>
-                    <input
-                      type="number"
-                      required
-                      value={variantForm.stock}
-                      onChange={(e) => handleFormChange('stock', e.target.value)}
-                      className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-sm transition-all"
-                      placeholder="100"
-                    />
-                  </div>
+                  <LabledInput
+                    label="Stock"
+                    type="number"
+                    required
+                    value={variantForm.stock}
+                    onChange={(e) => handleFormChange('stock', e.target.value)}
+                    placeholder="100"
+                  />
 
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Low Limit</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      value={variantForm.lowStockLimit}
-                      onChange={(e) => handleFormChange('lowStockLimit', e.target.value)}
-                      className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-sm transition-all"
-                      placeholder="10"
-                    />
-                  </div>
+                  <LabledInput
+                    label="Low Limit"
+                    type="number"
+                    required
+                    min="0"
+                    value={variantForm.lowStockLimit}
+                    onChange={(e) => handleFormChange('lowStockLimit', e.target.value)}
+                    placeholder="10"
+                  />
 
-                  <div className="space-y-1 col-span-2 lg:col-span-2">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">SKU</label>
-                    <input
-                      type="text"
-                      required
-                      value={variantForm.sku}
-                      onChange={(e) => handleFormChange('sku', e.target.value)}
-                      className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-semibold text-sm uppercase transition-all"
-                      placeholder="RG-001"
-                    />
-                  </div>
+                  <LabledInput
+                    label="SKU"
+                    type="text"
+                    required
+                    value={variantForm.sku}
+                    onChange={(e) => handleFormChange('sku', e.target.value)}
+                    placeholder="RG-001"
+                    className="col-span-2 lg:col-span-2"
+                  />
 
                   {/* Packaging Selection Under Variant */}
                   <div className="col-span-2 lg:col-span-3 mt-3">
@@ -703,47 +690,35 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
 
                   {variantForm.showInventory ? (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-in slide-in-from-top duration-300">
-                      <div className="space-y-1">
-                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Batch</label>
-                        <input
-                          type="text"
-                          value={variantForm.batchNumber}
-                          onChange={(e) => handleFormChange('batchNumber', e.target.value)}
-                          className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-xs font-semibold outline-none focus:border-green-500"
-                          placeholder="Auto generated"
-                        />
-                      </div>
+                      <LabledInput
+                        label="Batch"
+                        type="text"
+                        value={variantForm.batchNumber}
+                        onChange={(e) => handleFormChange('batchNumber', e.target.value)}
+                        placeholder="Auto generated"
+                      />
 
-                      <div className="space-y-1">
-                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Mfg Date</label>
-                        <input
-                          type="date"
-                          value={variantForm.mfgDate}
-                          onChange={(e) => handleFormChange('mfgDate', e.target.value)}
-                          className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-xs font-semibold outline-none focus:border-green-500"
-                        />
-                      </div>
+                      <LabledInput
+                        label="Mfg Date"
+                        type="date"
+                        value={variantForm.mfgDate}
+                        onChange={(e) => handleFormChange('mfgDate', e.target.value)}
+                      />
 
-                      <div className="space-y-1">
-                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Expiry</label>
-                        <input
-                          type="date"
-                          value={variantForm.expiryDate}
-                          onChange={(e) => handleFormChange('expiryDate', e.target.value)}
-                          className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-xs font-semibold outline-none focus:border-green-500"
-                        />
-                      </div>
+                      <LabledInput
+                        label="Expiry"
+                        type="date"
+                        value={variantForm.expiryDate}
+                        onChange={(e) => handleFormChange('expiryDate', e.target.value)}
+                      />
 
-                      <div className="space-y-1">
-                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">Notes</label>
-                        <input
-                          type="text"
-                          value={variantForm.notes}
-                          onChange={(e) => handleFormChange('notes', e.target.value)}
-                          className="w-full h-9 px-3 bg-white border border-gray-200 rounded-lg text-xs font-semibold outline-none focus:border-green-500"
-                          placeholder="Arrival notes"
-                        />
-                      </div>
+                      <LabledInput
+                        label="Notes"
+                        type="text"
+                        value={variantForm.notes}
+                        onChange={(e) => handleFormChange('notes', e.target.value)}
+                        placeholder="Arrival notes"
+                      />
                     </div>
                   ) : (
                     <div className="h-8 flex items-center text-[11px] font-semibold text-gray-400">

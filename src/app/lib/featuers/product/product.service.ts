@@ -86,7 +86,7 @@ export class ProductService {
 
         // Return fully populated product
         const populatedProduct = await Product.findById(product._id)
-            .populate("category certificates")
+            .populate("category certificates cultivation_city")
             .populate(variantPopulate);
         return populatedProduct as IProduct;
     }
@@ -155,7 +155,7 @@ export class ProductService {
      */
     static async getAllProducts(query: any = {}): Promise<IProduct[]> {
         return await Product.find({ ...query, ...notDeletedFilter })
-            .populate("category certificates")
+            .populate("category certificates cultivation_city")
             .populate(variantPopulate);
     }
 
@@ -165,12 +165,12 @@ export class ProductService {
     static async getProductBySlug(slug: string): Promise<IProduct | null> {
         if (slug.match(/^[0-9a-fA-F]{24}$/)) {
             const product = await Product.findOne({ _id: slug, ...notDeletedFilter })
-                .populate("category certificates")
+                .populate("category certificates cultivation_city")
                 .populate(variantPopulate);
             if (product) return product;
         }
         return await Product.findOne({ slug, ...notDeletedFilter })
-            .populate("category certificates")
+            .populate("category certificates cultivation_city")
             .populate(variantPopulate);
     }
 
@@ -179,7 +179,7 @@ export class ProductService {
      */
     static async getProductById(id: string): Promise<IProduct | null> {
         return await Product.findOne({ _id: id, ...notDeletedFilter })
-            .populate("category certificates")
+            .populate("category certificates cultivation_city")
             .populate(variantPopulate);
     }
 
@@ -292,7 +292,7 @@ export class ProductService {
 
         // Return fully populated updated product
         return await Product.findById(product._id)
-            .populate("category certificates")
+            .populate("category certificates cultivation_city")
             .populate(variantPopulate);
     }
 
@@ -377,18 +377,22 @@ export class ProductService {
     }
 
     /**
-     * Soft-delete product, all its variants, and their Cloudinary images
+     * Permanently delete product, all its variants, and their Cloudinary images if no inventory exists
      */
     static async deleteProduct(id: string): Promise<IProduct | null> {
         const product = await Product.findOne({ _id: id, ...notDeletedFilter });
         if (!product) return null;
 
-        const now = new Date();
+        // 1. Confirm product does not have any inventory entry
+        const hasInventory = await Inventory.findOne({ productId: product._id });
+        if (hasInventory) {
+            throw new Error("Cannot delete product as it has associated inventory records.");
+        }
 
-        // 1. Fetch all associated variants
+        // 2. Fetch all associated variants
         const variants = await ProductVariant.find({ productId: product._id, ...notDeletedFilter });
 
-        // 2. Delete all variant images from Cloudinary
+        // 3. Delete all variant images from Cloudinary
         const imageUrls = variants.flatMap((v: any) => v.images || []);
         for (const url of imageUrls) {
             if (url) {
@@ -400,19 +404,73 @@ export class ProductService {
             }
         }
 
-        // 3. Soft-delete all associated variants
+        // 4. Permanently delete all associated variants
+        await ProductVariant.deleteMany({ productId: product._id });
+
+        // 5. Permanently delete the product itself
+        await Product.deleteOne({ _id: product._id });
+
+        return product;
+    }
+
+    /**
+     * Get all soft-deleted products (trash)
+     */
+    static async getTrashProducts(): Promise<IProduct[]> {
+        return await Product.find({ isDeleted: true })
+            .populate("category certificates cultivation_city")
+            .populate({
+                path: "variants",
+                match: { isDeleted: true },
+                populate: [
+                    { path: "unit" },
+                    { path: "packaging" }
+                ]
+            });
+    }
+
+    /**
+     * Soft-delete product and all its variants (cascading)
+     */
+    static async softDeleteProduct(id: string): Promise<IProduct | null> {
+        const product = await Product.findOne({ _id: id, ...notDeletedFilter });
+        if (!product) return null;
+
+        const now = new Date();
+
+        // 1. Soft-delete all associated variants
         await ProductVariant.updateMany(
             { productId: product._id, ...notDeletedFilter },
             { $set: { isDeleted: true, deletedAt: now } }
         );
 
-        // 4. Delete all associated inventories
-        await Inventory.deleteMany({ productId: product._id });
-
-        // 5. Soft-delete the product itself
+        // 2. Soft-delete the product itself
         product.isDeleted = true;
         product.deletedAt = now;
         product.isPublished = false;
+        await product.save();
+
+        return product;
+    }
+
+    /**
+     * Restore soft-deleted product and all its variants (cascading)
+     */
+    static async restoreProduct(id: string): Promise<IProduct | null> {
+        const product = await Product.findOne({ _id: id, isDeleted: true });
+        if (!product) return null;
+
+        const now = new Date();
+
+        // 1. Restore all associated variants that were soft-deleted
+        await ProductVariant.updateMany(
+            { productId: product._id, isDeleted: true },
+            { $set: { isDeleted: false, deletedAt: null } }
+        );
+
+        // 2. Restore the product itself
+        product.isDeleted = false;
+        product.deletedAt = null;
         await product.save();
 
         return product;

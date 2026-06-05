@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { useDropzone } from "react-dropzone";
 import { Modal } from "@/components/shared/Modal";
 import { Button } from "@/components/shared/Button";
+import LabledInput from "@/components/shared/LabledInput";
 
 const emptyForm = {
   name: "",
@@ -19,6 +20,7 @@ export interface CategoryCreateModalProps {
   onClose: () => void;
   categories: { _id: string; name: string; parent?: unknown }[];
   defaultParent?: string;
+  categoryToEdit?: any;
   onSuccess: () => void;
 }
 
@@ -27,23 +29,36 @@ export function CategoryCreateModal({
   onClose,
   categories,
   defaultParent = "",
+  categoryToEdit,
   onSuccess,
 }: CategoryCreateModalProps) {
   const [formData, setFormData] = useState(emptyForm);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isImageDeleted, setIsImageDeleted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setFormData({ ...emptyForm, parent: defaultParent });
+      if (categoryToEdit) {
+        setFormData({
+          name: categoryToEdit.name || "",
+          slug: categoryToEdit.slug || "",
+          parent: categoryToEdit.parent?._id || categoryToEdit.parent || "",
+          description: categoryToEdit.description || "",
+        });
+        setImagePreview(categoryToEdit.image || null);
+      } else {
+        setFormData({ ...emptyForm, parent: defaultParent });
+        setImagePreview(null);
+      }
       setImageFile(null);
-      setImagePreview(null);
+      setIsImageDeleted(false);
     }
-  }, [isOpen, defaultParent]);
+  }, [isOpen, defaultParent, categoryToEdit]);
 
   const revokePreview = () => {
-    if (imagePreview) {
+    if (imagePreview && imagePreview.startsWith("blob:")) {
       URL.revokeObjectURL(imagePreview);
     }
   };
@@ -53,6 +68,7 @@ export function CategoryCreateModal({
     setFormData(emptyForm);
     setImageFile(null);
     setImagePreview(null);
+    setIsImageDeleted(false);
     onClose();
   };
 
@@ -71,10 +87,11 @@ export function CategoryCreateModal({
 
   const setImage = useCallback((file: File) => {
     setImagePreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
+      if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
     });
     setImageFile(file);
+    setIsImageDeleted(false);
   }, []);
 
   const onDrop = useCallback(
@@ -106,12 +123,13 @@ export function CategoryCreateModal({
     revokePreview();
     setImageFile(null);
     setImagePreview(null);
+    setIsImageDeleted(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!imageFile) {
+    if (!categoryToEdit && !imageFile) {
       toast.error("Please select a category image.");
       return;
     }
@@ -121,26 +139,36 @@ export function CategoryCreateModal({
       const body = new FormData();
       body.append("name", formData.name);
       body.append("slug", formData.slug);
-      if (formData.parent) body.append("parent", formData.parent);
-      if (formData.description) body.append("description", formData.description);
-      body.append("image", imageFile);
+      body.append("parent", formData.parent || "");
+      body.append("description", formData.description || "");
+      if (imageFile) {
+        body.append("image", imageFile);
+      }
+      if (isImageDeleted) {
+        body.append("deleteImage", "true");
+      }
 
-      const res = await fetch("/api/categories", {
-        method: "POST",
+      const url = categoryToEdit
+        ? `/api/categories/${categoryToEdit._id}`
+        : "/api/categories";
+      const method = categoryToEdit ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         body,
       });
       const json = await res.json();
 
       if (json.success) {
-        toast.success("Category created successfully!");
-        revokePreview();
-        setFormData(emptyForm);
-        setImageFile(null);
-        setImagePreview(null);
+        toast.success(
+          categoryToEdit
+            ? "Category updated successfully!"
+            : "Category created successfully!"
+        );
+        resetAndClose();
         onSuccess();
-        onClose();
       } else {
-        toast.error(json.message || "Failed to create category");
+        toast.error(json.message || `Failed to ${categoryToEdit ? "update" : "create"} category`);
       }
     } catch {
       toast.error("An error occurred.");
@@ -149,7 +177,9 @@ export function CategoryCreateModal({
     }
   };
 
-  const rootCategories = categories.filter((cat) => !cat.parent);
+  const rootCategories = categories.filter(
+    (cat) => !cat.parent && (!categoryToEdit || cat._id !== categoryToEdit._id)
+  );
 
   const inputClass =
     "w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all";
@@ -159,7 +189,7 @@ export function CategoryCreateModal({
     <Modal
       isOpen={isOpen}
       onClose={resetAndClose}
-      title={defaultParent ? "Add Subcategory" : "Add New Category"}
+      title={categoryToEdit ? "Edit Category" : defaultParent ? "Add Subcategory" : "Add New Category"}
       maxWidth="max-w-3xl"
     >
       <form onSubmit={handleSubmit}>
@@ -214,31 +244,25 @@ export function CategoryCreateModal({
 
           <div className="flex flex-col space-y-3 min-w-0 col-span-2">
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass}>Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  autoFocus
-                  className={inputClass}
-                  placeholder="e.g. Microgreens"
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Slug</label>
-                <input
-                  type="text"
-                  name="slug"
-                  value={formData.slug}
-                  onChange={handleInputChange}
-                  required
-                  className={inputClass}
-                  placeholder="slug-url"
-                />
-              </div>
+              <LabledInput
+                label="Name"
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+                autoFocus
+                placeholder="e.g. Microgreens"
+              />
+              <LabledInput
+                label="Slug"
+                type="text"
+                name="slug"
+                value={formData.slug}
+                onChange={handleInputChange}
+                required
+                placeholder="slug-url"
+              />
             </div>
 
             <div>
@@ -258,17 +282,16 @@ export function CategoryCreateModal({
               </select>
             </div>
 
-            <div>
-              <label className={labelClass}>Description (optional)</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                rows={2}
-                className={`${inputClass} resize-none`}
-                placeholder="Brief description…"
-              />
-            </div>
+            <LabledInput
+              label="Description (optional)"
+              type="textarea"
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              rows={2}
+              className="resize-none"
+              placeholder="Brief description…"
+            />
           </div>
         </div>
 
@@ -276,14 +299,19 @@ export function CategoryCreateModal({
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={resetAndClose}
             disabled={submitting}
+            className="!py-2 !px-4 !rounded-lg text-xs font-bold"
           >
             Cancel
           </Button>
-          <Button type="submit" variant="primary" size="sm" isLoading={submitting}>
-            Create Category
+          <Button 
+            type="submit" 
+            variant="primary" 
+            isLoading={submitting}
+            className="!py-2.5 !px-6 !rounded-lg text-xs font-bold"
+          >
+            {categoryToEdit ? "Update Category" : "Create Category"}
           </Button>
         </div>
       </form>

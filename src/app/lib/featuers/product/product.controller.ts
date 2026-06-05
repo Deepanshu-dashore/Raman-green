@@ -122,4 +122,35 @@ export class ProductController {
             return ApiResponse(500, null, error.message);
         }
     }
+
+    static async getTrash() {
+        try {
+            const products = await ProductService.getTrashProducts();
+            const formattedProducts = await Promise.all(products.map(product => formatProduct(product)));
+            return ApiResponse(200, formattedProducts, "Trash products fetched successfully.");
+        } catch (error: any) {
+            return ApiResponse(500, null, error.message);
+        }
+    }
+
+    static async softDelete(id: string) {
+        try {
+            const product = await ProductService.softDeleteProduct(id);
+            if (!product) return ApiResponse(404, null, "Product not found or already deleted.");
+            return ApiResponse(200, null, "Product soft-deleted successfully.");
+        } catch (error: any) {
+            return ApiResponse(500, null, error.message);
+        }
+    }
+
+    static async restore(id: string) {
+        try {
+            const product = await ProductService.restoreProduct(id);
+            if (!product) return ApiResponse(404, null, "Product not found in trash.");
+            const formatted = await formatProduct(product);
+            return ApiResponse(200, formatted, "Product restored successfully.");
+        } catch (error: any) {
+            return ApiResponse(500, null, error.message);
+        }
+    }
 }

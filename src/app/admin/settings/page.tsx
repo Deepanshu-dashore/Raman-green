@@ -407,7 +407,7 @@ const AdminSettings = () => {
                                     <div>
                                         <LabledInput value={packForm.description} onChange={(e) => setPackForm({ ...packForm, description: e.target.value })} label='Notes (Optional)' placeholder="Brief info..." />
                                     </div>
-                                    <Button type="submit" variant="edit" fullWidth isLoading={isSubmitting} className="py-3 rounded-2xl mt-2" icon="lucide:save">
+                                    <Button type="submit" variant="edit" fullWidth isLoading={isSubmitting} className="!py-2.5 !px-6 !rounded-lg text-xs font-bold mt-2" icon="lucide:save">
                                         {editingId ? 'Update' : 'Add'}
                                     </Button>
                                     {editingId && <button type="button" onClick={() => { setEditingId(null); setPackForm({ name: '', type: 'Box', description: '' }); }} className="w-full py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">Cancel Edit</button>}
@@ -456,14 +456,12 @@ const AdminSettings = () => {
                                 </h3>
                                 <form onSubmit={handleUnitSubmit} className="space-y-5">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
-                                        <input type="text" value={unitForm.name} onChange={(e) => setUnitForm({ ...unitForm, name: e.target.value })} required className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="e.g. Kilogram" />
+                                        <LabledInput label="Full Name" value={unitForm.name} onChange={(e) => setUnitForm({ ...unitForm, name: e.target.value })} required placeholder="e.g. Kilogram" />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Short Name</label>
-                                        <input type="text" value={unitForm.shortName} onChange={(e) => setUnitForm({ ...unitForm, shortName: e.target.value })} required className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="e.g. kg" />
+                                        <LabledInput label="Short Name" value={unitForm.shortName} onChange={(e) => setUnitForm({ ...unitForm, shortName: e.target.value })} required placeholder="e.g. kg" />
                                     </div>
-                                    <Button type="submit" variant="edit" fullWidth isLoading={isSubmitting} className="py-3 rounded-2xl mt-2" icon="lucide:save">
+                                    <Button type="submit" variant="edit" fullWidth isLoading={isSubmitting} className="!py-2.5 !px-6 !rounded-lg text-xs font-bold mt-2" icon="lucide:save">
                                         {editingId ? 'Update' : 'Add'}
                                     </Button>
                                     {editingId && <button type="button" onClick={() => { setEditingId(null); setUnitForm({ name: '', shortName: '' }); }} className="w-full py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">Cancel Edit</button>}
@@ -518,14 +516,12 @@ const AdminSettings = () => {
                                 </h3>
                                 <form onSubmit={handleCitySubmit} className="space-y-5">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">City Name</label>
-                                        <input type="text" value={cityForm.name} onChange={(e) => setCityForm({ ...cityForm, name: e.target.value })} required className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="e.g. Indore" />
+                                        <LabledInput label="City Name" value={cityForm.name} onChange={(e) => setCityForm({ ...cityForm, name: e.target.value })} required placeholder="e.g. Indore" />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">State / Region (Optional)</label>
-                                        <input type="text" value={cityForm.state} onChange={(e) => setCityForm({ ...cityForm, state: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm" placeholder="e.g. Madhya Pradesh" />
+                                        <LabledInput label="State / Region (Optional)" value={cityForm.state} onChange={(e) => setCityForm({ ...cityForm, state: e.target.value })} placeholder="e.g. Madhya Pradesh" />
                                     </div>
-                                    <Button type="submit" variant="edit" fullWidth isLoading={isSubmitting} className="py-3 rounded-2xl mt-2" icon="lucide:save">
+                                    <Button type="submit" variant="edit" fullWidth isLoading={isSubmitting} className="!py-2.5 !px-6 !rounded-lg text-xs font-bold mt-2" icon="lucide:save">
                                         {editingId ? 'Update' : 'Add'}
                                     </Button>
                                     {editingId && <button type="button" onClick={() => { setEditingId(null); setCityForm({ name: '', state: '' }); }} className="w-full py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">Cancel Edit</button>}

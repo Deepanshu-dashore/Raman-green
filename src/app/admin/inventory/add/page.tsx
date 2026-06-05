@@ -7,6 +7,7 @@ import { Icon } from '@iconify/react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import Card from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
+import LabledInput from '@/components/shared/LabledInput';
 
 interface ProductOption {
   _id: string;
@@ -35,6 +36,7 @@ const AddStockPage = () => {
   // Data state
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [variants, setVariants] = useState<VariantOption[]>([]);
+  const [existingInventories, setExistingInventories] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,10 +51,11 @@ const AddStockPage = () => {
     availableQty: 0,
     reservedQty: 0,
     lowStockLimit: 10,
-    notes: ''
+    notes: '',
+    inventoryId: '' // Explicit selected inventory ID
   });
 
-  // Fetch products on mount
+  // Fetch products and all inventories on mount
   useEffect(() => {
     setLoadingProducts(true);
     fetch('/api/products')
@@ -66,13 +69,22 @@ const AddStockPage = () => {
       })
       .catch(() => toast.error("Network error loading products"))
       .finally(() => setLoadingProducts(false));
+
+    fetch('/api/inventory')
+      .then(res => res.json())
+      .then(json => {
+        if (json.success) {
+          setExistingInventories(json.data || []);
+        }
+      })
+      .catch(() => console.error("Error loading existing inventories"));
   }, []);
 
   // Fetch variants when product changes
   useEffect(() => {
     if (!form.productId) {
       setVariants([]);
-      setForm(prev => ({ ...prev, variantId: '' }));
+      setForm(prev => ({ ...prev, variantId: '', inventoryId: '' }));
       return;
     }
 
@@ -103,6 +115,44 @@ const AddStockPage = () => {
     }));
   };
 
+  const handleInventoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const invId = e.target.value;
+    if (!invId) {
+      setForm(prev => ({
+        ...prev,
+        inventoryId: '',
+        variantId: '',
+        batchNumber: '',
+        mfgDate: '',
+        expiryDate: '',
+        availableQty: 0,
+        reservedQty: 0,
+        lowStockLimit: 10,
+        notes: ''
+      }));
+      return;
+    }
+
+    const selectedInv = existingInventories.find(inv => inv._id === invId);
+    if (selectedInv) {
+      const formattedMfg = selectedInv.mfgDate ? new Date(selectedInv.mfgDate).toISOString().split('T')[0] : '';
+      const formattedExp = selectedInv.expiryDate ? new Date(selectedInv.expiryDate).toISOString().split('T')[0] : '';
+
+      setForm(prev => ({
+        ...prev,
+        inventoryId: invId,
+        variantId: selectedInv.variantId?._id || '',
+        batchNumber: selectedInv.batchNumber || '',
+        mfgDate: formattedMfg,
+        expiryDate: formattedExp,
+        availableQty: 0, // specify quantity to add
+        reservedQty: selectedInv.reservedQty || 0,
+        lowStockLimit: selectedInv.lowStockLimit ?? 10,
+        notes: selectedInv.notes || ''
+      }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -128,7 +178,7 @@ const AddStockPage = () => {
     }
 
     setSaving(true);
-    const toastId = toast.loading("Creating inventory stock entry...");
+    const toastId = toast.loading(form.inventoryId ? "Updating existing batch stock..." : "Creating inventory stock entry...");
 
     try {
       const res = await fetch('/api/inventory', {
@@ -143,17 +193,18 @@ const AddStockPage = () => {
           availableQty: form.availableQty,
           reservedQty: form.reservedQty,
           lowStockLimit: form.lowStockLimit,
-          notes: form.notes.trim()
+          notes: form.notes.trim(),
+          inventoryId: form.inventoryId || undefined
         })
       });
 
       const json = await res.json();
 
       if (json.success) {
-        toast.success("Stock entry created successfully!", { id: toastId });
+        toast.success(form.inventoryId ? "Stock added to batch successfully!" : "Stock entry created successfully!", { id: toastId });
         router.push('/admin/inventory');
       } else {
-        throw new Error(json.message || "Failed to create stock entry");
+        throw new Error(json.message || "Failed to submit stock entry");
       }
     } catch (err: any) {
       toast.error(err.message || "An unexpected error occurred", { id: toastId });
@@ -164,6 +215,10 @@ const AddStockPage = () => {
 
   const selectedProduct = products.find(p => p._id === form.productId);
   const selectedVariant = variants.find(v => v._id === form.variantId);
+  const productInventories = existingInventories.filter(inv => inv.productId?._id === form.productId);
+  const selectedInventoryItem = existingInventories.find(inv => inv._id === form.inventoryId);
+  const previousStock = selectedInventoryItem ? (selectedInventoryItem.availableQty || 0) : 0;
+  const newCalculatedStock = previousStock + Number(form.availableQty || 0);
 
   return (
     <div className="max-w-4xl mx-auto pb-16 px-4 animate-in fade-in duration-500 space-y-6">
@@ -221,6 +276,41 @@ const AddStockPage = () => {
               </div>
             </div>
 
+            {/* Existing Batch Dropdown (Optional) */}
+            {form.productId && productInventories.length > 0 && (
+              <div className="space-y-1.5 animate-in fade-in duration-300">
+                <label className="block text-[10px] font-bold text-purple-600 uppercase tracking-widest ml-1">
+                  Existing Stock Batch / Record (Optional)
+                </label>
+                <div className="relative">
+                  <select
+                    name="inventoryId"
+                    value={form.inventoryId}
+                    onChange={handleInventoryChange}
+                    className="w-full px-4 py-3 bg-purple-50/40 border border-purple-100 rounded-2xl focus:ring-2 focus:ring-purple-500 outline-none text-sm font-semibold appearance-none cursor-pointer pr-10"
+                  >
+                    <option value="">-- Create a new stock batch record from scratch --</option>
+                    {productInventories.map(inv => {
+                      const pack = [inv.variantId?.weight, inv.variantId?.unit?.shortName]
+                        .filter(Boolean)
+                        .join(' ');
+                      return (
+                        <option key={inv._id} value={inv._id}>
+                          Add Stock to — SKU: {inv.variantId?.sku} • Batch: {inv.batchNumber} {pack ? `• ${pack}` : ''} (Current Stock: {inv.availableQty})
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-purple-400">
+                    <Icon icon="lucide:chevron-down" className="w-4 h-4" />
+                  </span>
+                </div>
+                <p className="text-[10px] font-semibold text-purple-500/80 ml-1">
+                  💡 Select an existing batch to update its stock level and details, or leave empty to register a brand new batch.
+                </p>
+              </div>
+            )}
+
             {/* Variant Select */}
             <div className="space-y-1.5">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
@@ -232,7 +322,7 @@ const AddStockPage = () => {
                   value={form.variantId}
                   onChange={handleChange}
                   required
-                  disabled={!form.productId || loadingVariants}
+                  disabled={!form.productId || loadingVariants || !!form.inventoryId}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed pr-10"
                 >
                   <option value="">
@@ -256,8 +346,25 @@ const AddStockPage = () => {
               </div>
             </div>
 
-            {/* Selected Variant Preview Card */}
-            {selectedVariant && (
+            {/* Existing Batch / Variant Info Card */}
+            {form.inventoryId ? (
+              <div className="flex items-center gap-4 p-4 bg-purple-50/60 border border-purple-100 rounded-2xl animate-in slide-in-from-top-2 duration-200">
+                <span className="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                  <Icon icon="solar:info-square-bold-duotone" className="w-5 h-5" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-purple-800">
+                    Adding Stock to Existing Batch
+                  </p>
+                  <p className="text-[11px] font-semibold text-purple-600 mt-0.5">
+                    Current stock level is <span className="font-bold text-purple-800">{existingInventories.find(inv => inv._id === form.inventoryId)?.availableQty || 0} units</span>. Entering a value below will add to this balance.
+                  </p>
+                </div>
+                <span className="shrink-0 w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center">
+                  <Icon icon="lucide:check" className="w-4 h-4" />
+                </span>
+              </div>
+            ) : selectedVariant ? (
               <div className="flex items-center gap-4 p-4 bg-green-50/60 border border-green-100 rounded-2xl animate-in slide-in-from-top-2 duration-200">
                 {selectedVariant.images?.[0] ? (
                   <img
@@ -282,7 +389,7 @@ const AddStockPage = () => {
                   <Icon icon="lucide:check" className="w-4 h-4" />
                 </span>
               </div>
-            )}
+            ) : null}
           </div>
         </Card>
 
@@ -300,112 +407,76 @@ const AddStockPage = () => {
 
           <div className="p-7 space-y-5">
             {/* Batch Number */}
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                Batch Number <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                name="batchNumber"
-                value={form.batchNumber}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold"
-                placeholder="e.g. BATCH-2025-001"
-              />
-            </div>
+            <LabledInput
+              label="Batch Number"
+              name="batchNumber"
+              value={form.batchNumber}
+              onChange={handleChange}
+              required
+              disabled={!!form.inventoryId}
+              placeholder="e.g. BATCH-2025-001"
+            />
 
             {/* Dates: Mfg & Expiry */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                  Manufacturing Date <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="mfgDate"
-                  value={form.mfgDate}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                  Expiry Date <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="expiryDate"
-                  value={form.expiryDate}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold"
-                />
-              </div>
+              <LabledInput
+                label="Manufacturing Date"
+                type="date"
+                name="mfgDate"
+                value={form.mfgDate}
+                onChange={handleChange}
+                required
+              />
+              <LabledInput
+                label="Expiry Date"
+                type="date"
+                name="expiryDate"
+                value={form.expiryDate}
+                onChange={handleChange}
+                required
+              />
             </div>
 
-            {/* Stock Quantities */}
+            {/* Stock Quantities & Dynamic Calculations */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                  Available Quantity <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="number"
-                  name="availableQty"
-                  value={form.availableQty}
-                  onChange={handleChange}
-                  required
-                  min={0}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold"
-                  placeholder="0"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                  Reserved Quantity
-                </label>
-                <input
-                  type="number"
-                  name="reservedQty"
-                  value={form.reservedQty}
-                  onChange={handleChange}
-                  min={0}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold"
-                  placeholder="0"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                  Low Stock Alert Limit
-                </label>
-                <input
-                  type="number"
-                  name="lowStockLimit"
-                  value={form.lowStockLimit}
-                  onChange={handleChange}
-                  min={0}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold"
-                  placeholder="10"
-                />
-              </div>
+              <LabledInput
+                label="Quantity to Add"
+                type="number"
+                name="availableQty"
+                value={form.availableQty}
+                onChange={handleChange}
+                required
+                min={0}
+                placeholder="0"
+              />
+
+              <LabledInput
+                label="Previous Stock"
+                type="number"
+                disabled
+                value={previousStock}
+                className="bg-gray-100/50"
+              />
+
+              <LabledInput
+                label="New Calculated Stock"
+                type="number"
+                disabled
+                value={newCalculatedStock}
+                className="bg-green-50/20 text-green-700 font-black border border-green-200"
+              />
             </div>
 
             {/* Notes */}
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                Stock Notes
-              </label>
-              <textarea
-                name="notes"
-                value={form.notes}
-                onChange={handleChange}
-                rows={3}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm font-semibold min-h-[80px] resize-none"
-                placeholder="Optional batch notes, shipment details, quality review, etc."
-              />
-            </div>
+            <LabledInput
+              label="Stock Notes"
+              type="textarea"
+              name="notes"
+              value={form.notes}
+              onChange={handleChange}
+              rows={3}
+              placeholder="Optional batch notes, shipment details, quality review, etc."
+            />
           </div>
         </Card>
 
@@ -416,7 +487,7 @@ const AddStockPage = () => {
             variant="outline"
             onClick={() => router.push('/admin/inventory')}
             icon="lucide:arrow-left"
-            className="!rounded-2xl px-6 font-bold"
+            className="!py-2 !px-4 !rounded-lg text-xs font-bold"
           >
             Back to Inventory
           </Button>
@@ -434,10 +505,11 @@ const AddStockPage = () => {
                 availableQty: 0,
                 reservedQty: 0,
                 lowStockLimit: 10,
-                notes: ''
+                notes: '',
+                inventoryId: ''
               })}
               icon="lucide:rotate-ccw"
-              className="!rounded-2xl px-6 font-bold"
+              className="!py-2 !px-4 !rounded-lg text-xs font-bold"
             >
               Reset
             </Button>
@@ -445,7 +517,7 @@ const AddStockPage = () => {
               type="submit"
               isLoading={saving}
               icon="lucide:plus"
-              className="!rounded-2xl px-8 shadow-lg font-bold"
+              className="!py-2.5 !px-6 !rounded-lg text-xs font-bold"
             >
               Add Stock Entry
             </Button>

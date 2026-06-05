@@ -70,25 +70,80 @@ export class InventoryService {
     /**
      * Create a new inventory record and push STOCK_IN history
      */
-    static async createInventory(data: Partial<IInventory>, adminId?: string): Promise<IInventory> {
-        const inventory = new Inventory(data);
-        await inventory.save();
+    static async createInventory(data: Partial<IInventory> & { inventoryId?: string }, adminId?: string): Promise<IInventory> {
+        let inventory;
 
-        // Push STOCK_IN history for newly created inventory
-        try {
-            await InventoryHistory.create({
-                inventory: inventory._id,
-                actionType: 'STOCK_IN',
-                quantity: inventory.availableQty,
-                previousStock: 0,
-                newStock: inventory.availableQty,
-                note: data.notes || "Stock added via inventory creation",
-                referenceId: inventory.variantId?.toString(),
-                referenceModel: 'StockIn',
-                createdBy: adminId || undefined
+        if (data.inventoryId) {
+            inventory = await Inventory.findById(data.inventoryId);
+        } else {
+            // Find by matching variantId and batchNumber (trimmed)
+            inventory = await Inventory.findOne({
+                variantId: data.variantId,
+                batchNumber: data.batchNumber?.trim()
             });
-        } catch (err) {
-            console.error("Failed to create inventory history on creation:", err);
+        }
+
+        if (inventory) {
+            const previousStock = inventory.availableQty;
+            const newStock = previousStock + Number(data.availableQty || 0);
+
+            inventory.availableQty = newStock;
+            if (data.notes) {
+                inventory.notes = data.notes;
+            }
+            if (data.mfgDate) inventory.mfgDate = data.mfgDate;
+            if (data.expiryDate) inventory.expiryDate = data.expiryDate;
+            if (data.lowStockLimit !== undefined) inventory.lowStockLimit = data.lowStockLimit;
+
+            await inventory.save();
+
+            // Push STOCK_IN history for updated inventory batch
+            try {
+                await InventoryHistory.create({
+                    inventory: inventory._id,
+                    actionType: 'STOCK_IN',
+                    quantity: Number(data.availableQty || 0),
+                    previousStock,
+                    newStock,
+                    note: data.notes || "Stock added to existing batch",
+                    referenceId: inventory._id.toString(), // Store the inventory ID here as reference
+                    referenceModel: 'StockIn',
+                    createdBy: adminId || undefined
+                });
+            } catch (err) {
+                console.error("Failed to create inventory history on update:", err);
+            }
+        } else {
+            // Create a new inventory record
+            inventory = new Inventory({
+                variantId: data.variantId,
+                productId: data.productId,
+                batchNumber: data.batchNumber?.trim(),
+                mfgDate: data.mfgDate,
+                expiryDate: data.expiryDate,
+                availableQty: data.availableQty || 0,
+                reservedQty: data.reservedQty || 0,
+                lowStockLimit: data.lowStockLimit !== undefined ? data.lowStockLimit : 10,
+                notes: data.notes
+            });
+            await inventory.save();
+
+            // Push STOCK_IN history for newly created inventory
+            try {
+                await InventoryHistory.create({
+                    inventory: inventory._id,
+                    actionType: 'STOCK_IN',
+                    quantity: inventory.availableQty,
+                    previousStock: 0,
+                    newStock: inventory.availableQty,
+                    note: data.notes || "Stock added via inventory creation",
+                    referenceId: inventory._id.toString(), // Store the inventory ID here as reference
+                    referenceModel: 'StockIn',
+                    createdBy: adminId || undefined
+                });
+            } catch (err) {
+                console.error("Failed to create inventory history on creation:", err);
+            }
         }
 
         const populated = await Inventory.findById(inventory._id)

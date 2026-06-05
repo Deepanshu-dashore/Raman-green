@@ -57,6 +57,11 @@ const AdminCategories = () => {
     openCreateModal(parentId);
   };
 
+  const handleEditClick = (category: any) => {
+    setSelectedCategory(category);
+    setCreateModalOpen(true);
+  };
+
   const handleDeleteClick = (category: any) => {
     setSelectedCategory(category);
     setDeleteModalOpen(true);
@@ -70,7 +75,7 @@ const AdminCategories = () => {
       const res = await fetch(`/api/categories/${catId}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
-        toast.success("Category deleted successfully");
+        toast.success("Category moved to trash");
         fetchCategories();
       } else {
         toast.error(json.message);
@@ -139,6 +144,7 @@ const AdminCategories = () => {
             )
           }
         ]}
+        onEdit={handleEditClick}
         onDelete={handleDeleteClick}
         additionalActions={[
           {
@@ -148,7 +154,7 @@ const AdminCategories = () => {
             onClick: (cat) => handleAddSubcategory(cat._id)
           }
         ]}
-        hiddenActions={['view', 'edit']}
+        hiddenActions={['view']}
       />
 
       <CategoryCreateModal
@@ -156,9 +162,11 @@ const AdminCategories = () => {
         onClose={() => {
           setCreateModalOpen(false);
           setDefaultParent('');
+          setSelectedCategory(null);
         }}
         categories={categories}
         defaultParent={defaultParent}
+        categoryToEdit={selectedCategory}
         onSuccess={fetchCategories}
       />
 

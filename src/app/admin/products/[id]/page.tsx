@@ -3,13 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
-import { PencilIcon } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
-import { PageHeader } from "@/components/shared/PageHeader";
-import Card from "@/components/shared/Card";
-import { Button } from "@/components/shared/Button";
-import { DataTable } from "@/components/shared/DataTable";
-import { getStatusStyle } from "@/constants/status";
 
 interface ProductViewPageProps {
   params: Promise<{ id: string }>;
@@ -23,6 +17,12 @@ const ProductViewPage = ({ params }: ProductViewPageProps) => {
   const [product, setProduct] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState<string | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  const [activeVariant, setActiveVariant] = useState<any | null>(null);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [activeTab, setActiveTab] = useState<"description" | "reviews">("description");
+  const [selectedColor, setSelectedColor] = useState<string>("emerald");
+  const [selectedPackaging, setSelectedPackaging] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -31,8 +31,17 @@ const ProductViewPage = ({ params }: ProductViewPageProps) => {
       .then((json) => {
         if (json.success) {
           setProduct(json.data);
-          const firstImg = json.data?.variants?.[0]?.images?.[0] || null;
+          const firstVariant = json.data?.variants?.[0] || null;
+          setActiveVariant(firstVariant);
+          const firstImg = firstVariant?.images?.[0] || json.data?.variants?.flatMap((v: any) => v.images || [])?.[0] || null;
           setActiveImage(firstImg);
+          setActiveImageIndex(0);
+          if (firstVariant?.packaging?.[0]) {
+            const packId = typeof firstVariant.packaging[0] === 'object' ? firstVariant.packaging[0]._id : firstVariant.packaging[0];
+            setSelectedPackaging(packId);
+          } else {
+            setSelectedPackaging(null);
+          }
         } else {
           toast.error(json.message || "Failed to load product details.");
         }
@@ -43,44 +52,60 @@ const ProductViewPage = ({ params }: ProductViewPageProps) => {
       })
       .finally(() => setLoading(false));
   }, [productId]);
-  
-  const handleDeleteVariant = (v: any) => {
-    if (!confirm(`Are you sure you want to delete variant "${v.sku}"? This will permanently wipe its warehouse inventory and delete all of its images.`)) return;
 
-    toast.promise(
-      fetch(`/api/products/variants/${v._id}`, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(json => {
-          if (json.success) {
-            setProduct((prev: any) => {
-              if (!prev) return null;
-              return {
-                ...prev,
-                variants: (prev.variants || []).filter((item: any) => item._id !== v._id)
-              };
-            });
-          } else {
-            throw new Error(json.message || 'Failed to delete variant');
-          }
-        }),
-      {
-        loading: 'Deleting variant...',
-        success: 'Variant deleted successfully',
-        error: (err) => err.message || 'Failed to delete variant'
+  const allImages: string[] = useMemo(() => {
+    if (!product) return [];
+    // Collect all unique variant images
+    const imgs = product.variants?.flatMap((v: any) => v.images || []) || [];
+    return Array.from(new Set(imgs));
+  }, [product]);
+
+  // Update active image index when active image changes
+  useEffect(() => {
+    if (activeImage) {
+      const idx = allImages.indexOf(activeImage);
+      if (idx > -1) {
+        setActiveImageIndex(idx);
       }
-    );
+    }
+  }, [activeImage, allImages]);
+
+  const nextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (allImages.length <= 1) return;
+    const nextIdx = (activeImageIndex + 1) % allImages.length;
+    setActiveImageIndex(nextIdx);
+    setActiveImage(allImages[nextIdx]);
   };
 
-  const allImages: string[] = useMemo(
-    () =>
-      Array.from(
-        new Set(product?.variants?.flatMap((v: any) => v.images || []) || [])
-      ),
-    [product]
-  );
+  const prevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (allImages.length <= 1) return;
+    const prevIdx = (activeImageIndex - 1 + allImages.length) % allImages.length;
+    setActiveImageIndex(prevIdx);
+    setActiveImage(allImages[prevIdx]);
+  };
+
+  const handleVariantChange = (variantId: string) => {
+    const v = product?.variants?.find((item: any) => item._id === variantId);
+    if (v) {
+      setActiveVariant(v);
+      if (v.images?.[0]) {
+        setActiveImage(v.images[0]);
+      }
+      setQuantity(1);
+      if (v.packaging?.[0]) {
+        const packId = typeof v.packaging[0] === 'object' ? v.packaging[0]._id : v.packaging[0];
+        setSelectedPackaging(packId);
+      } else {
+        setSelectedPackaging(null);
+      }
+    }
+  };
 
   const stats = useMemo(() => {
-    const variants = product?.variants || [];
+    if (!product) return { priceLabel: "N/A", totalStock: 0 };
+    const variants = product.variants || [];
     const prices = variants
       .map((v: any) => v.basePrice)
       .filter((p: number) => p != null);
@@ -98,385 +123,481 @@ const ProductViewPage = ({ params }: ProductViewPageProps) => {
           : `₹${min} – ₹${max}`;
 
     return {
-      variantCount: variants.length,
       priceLabel,
       totalStock,
-      isFeatured: !!product?.isFeatured,
     };
   }, [product]);
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-600" />
-        <p className="text-sm font-medium text-gray-500">Loading product…</p>
+      <div className="flex flex-col items-center justify-center min-h-[500px] space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600" />
+        <p className="text-sm font-semibold text-slate-500">Loading product details...</p>
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="max-w-lg mx-auto text-center py-16 space-y-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 text-red-500">
+      <div className="max-w-lg mx-auto text-center py-20 space-y-6">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 text-red-500 shadow-inner">
           <Icon icon="lucide:alert-circle" className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-gray-800">Product not found</h2>
-        <p className="text-sm text-gray-500">
+        <h2 className="text-2xl font-bold text-slate-800">Product not found</h2>
+        <p className="text-sm text-slate-500">
           This product may have been removed or the link is invalid.
         </p>
-        <Button onClick={() => router.push("/admin/products")} icon="lucide:arrow-left">
+        <button
+          onClick={() => router.push("/admin/products")}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors shadow-md"
+        >
+          <Icon icon="lucide:arrow-left" className="w-4 h-4" />
           Back to products
-        </Button>
+        </button>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6 pb-12">
-      <PageHeader
-        title={product.name}
-        breadcrumbs={[
-          { label: "Admin", href: "/admin" },
-          { label: "Products", href: "/admin/products" },
-          { label: product.name },
-        ]}
-        backLink="/admin/products"
-        actionNode={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push(`/admin/products/edit/${productId}/variants`)}
-              icon="lucide:layers"
-            >
-              Variants
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => router.push(`/admin/products/edit/${productId}`)}
-              icon="lucide:edit"
-            >
-              Edit product
-            </Button>
-          </div>
-        }
-      />
+  const isOutOfStock = !activeVariant || Number(activeVariant.stock) <= 0;
 
-      {/* Quick stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          {
-            label: "Variants",
-            value: String(stats.variantCount),
-            icon: "lucide:layers",
-            color: "text-blue-600 bg-blue-50",
-          },
-          {
-            label: "Price range",
-            value: stats.priceLabel,
-            icon: "lucide:indian-rupee",
-            color: "text-emerald-600 bg-emerald-50",
-          },
-          {
-            label: "Total stock",
-            value: String(stats.totalStock),
-            icon: "lucide:package",
-            color: "text-amber-600 bg-amber-50",
-          },
-          {
-            label: "Status",
-            value: stats.isFeatured ? "Featured" : "Active",
-            icon: stats.isFeatured ? "lucide:star" : "lucide:check-circle",
-            color: stats.isFeatured
-              ? "text-purple-600 bg-purple-50"
-              : "text-green-600 bg-green-50",
-          },
-        ].map((item) => (
-          <Card key={item.label} className="!p-4 !min-h-0 flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.color}`}
-            >
-              <Icon icon={item.icon} className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                {item.label}
-              </p>
-              <p className="text-sm font-bold text-gray-900 truncate">{item.value}</p>
-            </div>
-          </Card>
-        ))}
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-10 animate-in fade-in duration-500">
+      
+      {/* 1. Header controls */}
+      <div className="flex items-center justify-between border-b border-slate-100 pb-5">
+        <button
+          onClick={() => router.push("/admin/products")}
+          className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm transition-colors group"
+        >
+          <Icon icon="lucide:chevron-left" className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
+          Back
+        </button>
+        
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => {
+              navigator.clipboard.writeText(window.location.origin + `/products/${product.slug}`);
+              toast.success("Product link copied!");
+            }}
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-all border border-slate-100 shadow-sm"
+            title="Copy Public Link"
+          >
+            <Icon icon="lucide:share-2" className="w-4.5 h-4.5" />
+          </button>
+          
+          <button
+            onClick={() => router.push(`/admin/products/edit/${productId}`)}
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-all border border-slate-100 shadow-sm"
+            title="Edit Base Product"
+          >
+            <Icon icon="lucide:edit-2" className="w-4.5 h-4.5" />
+          </button>
+          
+          <div className="bg-slate-900 text-slate-100 px-4 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-default select-none border border-slate-800">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Published</span>
+          </div>
+        </div>
       </div>
 
-      {/* Product overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 items-start">
-        {/* Gallery */}
-        <Card className="!p-4 !min-h-0 lg:sticky lg:top-24">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-            Gallery
-          </p>
-          <div className="aspect-square w-full rounded-xl overflow-hidden bg-gray-50 border border-gray-100">
+      {/* 2. Main content area: Image Gallery (Left) & Product Customizer (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+        
+        {/* Left: Image Gallery */}
+        <div className="lg:col-span-6 space-y-4">
+          <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-slate-50 border border-slate-200/60 shadow-sm group">
             {activeImage ? (
               <img
                 src={activeImage}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
               />
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
-                <Icon icon="lucide:image" className="w-12 h-12 mb-2" />
-                <span className="text-xs font-medium text-gray-400">No images</span>
+              <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
+                <Icon icon="lucide:image" className="w-16 h-16 mb-2" />
+                <span className="text-xs font-semibold text-slate-400">No images available</span>
               </div>
             )}
+
+            {/* Gallery Left/Right Overlays */}
+            {allImages.length > 1 && (
+              <>
+                <button
+                  onClick={prevImage}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-white hover:text-slate-950 shadow-md transition-all opacity-0 group-hover:opacity-100"
+                >
+                  <Icon icon="lucide:chevron-left" className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={nextImage}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-white hover:text-slate-950 shadow-md transition-all opacity-0 group-hover:opacity-100"
+                >
+                  <Icon icon="lucide:chevron-right" className="w-5 h-5" />
+                </button>
+
+                {/* Page Indicator Overlay */}
+                <div className="absolute bottom-4 right-4 bg-slate-950/85 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-3 shadow-md">
+                  <button onClick={prevImage} className="hover:text-emerald-400 transition-colors">
+                    <Icon icon="lucide:chevron-left" className="w-4 h-4" />
+                  </button>
+                  <span className="tabular-nums">
+                    {activeImageIndex + 1} / {allImages.length}
+                  </span>
+                  <button onClick={nextImage} className="hover:text-emerald-400 transition-colors">
+                    <Icon icon="lucide:chevron-right" className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-          {allImages.length > 0 && (
-            <div className="grid grid-cols-5 gap-2 mt-3">
+
+          {/* Thumbnails list */}
+          {allImages.length > 1 && (
+            <div className="flex gap-3 overflow-x-auto py-1 hide-scrollbar">
               {allImages.map((imgUrl, idx) => (
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => setActiveImage(imgUrl)}
-                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                  onClick={() => {
+                    setActiveImage(imgUrl);
+                    setActiveImageIndex(idx);
+                  }}
+                  className={`w-18 h-18 rounded-xl overflow-hidden shrink-0 border-2 transition-all shadow-sm ${
                     activeImage === imgUrl
-                      ? "border-green-600 ring-1 ring-green-600/30"
-                      : "border-transparent opacity-70 hover:opacity-100"
+                      ? "border-emerald-600 ring-2 ring-emerald-600/20 scale-[0.98]"
+                      : "border-slate-200/80 opacity-60 hover:opacity-100"
                   }`}
                 >
                   <img
                     src={imgUrl}
-                    alt={`View ${idx + 1}`}
+                    alt={`Thumbnail ${idx + 1}`}
                     className="w-full h-full object-cover"
                   />
                 </button>
               ))}
             </div>
           )}
-        </Card>
+        </div>
 
-        {/* Details */}
-        <Card className="!p-6 !min-h-0 space-y-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-bold uppercase text-green-700 bg-green-50 border border-green-100 px-2.5 py-1 rounded-lg">
-              {product.brand || "Raman Green"}
-            </span>
-            <span className="text-[10px] font-bold uppercase text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
-              {product.category?.name || "Uncategorized"}
-            </span>
-            {product.isFeatured && (
-              <span className="text-[10px] font-bold uppercase text-purple-700 bg-purple-50 border border-purple-100 px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
-                <Icon icon="lucide:star" className="w-3 h-3" />
-                Featured
+        {/* Right: Product Detail purchase block simulator */}
+        <div className="lg:col-span-6 space-y-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <span className="px-2.5 py-1 bg-sky-50 border border-sky-100 text-sky-600 rounded-lg text-[10px] font-bold tracking-wider uppercase">
+                New
               </span>
-            )}
-            {product.isPublished === false && (
-              <span className="text-[10px] font-bold uppercase text-gray-600 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-lg">
-                Draft
+              <span className={`text-xs font-black uppercase tracking-wide ${isOutOfStock ? "text-rose-600" : "text-emerald-600"}`}>
+                {isOutOfStock ? "Out of Stock" : "In Stock"}
               </span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                Slug
-              </p>
-              <p className="font-mono text-gray-800 break-all">{product.slug}</p>
             </div>
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                Product ID
-              </p>
-              <p className="font-mono text-gray-500 text-xs break-all">{product._id}</p>
+
+            <h1 className="text-3xl font-black text-slate-900 leading-tight">
+              {product.name}
+            </h1>
+
+            {/* Stars and reviews */}
+            <div className="flex items-center gap-2">
+              <div className="flex text-amber-400">
+                {[1, 2, 3, 4].map((i) => (
+                  <Icon key={i} icon="material-symbols:star" className="w-5 h-5" />
+                ))}
+                <Icon icon="material-symbols:star-half" className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-semibold text-slate-400 hover:underline cursor-pointer">
+                (9.12k reviews)
+              </span>
             </div>
           </div>
 
-          <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-              Description
-            </p>
-            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-              {product.description || "No description provided."}
-            </p>
+          {/* Price */}
+          <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4.5 flex items-baseline gap-2">
+            <span className="text-3xl font-black text-slate-900">
+              ₹{activeVariant ? activeVariant.basePrice : stats.priceLabel}
+            </span>
+            {activeVariant?.discountedPrice && (
+              <span className="text-sm font-semibold text-slate-400 line-through">
+                ₹{activeVariant.discountedPrice}
+              </span>
+            )}
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-auto">
+              Price per pack
+            </span>
           </div>
 
-          {product.certificates?.length > 0 && (
-            <div className="pt-4 border-t border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-                Certificates
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {product.certificates.map((cert: any, idx: number) => {
-                  const key = typeof cert === 'object' && cert ? (cert._id || cert.id || `cert-${idx}`) : (cert || `cert-${idx}`);
-                  const name = typeof cert === 'object' && cert ? cert.name : `Certificate ID: ${cert}`;
-                  const url = typeof cert === 'object' && cert ? cert.url : null;
+          <p className="text-sm text-slate-500 leading-relaxed">
+            {product.description || "Indulge in premium quality microgreens. Carefully curated to fit high dietary standards, grown organic under state-of-the-art standards."}
+          </p>
+
+          <hr className="border-slate-100" />
+
+          {/* Color simulator */}
+          <div className="space-y-2.5">
+            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              Theme / Variety ({selectedColor === "emerald" ? "Organic Green" : "Sunset Coral"})
+            </span>
+            <div className="flex items-center gap-3">
+              {[
+                { id: "emerald", color: "bg-emerald-500 ring-emerald-500/25" },
+                { id: "coral", color: "bg-rose-400 ring-rose-400/25" }
+              ].map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedColor(c.id)}
+                  className={`w-6 h-6 rounded-full ${c.color} transition-all duration-200 relative ${
+                    selectedColor === c.id
+                      ? "ring-4 scale-105 border border-white"
+                      : "opacity-75 hover:opacity-100 hover:scale-105"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Variant size/unit select chips */}
+          {product.variants?.length > 0 && (
+            <div className="space-y-2.5">
+              <div className="flex justify-between items-baseline">
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Size / Weight Option
+                </span>
+                <button 
+                  onClick={() => router.push(`/admin/products/edit/${productId}/variants`)} 
+                  className="text-xs text-emerald-600 hover:underline font-bold"
+                >
+                  Size chart
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {product.variants.map((v: any) => {
+                  const sizeLabel = [v.weight || v.value, v.unit?.shortName || v.unit?.name]
+                    .filter(Boolean)
+                    .join(" ");
+                  const isSelected = activeVariant?._id === v._id;
                   return (
-                    <div key={key} className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg">
-                      {url && (
-                        <img src={url} alt={name} className="w-5 h-5 object-contain" />
-                      )}
-                      <span className="text-xs font-semibold text-gray-700">{name}</span>
-                    </div>
+                    <button
+                      key={v._id}
+                      type="button"
+                      onClick={() => handleVariantChange(v._id)}
+                      className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                        isSelected
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-700 font-extrabold ring-1 ring-emerald-500/10 shadow-sm"
+                          : "border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50/50"
+                      }`}
+                    >
+                      {sizeLabel || v.sku}
+                    </button>
                   );
                 })}
               </div>
             </div>
           )}
-        </Card>
+
+          {/* Packaging option select chips */}
+          {activeVariant?.packaging?.length > 0 && (
+            <div className="space-y-2.5">
+              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Packaging Variant
+              </span>
+              <div className="flex flex-wrap gap-2.5">
+                {activeVariant.packaging.map((pack: any, pIdx: number) => {
+                  const id = typeof pack === 'object' && pack ? pack._id : pack;
+                  const label = typeof pack === 'object' && pack ? pack.name : `Packaging ${pIdx + 1}`;
+                  const isSelected = selectedPackaging === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setSelectedPackaging(id)}
+                      className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                        isSelected
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-700 font-extrabold ring-1 ring-emerald-500/10 shadow-sm"
+                          : "border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50/50"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Quantity stepper simulator */}
+          <div className="space-y-2.5">
+            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              Quantity
+            </span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50/50 p-1">
+                <button
+                  type="button"
+                  disabled={quantity <= 1 || isOutOfStock}
+                  onClick={() => setQuantity(q => q - 1)}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
+                >
+                  <Icon icon="lucide:minus" className="w-4 h-4" />
+                </button>
+                <span className="w-12 text-center text-sm font-black tabular-nums text-slate-800">
+                  {isOutOfStock ? 0 : quantity}
+                </span>
+                <button
+                  type="button"
+                  disabled={isOutOfStock || quantity >= (activeVariant?.stock || 99)}
+                  onClick={() => setQuantity(q => q + 1)}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
+                >
+                  <Icon icon="lucide:plus" className="w-4 h-4" />
+                </button>
+              </div>
+              <span className="text-xs font-semibold text-slate-400 uppercase">
+                Available: {activeVariant ? activeVariant.stock : stats.totalStock}
+              </span>
+            </div>
+          </div>
+
+
+        </div>
       </div>
 
-      {/* Variants */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Variants</h2>
-            <p className="text-sm text-gray-500">
-              Sizes, pricing, stock, and packaging for this product.
+      {/* 3. Promotional Highlight Badges */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-slate-100 pt-10">
+        {[
+          {
+            title: "100% Organic",
+            desc: "Locally sourced microgreens and products direct from organic cultivation labs.",
+            icon: "lucide:check-circle",
+            color: "text-emerald-500 bg-emerald-50"
+          },
+          {
+            title: "Fast Local Delivery",
+            desc: "Fresh, healthy greens harvested on-demand and delivered straight to your door.",
+            icon: "lucide:clock",
+            color: "text-blue-500 bg-blue-50"
+          },
+          {
+            title: "Quality Warranty",
+            desc: "Guaranteed crop quality, certified lab standards, and 100% freshness insurance.",
+            icon: "lucide:check-circle",
+            color: "text-emerald-500 bg-emerald-50"
+          }
+        ].map((feat) => (
+          <div key={feat.title} className="flex flex-col items-center text-center p-6 space-y-3 bg-slate-50/20 border border-slate-100 rounded-2xl shadow-sm">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${feat.color}`}>
+              <Icon icon={feat.icon} className="w-6 h-6" />
+            </div>
+            <h3 className="font-black text-slate-800 text-sm tracking-wide">
+              {feat.title}
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed px-2">
+              {feat.desc}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/admin/products/edit/${productId}/variants`)}
-            icon="lucide:plus"
+        ))}
+      </div>
+
+      {/* 4. Tabbed Area (Description / Specifications vs Reviews) */}
+      <div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
+        <div className="flex border-b border-slate-100 bg-slate-50/50">
+          <button
+            onClick={() => setActiveTab("description")}
+            className={`px-8 py-4 text-xs font-bold transition-all relative border-r border-slate-100 ${
+              activeTab === "description"
+                ? "bg-white text-slate-900 border-b-2 border-b-slate-900"
+                : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/40"
+            }`}
           >
-            Manage variants
-          </Button>
+            Description
+          </button>
+          <button
+            onClick={() => setActiveTab("reviews")}
+            className={`px-8 py-4 text-xs font-bold transition-all relative ${
+              activeTab === "reviews"
+                ? "bg-white text-slate-900 border-b-2 border-b-slate-900"
+                : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/40"
+            }`}
+          >
+            Reviews (8)
+          </button>
         </div>
 
-        {product.variants?.length > 0 ? (
-        <DataTable
-          data={product.variants}
-          loading={false}
-          rowKey={(v: any) => v._id}
-          columns={[
-            {
-              key: "image",
-              label: "Variant",
-              type: "user",
-              getAvatar: (v: any) => v.images?.[0] || v.sku?.charAt(0) || "?",
-              getTitle: (v: any) => v.sku,
-              getSubtitle: (v: any) => {
-                const size = [v.weight || v.value, v.unit?.shortName || v.unit?.name]
-                  .filter(Boolean)
-                  .join(" ");
-                return size || "—";
-              },
-            },
-            {
-              key: "basePrice",
-              label: "Price",
-              custom: true,
-              render: (v: any) => (
-                <div className="text-sm">
-                  <span className="font-bold text-gray-900">₹{v.basePrice}</span>
-                  {v.discountedPrice ? (
-                    <span className="block text-xs font-medium text-green-600">
-                      ₹{v.discountedPrice} sale
-                    </span>
-                  ) : null}
+        <div className="p-8">
+          {activeTab === "description" ? (
+            <div className="space-y-8">
+              
+              {/* Specifications */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-black text-slate-800 tracking-wide uppercase">
+                  Specifications
+                </h3>
+                <div className="overflow-x-auto rounded-xl border border-slate-100 shadow-inner bg-slate-50/20">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <tbody>
+                      {[
+                        { label: "Category", val: product.category?.name || "Root category" },
+                        { label: "Manufacturer / Brand", val: product.brand || "Raman Green" },
+                        { label: "Cultivation Standard", val: product.cultivation || "Organic Lab" },
+                        { label: "Registered Cities", val: product.cultivation_city?.map((c: any) => c.name || c).join(", ") || "All cities" },
+                        { label: "Certificates", val: product.certificates?.map((c: any) => c.name || c).join(", ") || "Certified organic" }
+                      ].map((row, idx) => (
+                        <tr key={idx} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}>
+                          <td className="px-5 py-3.5 font-semibold text-slate-400 border-r border-slate-100 w-1/3">
+                            {row.label}
+                          </td>
+                          <td className="px-5 py-3.5 font-bold text-slate-700">
+                            {row.val}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ),
-            },
-            {
-              key: "stock",
-              label: "Stock",
-              custom: true,
-              render: (v: any) => {
-                const stock = Number(v.stock) || 0;
-                const key =
-                  stock === 0
-                    ? "outOfStock"
-                    : stock < 15
-                      ? "lowStock"
-                      : "inStock";
-                const style = getStatusStyle(key);
-                return (
-                  <span
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold ${style.color}`}
-                  >
-                    {stock === 0
-                      ? "Out of stock"
-                      : stock < 15
-                        ? `Low (${stock})`
-                        : `In stock (${stock})`}
-                  </span>
-                );
-              },
-            },
-            {
-              key: "packaging",
-              label: "Packaging",
-              custom: true,
-              render: (v: any) =>
-                v.packaging?.length ? (
-                  <div className="flex flex-wrap gap-1 max-w-[180px]">
-                    {v.packaging.map((pack: any, pIdx: number) => {
-                      const key = typeof pack === 'object' && pack ? (pack._id || pack.id || `pack-${pIdx}`) : (pack || `pack-${pIdx}`);
-                      const label = typeof pack === 'object' && pack ? pack.name : `Packaging ID: ${pack}`;
-                      return (
-                        <span
-                          key={key}
-                          className="text-[9px] font-bold uppercase text-purple-600 bg-purple-50 border border-purple-100 px-1.5 py-0.5 rounded"
-                        >
-                          {label}
-                        </span>
-                      );
-                    })}
+              </div>
+
+              {/* Product details */}
+              <div className="space-y-3.5">
+                <h3 className="text-sm font-black text-slate-800 tracking-wide uppercase">
+                  Product details
+                </h3>
+                <ul className="list-disc list-inside space-y-2.5 text-xs text-slate-500 leading-relaxed font-semibold">
+                  <li>Organic standard cultivation with zero synthetic pesticides or chemicals.</li>
+                  <li>Harvested on-demand, packing full nutrient preservation.</li>
+                  <li>Contains high density vitamins (A, C, K) and active antioxidant compounds.</li>
+                  <li>Eco-friendly biological paper or compostable punnet packaging.</li>
+                  <li>Store cool between 2°C - 5°C to preserve crunchy texture and fresh leaves.</li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {[
+                { name: "Aarav Sharma", date: "June 2, 2026", text: "Extremely fresh microgreens! The packaging was secure and standard. Will order again.", stars: 5 },
+                { name: "Priya Patel", date: "May 28, 2026", text: "Good size options, very clean leaves. Tastes perfect with salads. Highly recommend organic variants.", stars: 4 },
+                { name: "John Doe", date: "May 15, 2026", text: "Healthy, fresh, and on-time delivery. The batch expiry date details on variants are helpful.", stars: 5 }
+              ].map((rev, idx) => (
+                <div key={idx} className="border-b border-slate-100 pb-5 last:border-b-0 last:pb-0 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-800">{rev.name}</h4>
+                      <span className="text-[10px] text-slate-400 font-semibold">{rev.date}</span>
+                    </div>
+                    <div className="flex text-amber-400">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Icon
+                          key={i}
+                          icon="material-symbols:star"
+                          className={`w-4 h-4 ${i < rev.stars ? "text-amber-400" : "text-slate-200"}`}
+                        />
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  <span className="text-xs text-gray-400">—</span>
-                ),
-            },
-            {
-              key: "actions",
-              label: "Actions",
-              custom: true,
-              align: "right",
-              render: (v: any) => (
-                <div className="flex items-center justify-end gap-1.5">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/admin/products/edit/${productId}/variants?variantId=${v._id}`);
-                    }}
-                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                    title="Edit Variant"
-                  >
-                    <Icon icon="lucide:edit" className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteVariant(v);
-                    }}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                    title="Delete Variant"
-                  >
-                    <Icon icon="lucide:trash-2" className="w-4 h-4" />
-                  </button>
+                  <p className="text-xs text-slate-500 leading-relaxed">{rev.text}</p>
                 </div>
-              ),
-            },
-          ]}
-          hiddenActions={["view", "edit", "delete"]}
-        />
-        ) : (
-          <Card className="!p-10 !min-h-0 text-center">
-            <Icon icon="lucide:layers" className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm font-medium text-gray-500 mb-4">
-              No variants configured yet.
-            </p>
-            <Button
-              onClick={() =>
-                router.push(`/admin/products/edit/${productId}/variants`)
-              }
-              icon="lucide:plus"
-            >
-              Add first variant
-            </Button>
-          </Card>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+      
     </div>
   );
 };

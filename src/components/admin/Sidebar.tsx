@@ -235,6 +235,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ adminUser, handleLogout }) => 
             { name: 'Cities', href: '/admin/settings?tab=product&sub=cities' },
             { name: 'Branding', href: '/admin/settings?tab=branding' },
           ]
+        },
+        {
+          name: 'Trash',
+          href: '/admin/trash/products',
+          icon: 'solar:trash-bin-minimalistic-bold-duotone',
+          subItems: [
+            { name: 'Products', href: '/admin/trash/products' },
+            { name: 'Categories', href: '/admin/trash/categories' },
+          ]
         }
       ]
     }

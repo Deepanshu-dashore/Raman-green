@@ -398,6 +398,12 @@ export default function Navbar() {
                         </Link>
                       </li>
                       <li>
+                        <Link href="/store" onClick={() => setActiveMenu(null)} className="text-[13px] font-semibold text-charcoal/80 hover:text-forest transition-colors flex items-center gap-2">
+                          <Icon icon="solar:map-point-linear" className="w-4 h-4 text-[#3eac5c]" />
+                          Visit Flagship Store
+                        </Link>
+                      </li>
+                      <li>
                         <Link href="/about" onClick={() => setActiveMenu(null)} className="text-[13px] font-semibold text-charcoal/80 hover:text-forest transition-colors flex items-center gap-2">
                           <Icon icon="solar:info-square-linear" className="w-4 h-4 text-[#3eac5c]" />
                           About Our Farm
@@ -619,6 +625,15 @@ export default function Navbar() {
                   ))}
 
                   {/* Additional Mobile Pages */}
+                  <li>
+                    <Link
+                      href="/store"
+                      onClick={() => setMobileOpen(false)}
+                      className="block py-3 text-sm font-bold text-forest hover:text-green-700 transition-colors uppercase tracking-wider border-b border-gray-50/50"
+                    >
+                      Our Store
+                    </Link>
+                  </li>
                   <li>
                     <Link
                       href="/account"
