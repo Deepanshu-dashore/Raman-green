@@ -1,5 +1,7 @@
 import { Category, ICategory } from "./category.model";
 import { notDeletedFilter } from "../../utils/softDelete";
+import { Product } from "../product/product.model";
+import { CloudinaryService } from "../../services/cloudinary.service";
 
 export class CategoryService {
     /**
@@ -122,6 +124,48 @@ export class CategoryService {
                 $addToSet: { children: category._id }
             });
         }
+
+        return category;
+    }
+
+    /**
+     * Permanently delete a category and its Cloudinary image if no products are associated
+     */
+    static async deleteCategoryPermanent(id: string): Promise<ICategory | null> {
+        const category = await Category.findById(id);
+        if (!category) return null;
+
+        // Check if there are any products associated with this category
+        const hasProducts = await Product.findOne({ category: id });
+        if (hasProducts) {
+            throw new Error("Cannot delete category as it has associated products.");
+        }
+
+        // Clean up parent/children relationships just in case they exist
+        if (category.parent) {
+            await Category.findByIdAndUpdate(category.parent, {
+                $pull: { children: category._id }
+            });
+        }
+
+        if (category.children && category.children.length > 0) {
+            await Category.updateMany(
+                { _id: { $in: category.children } },
+                { $unset: { parent: "" } }
+            );
+        }
+
+        // Delete image from Cloudinary
+        if (category.image) {
+            try {
+                await CloudinaryService.delete(category.image, "image");
+            } catch (err) {
+                console.error(`Failed to delete Cloudinary image: ${category.image}`, err);
+            }
+        }
+
+        // Delete from database
+        await Category.deleteOne({ _id: id });
 
         return category;
     }

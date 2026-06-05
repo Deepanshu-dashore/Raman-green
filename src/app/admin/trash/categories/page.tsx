@@ -4,10 +4,13 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/shared/DataTable';
 import { PageHeader } from '@/components/shared/PageHeader';
+import DeleteModal from '@/components/shared/DeleteModal';
 
 export default function CategoriesTrashPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
 
   const fetchTrashCategories = () => {
     setLoading(true);
@@ -48,6 +51,33 @@ export default function CategoriesTrashPage() {
         loading: 'Restoring category...',
         success: 'Category restored successfully',
         error: (err) => err.message || 'Failed to restore category'
+      }
+    );
+  };
+
+  const handleDeleteClick = (category: any) => {
+    setSelectedCategory(category);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!selectedCategory) return;
+    const c = selectedCategory;
+    setDeleteModalOpen(false);
+    toast.promise(
+      fetch(`/api/categories/${c._id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(json => {
+          if (json.success) {
+            setCategories(prev => prev.filter(item => item._id !== c._id));
+          } else {
+            throw new Error(json.message);
+          }
+        }),
+      {
+        loading: 'Permanently deleting...',
+        success: 'Category deleted permanently',
+        error: (err) => err.message || 'Failed to delete category'
       }
     );
   };
@@ -94,7 +124,8 @@ export default function CategoriesTrashPage() {
             getDate: (cat) => cat.deletedAt || new Date()
           }
         ]}
-        hiddenActions={['view', 'edit', 'delete']}
+        hiddenActions={['view', 'edit']}
+        onDelete={handleDeleteClick}
         additionalActions={[
           {
             label: 'Restore',
@@ -102,6 +133,18 @@ export default function CategoriesTrashPage() {
             onClick: handleRestoreClick
           }
         ]}
+      />
+
+      <DeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setSelectedCategory(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Category Permanently"
+        message={`Are you sure you want to permanently delete "${selectedCategory?.name}"? This action cannot be undone.`}
+        confirmButtonText="Delete Permanently"
       />
     </div>
   );

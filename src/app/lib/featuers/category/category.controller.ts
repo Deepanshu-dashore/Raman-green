@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 import { CategoryService } from "./category.service";
-import { ICategory } from "./category.model";
+import { Category, ICategory } from "./category.model";
 import { ApiResponse } from "../../utils/ApiResponse";
 import { getUrls } from "../../utils/geturl";
 import { CloudinaryService } from "../../services/cloudinary.service";
@@ -151,9 +151,16 @@ export class CategoryController {
 
     static async delete(id: string) {
         try {
-            const category = await CategoryService.deleteCategory(id);
+            const category = await Category.findById(id);
             if (!category) return ApiResponse(404, null, "Category not found.");
-            return ApiResponse(200, null, "Category deleted successfully.");
+
+            if (category.isDeleted) {
+                await CategoryService.deleteCategoryPermanent(id);
+                return ApiResponse(200, null, "Category permanently deleted successfully.");
+            } else {
+                await CategoryService.deleteCategory(id);
+                return ApiResponse(200, null, "Category moved to trash successfully.");
+            }
         } catch (error: any) {
             return ApiResponse(500, null, error.message);
         }

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { MultiSelectDropdown } from '@/components/shared/MultiSelectDropdown';
+import { LabeledSelect } from '@/components/shared/LabeledSelect';
 import { PageHeader } from '@/components/shared/PageHeader';
 import Card from '@/components/shared/Card';
 import { DataTable } from "@/components/shared/DataTable";
@@ -12,6 +13,30 @@ import { Button } from '@/components/shared/Button';
 import { Icon } from '@iconify/react';
 import LabledInput from '@/components/shared/LabledInput';
 import { getStatusStyle } from '@/constants/status';
+
+const CULTIVATION_SEASON_OPTIONS = [
+  { id: "Organic", label: "Organic" },
+  { id: "Natural", label: "Natural" },
+  { id: "Hydroponic", label: "Hydroponic" },
+  { id: "Aquaponic", label: "Aquaponic" },
+  { id: "Polyhouse", label: "Polyhouse" },
+  { id: "Open Field", label: "Open Field" },
+  { id: "Soil-less", label: "Soil-less" },
+  { id: "Winter", label: "Winter" },
+  { id: "Summer", label: "Summer" },
+  { id: "Monsoon", label: "Monsoon" },
+  { id: "All Season", label: "All Season" }
+];
+
+const CULTIVATION_OPTIONS = [
+  { id: "Organic", label: "Organic" },
+  { id: "Natural", label: "Natural" },
+  { id: "Hydroponic", label: "Hydroponic" },
+  { id: "Aquaponic", label: "Aquaponic" },
+  { id: "Polyhouse", label: "Polyhouse" },
+  { id: "Open Field", label: "Open Field" },
+  { id: "Soil-less", label: "Soil-less" }
+];
 import { div } from 'framer-motion/client';
 import DeleteModal from '@/components/shared/DeleteModal';
 
@@ -36,10 +61,12 @@ const EditProduct = ({ params }: EditProductProps) => {
     description: '',
     category: '',
     cultivation: '',
+    cultivationOrSeason: '',
     cultivation_city: [] as string[],
     brand: 'Raman Green',
     isFeatured: false,
-    certificates: [] as string[]
+    certificates: [] as string[],
+    spaceification: [] as { title: string, value: string }[]
   });
 
   const [existingVariants, setExistingVariants] = useState<any[]>([]);
@@ -99,10 +126,12 @@ const EditProduct = ({ params }: EditProductProps) => {
           description: prod.description || '',
           category: prod.category?._id || prod.category || '',
           cultivation: prod.cultivation || '',
+          cultivationOrSeason: prod.cultivationOrSeason || '',
           cultivation_city: (prod.cultivation_city || []).map((c: any) => c._id || c),
           brand: prod.brand || 'Raman Green',
           isFeatured: !!prod.isFeatured,
-          certificates: (prod.certificates || []).map((c: any) => c._id || c)
+          certificates: (prod.certificates || []).map((c: any) => c._id || c),
+          spaceification: prod.spaceification || []
         });
       } else {
         toast.error("Product not found");
@@ -144,6 +173,28 @@ const EditProduct = ({ params }: EditProductProps) => {
       if (index > -1) list.splice(index, 1);
       else list.push(id);
       return { ...prev, cultivation_city: list };
+    });
+  };
+
+  const addSpecificationRow = () => {
+    setFormData(prev => ({
+      ...prev,
+      spaceification: [...(prev.spaceification || []), { title: '', value: '' }]
+    }));
+  };
+
+  const removeSpecificationRow = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      spaceification: (prev.spaceification || []).filter((_, idx) => idx !== index)
+    }));
+  };
+
+  const handleSpecificationChange = (index: number, field: 'title' | 'value', value: string) => {
+    setFormData(prev => {
+      const updated = [...(prev.spaceification || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, spaceification: updated };
     });
   };
 
@@ -221,20 +272,15 @@ const EditProduct = ({ params }: EditProductProps) => {
                 placeholder="slug-url"
               />
 
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Category</label>
-                <select
-                  name="category"
+              <div className="space-y-1.5 flex flex-col justify-center min-h-[80px]">
+                <LabeledSelect
+                  label="Category"
                   required
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm cursor-pointer"
-                >
-                  <option value="">Select Category</option>
-                  {categories.map(cat => (
-                    <option key={cat._id} value={cat._id}>{cat.name}</option>
-                  ))}
-                </select>
+                  options={categories.map(cat => ({ id: cat._id, label: cat.name }))}
+                  selectedValue={formData.category}
+                  onChange={(val) => setFormData(prev => ({ ...prev, category: val }))}
+                  placeholder="Select Category"
+                />
               </div>
 
               <LabledInput
@@ -245,33 +291,44 @@ const EditProduct = ({ params }: EditProductProps) => {
                 placeholder="Brand name"
               />
 
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Cultivation Type</label>
-                <select 
-                  name="cultivation"
+              <div className="space-y-1.5 flex flex-col justify-center min-h-[80px]">
+                <LabeledSelect
+                  label="Cultivation / Season"
                   required
-                  value={formData.cultivation}
-                  onChange={handleInputChange}
-                  className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm cursor-pointer"
-                >
-                  <option value="">Select Cultivation</option>
-                  <option value="Organic">Organic</option>
-                  <option value="Natural">Natural</option>
-                  <option value="Hydroponic">Hydroponic</option>
-                  <option value="Aquaponic">Aquaponic</option>
-                  <option value="Polyhouse">Polyhouse</option>
-                  <option value="Open Field">Open Field</option>
-                  <option value="Soil-less">Soil-less</option>
-                </select>
+                  options={CULTIVATION_SEASON_OPTIONS}
+                  selectedValue={formData.cultivationOrSeason}
+                  onChange={(val) => setFormData(prev => ({ ...prev, cultivationOrSeason: val }))}
+                  placeholder="Select Cultivation / Season"
+                />
               </div>
 
               <div className="space-y-1.5 flex flex-col justify-center min-h-[80px]">
-                <MultiSelectDropdown 
-                   label="Cultivation Cities"
-                   options={cities.map(c => ({ id: c._id, label: `${c.name} (${c.state || ''})` }))}
-                   selectedValues={formData.cultivation_city}
-                   onChange={toggleCity}
-                   placeholder="Select cities"
+                <LabeledSelect
+                  label="Cultivation Type"
+                  options={CULTIVATION_OPTIONS}
+                  selectedValue={formData.cultivation}
+                  onChange={(val) => setFormData(prev => ({ ...prev, cultivation: val }))}
+                  placeholder="Select Cultivation Type"
+                />
+              </div>
+
+              <div className="space-y-1.5 flex flex-col justify-center min-h-[80px]">
+                <MultiSelectDropdown
+                  label="Product Certificates"
+                  options={certificateOptions.map(c => ({ id: c._id, label: c.name, image: c.url }))}
+                  selectedValues={formData.certificates}
+                  onChange={toggleCertificate}
+                  placeholder="Select certificates"
+                />
+              </div>
+
+              <div className="space-y-1.5 flex flex-col justify-center min-h-[80px]">
+                <MultiSelectDropdown
+                  label="Cultivation Cities"
+                  options={cities.map(c => ({ id: c._id, label: `${c.name} (${c.state || ''})` }))}
+                  selectedValues={formData.cultivation_city}
+                  onChange={toggleCity}
+                  placeholder="Select cities"
                 />
               </div>
 
@@ -300,16 +357,55 @@ const EditProduct = ({ params }: EditProductProps) => {
             </div>
           </Card>
 
-          {/* Certificates */}
-          <Card className="!p-8 border-gray-100 shadow-sm flex flex-col justify-center min-h-[160px]">
-            <MultiSelectDropdown
-              label="Product Certificates"
-              options={certificateOptions.map(c => ({ id: c._id, label: c.name, image: c.url }))}
-              selectedValues={formData.certificates}
-              onChange={toggleCertificate}
-              placeholder="Select certificates"
-            />
+          {/* Specifications */}
+          <Card className="!p-8 border-gray-100 shadow-sm space-y-6">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <h2 className="text-lg font-bold text-gray-800">Specifications</h2>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addSpecificationRow}
+                icon="lucide:plus"
+                className="!py-1.5 !px-3 !rounded-lg text-xs font-bold"
+              >
+                Add Row
+              </Button>
+            </div>
+
+            {!formData.spaceification || formData.spaceification.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No specifications added yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {formData.spaceification.map((spec, idx) => (
+                  <div key={idx} className="flex items-end gap-4">
+                    <LabledInput
+                      label="Spec Title"
+                      value={spec.title}
+                      onChange={(e) => handleSpecificationChange(idx, 'title', e.target.value)}
+                      placeholder="e.g. Origin / Purity"
+                      className="flex-1"
+                    />
+                    <LabledInput
+                      label="Spec Value"
+                      value={spec.value}
+                      onChange={(e) => handleSpecificationChange(idx, 'value', e.target.value)}
+                      placeholder="e.g. Rajasthan / 100%"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="danger"
+                      onClick={() => removeSpecificationRow(idx)}
+                      icon="lucide:trash-2"
+                      className="!p-2.5 mb-1"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
+
+
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end space-x-4">

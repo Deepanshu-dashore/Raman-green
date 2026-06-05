@@ -6,7 +6,8 @@ export interface IProduct extends Document {
     slug: string;
     description?: string;
     category: ICategory['_id'];
-    cultivation: string;
+    cultivationOrSeason: string;
+    cultivation?: string;
     cultivation_city: {
         type: Schema.Types.ObjectId,
         ref: 'City'
@@ -23,6 +24,7 @@ export interface IProduct extends Document {
     isPublished?: boolean;
     brand?: string;
     tags?: string[];
+    spaceification?: any[],
     certificates?: string[]; // Array of Certificate IDs
 }
 
@@ -48,9 +50,14 @@ const productSchema = new Schema<IProduct>({
         required: true
     },
 
-    cultivation: {
+    cultivationOrSeason: {
         type: String,
         required: true
+    },
+
+    cultivation: {
+        type: String,
+        required: false
     },
 
     cultivation_city: [
@@ -73,6 +80,14 @@ const productSchema = new Schema<IProduct>({
             ref: 'Certificate'
         }
     ],
+
+    spaceification: {
+        type: [{
+            title: String,
+            value: String
+        }],
+        default: []
+    },
 
     rating: {
         type: Number,

@@ -10,23 +10,25 @@ export interface Option {
   subLabel?: string;
 }
 
-interface MultiSelectDropdownProps {
+interface LabeledSelectProps {
   label: string;
   options: Option[];
-  selectedValues: string[];
+  selectedValue: string;
   onChange: (id: string) => void;
   placeholder?: string;
+  required?: boolean;
   className?: string;
 }
 
-export function MultiSelectDropdown({
+export function LabeledSelect({
   label,
   options,
-  selectedValues,
+  selectedValue,
   onChange,
   placeholder = "Select...",
+  required = false,
   className = ""
-}: MultiSelectDropdownProps) {
+}: LabeledSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -41,19 +43,17 @@ export function MultiSelectDropdown({
   }, []);
 
   // Compute display value
-  const selectedOptions = options.filter(o => selectedValues.includes(o.id));
-  const displayText = selectedOptions.length === 0 ? (
+  const selectedOption = options.find(o => o.id === selectedValue);
+  const displayText = !selectedOption ? (
     <span className="text-gray-400 font-medium">{placeholder}</span>
   ) : (
-    <span className="text-gray-900 font-semibold truncate block w-full">
-      {selectedOptions.map(o => o.label).join(", ")}
-    </span>
+    <span className="text-gray-900 font-semibold truncate block w-full">{selectedOption.label}</span>
   );
 
   return (
     <div className={`space-y-1 w-full ${className}`} ref={containerRef}>
       <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide">
-        {label}
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
       <div className="relative w-full">
         {/* Trigger */}
@@ -78,34 +78,18 @@ export function MultiSelectDropdown({
           >
             <div className="max-h-[250px] overflow-y-auto custom-scrollbar flex flex-col gap-0.5 p-1">
               {options.map((option) => (
-                <label
+                <div
                   key={option.id}
-                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer hover:bg-white/60 transition-colors group"
+                  onClick={() => {
+                    onChange(option.id);
+                    setIsOpen(false);
+                  }}
+                  className={`flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg cursor-pointer transition-colors group ${
+                    option.id === selectedValue
+                      ? "bg-white/80 font-bold shadow-sm"
+                      : "hover:bg-white/60"
+                  }`}
                 >
-                  <div className="relative flex items-center justify-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedValues.includes(option.id)}
-                      onChange={() => onChange(option.id)}
-                      className="w-4 h-4 rounded-[4px] border-2 border-gray-400 text-gray-900 focus:ring-gray-900 focus:ring-offset-0 cursor-pointer appearance-none checked:bg-gray-900 checked:border-gray-900 transition-colors"
-                    />
-                    {selectedValues.includes(option.id) && (
-                      <svg
-                        className="w-3 h-3 text-white absolute pointer-events-none"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="3"
-                          d="M5 13l4 4L19 7"
-                        ></path>
-                      </svg>
-                    )}
-                  </div>
-
                   {option.image && (
                     <img
                       src={option.image}
@@ -113,8 +97,8 @@ export function MultiSelectDropdown({
                       className="w-6 h-6 object-contain rounded bg-white border border-gray-100 p-0.5"
                     />
                   )}
-                  <div className="flex flex-col">
-                    <span className="text-xs font-semibold text-gray-800 group-hover:text-gray-900">
+                  <div className="flex-grow flex flex-col">
+                    <span className={`text-xs font-semibold text-gray-800 group-hover:text-gray-900 ${option.id === selectedValue ? "text-green-700 font-bold" : ""}`}>
                       {option.label}
                     </span>
                     {option.subLabel && (
@@ -123,23 +107,28 @@ export function MultiSelectDropdown({
                       </span>
                     )}
                   </div>
-                </label>
+                  {option.id === selectedValue && (
+                    <svg
+                      className="w-4 h-4 text-green-600 shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2.5"
+                        d="M5 13l4 4L19 7"
+                      ></path>
+                    </svg>
+                  )}
+                </div>
               ))}
               {options.length === 0 && (
                 <p className="text-sm text-gray-500 italic p-3 text-center font-medium">
                   No options available.
                 </p>
               )}
-            </div>
-
-            <div className="mt-1 p-1">
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="w-full bg-black/5 hover:bg-black/10 text-gray-900 font-bold py-2 rounded-lg transition-all text-[13px]"
-              >
-                Apply
-              </button>
             </div>
           </div>
         )}
