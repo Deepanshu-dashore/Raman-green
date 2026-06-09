@@ -7,10 +7,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ArrowUpIcon,
-  ArrowDownIcon,
-  EyeIcon,
-  PencilIcon,
-  TrashIcon
+  ArrowDownIcon
 } from "@heroicons/react/24/outline";
 import { Icon } from "@iconify/react";
 import { StatusBadge } from "./StatusBadge";
@@ -82,6 +79,7 @@ export interface DataTableProps<T> {
   hiddenActions?: ('view' | 'edit' | 'delete')[];
   additionalActions?: ActionDef<T>[];
   rowKey: (row: T) => string;
+  renderRowDetails?: (row: T) => React.ReactNode;
 
   // State Overrides (if fully controlled, though we can do uncontrolled fallback)
 }
@@ -208,6 +206,7 @@ export function DataTable<T>({
   showCheckBox = false,
   showPagination = true,
   showSearch = true,
+  renderRowDetails,
 }: DataTableProps<T>) {
 
   const [searchInput, setSearchInput] = useState("");
@@ -217,6 +216,19 @@ export function DataTable<T>({
   const [isDense, setIsDense] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [openActionId, setOpenActionId] = useState<string | null>(null);
+  const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set());
+
+  const toggleRow = (id: string) => {
+    setExpandedRowIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   // Track action buttons to attach dropdowns correctly
   const actionRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
@@ -364,8 +376,8 @@ export function DataTable<T>({
                 </th>
               ))}
 
-              {finalActions && finalActions.length > 0 && (
-                <th className="px-4 py-4 w-16"></th>
+              {((finalActions && finalActions.length > 0) || renderRowDetails) && (
+                <th className="px-4 py-4 w-20"></th>
               )}
             </tr>
           </thead>
@@ -409,97 +421,135 @@ export function DataTable<T>({
               currentData.map((row, idx) => {
                 const id = rowKey(row) || `row-${idx}`;
                 return (
-                  <tr key={id} className={`hover:bg-gray-50/50 transition-colors ${isDense ? 'h-14' : 'h-[72px]'}`}>
-                    {/* Checkbox */}
-                    {showCheckBox && (
-                      <td className="px-6">
-                        <div className="w-4 h-4 rounded-[4px] border-2 border-gray-300 cursor-pointer"></div>
-                      </td>
-                    )}
+                  <React.Fragment key={id}>
+                    <tr className={`hover:bg-gray-50/50 transition-colors ${isDense ? 'h-14' : 'h-[72px]'}`}>
+                      {/* Checkbox */}
+                      {showCheckBox && (
+                        <td className="px-6">
+                          <div className="w-4 h-4 rounded-[4px] border-2 border-gray-300 cursor-pointer"></div>
+                        </td>
+                      )}
 
-                    {columns.map((col, cIdx) => (
-                      <td
-                        key={`${id}-${cIdx}`}
-                        className={`px-4 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}
-                      >
-                        {col.custom ? col.render?.(row) :
-                          col.type === 'user' ? (
-                            <div className="flex items-center gap-4">
-                              {/* Avatar Gen */}
-                              {col.getAvatar && (() => {
-                                const ava = col.getAvatar(row);
-                                if (typeof ava === 'string' && ava.startsWith('http')) {
-                                  return <img src={ava} className="w-10 h-10 rounded-full object-cover shrink-0 z-0 bg-gray-100 shadow-sm" alt="" />
-                                } else if (typeof ava === 'string') {
-                                  return <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-black flex items-center justify-center shrink-0 uppercase">{ava}</div>
-                                } else {
-                                  return ava; // node
-                                }
-                              })()}
-                              <div className="flex flex-col text-left max-w-[250px]">
-                                <span className="font-semibold text-gray-900 line-clamp-1">{col.getTitle?.(row)}</span>
-                                <span className="text-[13px] text-gray-500 font-medium tracking-tight line-clamp-1">{col.getSubtitle?.(row)}</span>
-                              </div>
-                            </div>
-                          ) :
-                            col.type === 'date' ? (() => {
-                              const dateVal = col.getDate?.(row);
-                              if (!dateVal) return "-";
-                              const d = new Date(dateVal);
-                              return (
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-gray-800">
-                                    {d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                  </span>
-                                  <span className="text-[12.25px] text-gray-500 font-medium tracking-wider uppercase">
-                                    {d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                                  </span>
-                                </div>
-                              );
-                            })() :
-                              col.type === 'status' ? (() => {
-                                const statusKey = col.getStatus ? col.getStatus(row) : String((row as any)[col.key]);
-                                return (
-                                  <StatusBadge
-                                    status={statusKey}
-                                    className={col.getStatusColor?.(row)}
-                                  />
-                                )
-                              })() :
-                                col.type === 'text' ? (
-                                  <span className="text-[12.5px] text-gray-700 font-medium">
-                                    {String((row as any)[col.key] || '-')}
-                                  </span>
-                                ) : (
-                                  <span className="text-[12.5px] text-gray-700 font-medium">
-                                    {col.render ? col.render(row) : String((row as any)[col.key] || '-')}
-                                  </span>
-                                )}
-                      </td>
-                    ))}
-
-                    {/* Actions */}
-                    {finalActions && finalActions.length > 0 && (
-                      <td className="px-6 text-right relative">
-                        <button
-                          ref={el => { actionRefs.current[id] = el; }}
-                          onClick={() => setOpenActionId(openActionId === id ? null : id)}
-                          className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                      {columns.map((col, cIdx) => (
+                        <td
+                          key={`${id}-${cIdx}`}
+                          className={`px-4 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}
                         >
-                          <EllipsisVerticalIcon className="w-5 h-5" />
-                        </button>
+                          {col.custom ? col.render?.(row) :
+                            col.type === 'user' ? (
+                              <div className="flex items-center gap-4">
+                                {/* Avatar Gen */}
+                                {col.getAvatar && (() => {
+                                  const ava = col.getAvatar(row);
+                                  if (typeof ava === 'string' && ava.startsWith('http')) {
+                                    return <img src={ava} className="w-10 h-10 rounded-full object-cover shrink-0 z-0 bg-gray-100 shadow-sm" alt="" />
+                                  } else if (typeof ava === 'string') {
+                                    return <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-black flex items-center justify-center shrink-0 uppercase">{ava}</div>
+                                  } else {
+                                    return ava; // node
+                                  }
+                                })()}
+                                <div className="flex flex-col text-left max-w-[250px]">
+                                  <span className="font-semibold text-gray-900 line-clamp-1">{col.getTitle?.(row)}</span>
+                                  <span className="text-[13px] text-gray-500 font-medium tracking-tight line-clamp-1">{col.getSubtitle?.(row)}</span>
+                                </div>
+                              </div>
+                            ) :
+                              col.type === 'date' ? (() => {
+                                const dateVal = col.getDate?.(row);
+                                if (!dateVal) return "-";
+                                const d = new Date(dateVal);
+                                return (
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-gray-800">
+                                      {d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                    </span>
+                                    <span className="text-[12.25px] text-gray-500 font-medium tracking-wider uppercase">
+                                      {d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+                                );
+                              })() :
+                                col.type === 'status' ? (() => {
+                                  const statusKey = col.getStatus ? col.getStatus(row) : String((row as any)[col.key]);
+                                  return (
+                                    <StatusBadge
+                                      status={statusKey}
+                                      className={col.getStatusColor?.(row)}
+                                    />
+                                  )
+                                })() :
+                                  col.type === 'text' ? (
+                                    <span className="text-[12.5px] text-gray-700 font-medium">
+                                      {String((row as any)[col.key] || '-')}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[12.5px] text-gray-700 font-medium">
+                                      {col.render ? col.render(row) : String((row as any)[col.key] || '-')}
+                                    </span>
+                                  )}
+                        </td>
+                      ))}
 
-                        {openActionId === id && (
-                          <DropdownMenu
-                            actions={finalActions}
-                            row={row}
-                            onClose={() => setOpenActionId(null)}
-                            triggerRef={{ current: actionRefs.current[id] }}
-                          />
-                        )}
-                      </td>
+                      {/* Actions */}
+                      {((finalActions && finalActions.length > 0) || renderRowDetails) && (
+                        <td className="px-6 text-right relative whitespace-nowrap">
+                          <div className="inline-flex items-center justify-end gap-1">
+                            {renderRowDetails && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleRow(id);
+                                }}
+                                className="p-1.5 text-gray-400 hover:text-gray-955 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                                title="Toggle details"
+                              >
+                                <Icon
+                                  icon="solar:alt-arrow-down-linear"
+                                  className={`w-[19px] h-[19px] transition-transform duration-200 ${expandedRowIds.has(id) ? "rotate-180" : ""}`}
+                                />
+                              </button>
+                            )}
+                            {finalActions && finalActions.length > 0 && (
+                              <>
+                                <button
+                                  type="button"
+                                  ref={el => { actionRefs.current[id] = el; }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenActionId(openActionId === id ? null : id);
+                                  }}
+                                  className="p-1.5 text-gray-400 hover:text-gray-955 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                                >
+                                  <EllipsisVerticalIcon className="w-5 h-5" />
+                                </button>
+
+                                {openActionId === id && (
+                                  <DropdownMenu
+                                    actions={finalActions}
+                                    row={row}
+                                    onClose={() => setOpenActionId(null)}
+                                    triggerRef={{ current: actionRefs.current[id] }}
+                                  />
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                    {renderRowDetails && expandedRowIds.has(id) && (
+                      <tr className="bg-gray-50/15">
+                        <td 
+                          colSpan={columns.length + (finalActions.length > 0 ? 1 : 0) + (showCheckBox ? 1 : 0)} 
+                          className="px-6 py-4"
+                        >
+                          {renderRowDetails(row)}
+                        </td>
+                      </tr>
                     )}
-                  </tr>
+                  </React.Fragment>
                 );
               })
             )}
