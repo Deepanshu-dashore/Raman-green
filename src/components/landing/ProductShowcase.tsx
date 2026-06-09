@@ -6,8 +6,8 @@ import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { productsData } from "@/constants/products";
 
-// Fetch exact homepage showcase items from unified products database
-const showcaseProducts = [
+// Default fallback homepage showcase items from unified products database
+const fallbackProducts = [
   productsData.find((p) => p.id === "7")!,
   productsData.find((p) => p.id === "13")!,
   productsData.find((p) => p.id === "14")!,
@@ -15,13 +15,40 @@ const showcaseProducts = [
   productsData.find((p) => p.id === "16")!,
   productsData.find((p) => p.id === "17")!,
   productsData.find((p) => p.id === "18")!,
-].filter(Boolean);
+].filter(Boolean).map((p) => ({
+  id: p.id,
+  name: p.name,
+  description: p.description,
+  price: p.formattedPrice,
+  originalPrice: p.originalPrice,
+  image: p.image,
+  tags: p.tags,
+}));
 
 export default function ProductShowcase() {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [products, setProducts] = useState<any[]>(fallbackProducts);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardWidth, setCardWidth] = useState(280);
   const [visibleItems, setVisibleItems] = useState(4);
+
+  // Fetch dynamic featured products on mount
+  useEffect(() => {
+    async function fetchFeatured() {
+      try {
+        const res = await fetch("/api/products/minimal?featured=true");
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            setProducts(json.data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch featured products from API:", err);
+      }
+    }
+    fetchFeatured();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -53,7 +80,7 @@ export default function ProductShowcase() {
     };
   }, []);
 
-  const maxIndex = Math.max(0, showcaseProducts.length - visibleItems);
+  const maxIndex = Math.max(0, products.length - visibleItems);
 
   // Clamp current index on resizing
   useEffect(() => {
@@ -143,7 +170,7 @@ export default function ProductShowcase() {
               transition={{ type: "spring", stiffness: 240, damping: 28 }}
               className="flex gap-4 touch-pan-y"
             >
-              {showcaseProducts.map((product, i) => (
+              {products.map((product, i) => (
                 <div
                   key={product.id}
                   ref={i === 0 ? cardRef : null}
@@ -154,7 +181,7 @@ export default function ProductShowcase() {
                       id: product.id,
                       name: product.name,
                       description: product.description,
-                      price: product.formattedPrice,
+                      price: product.price,
                       originalPrice: product.originalPrice,
                       image: product.image,
                       tags: product.tags,

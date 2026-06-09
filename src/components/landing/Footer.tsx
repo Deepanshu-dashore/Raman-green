@@ -25,6 +25,13 @@ const marqueeItems = [
   { word: "PRECISION", icon: "solar:target-bold-duotone" },
   { word: "PURITY", icon: "solar:water-drops-bold-duotone" },
   { word: "VITALITY", icon: "solar:heart-pulse-bold-duotone" },
+  { word: "SUSTAINABLE", icon: "solar:earth-bold-duotone" },
+  { word: "QUALITY", icon: "solar:verified-check-bold-duotone" },
+  { word: "NATURAL", icon: "solar:tree-bold-duotone" },
+  { word: "TRUSTED", icon: "solar:shield-check-bold-duotone" },
+  { word: "EXCELLENCE", icon: "solar:star-bold-duotone" },
+  { word: "WELLNESS", icon: "solar:meditation-round-bold-duotone" },
+  { word: "FRESHNESS", icon: "solar:sun-bold-duotone" },
 ];
 
 export default function Footer() {

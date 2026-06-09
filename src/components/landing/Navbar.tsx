@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Icon } from "@iconify/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 // Ticker announcements
 const announcements = [
@@ -115,6 +115,22 @@ const navItems = [
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const isLinkActive = (href: string) => {
+    const [path, query] = href.split('?');
+    if (pathname !== path) return false;
+
+    if (query) {
+      const params = new URLSearchParams(query);
+      for (const [key, value] of params.entries()) {
+        if (searchParams.get(key) !== value) return false;
+      }
+    }
+    return true;
+  };
+
   const [tickerIndex, setTickerIndex] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -207,7 +223,7 @@ export default function Navbar() {
       {/* Main Navigation - Sticky White Glassmorphism */}
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 text-charcoal shadow-sm">
         <div
-          className="max-w-[1280px] mx-auto px-5 md:px-16 flex items-center justify-between h-18 relative"
+          className="max-w-[1280px] mx-auto px-5 md:px-16 flex items-center justify-between py-4 relative"
           onMouseLeave={() => setActiveMenu(null)}
         >
           {/* Logo */}
@@ -224,32 +240,41 @@ export default function Navbar() {
 
           {/* Center Navigation Links - Desktop */}
           <ul className="hidden md:flex items-center gap-8 h-full">
-            {navItems.map((item) => (
-              <li
-                key={item.id}
-                className="h-full flex items-center"
-                onMouseEnter={() => {
-                  if (megaMenuData[item.id]) {
-                    setActiveMenu(item.id);
-                  } else {
-                    setActiveMenu(null);
-                  }
-                }}
-              >
-                <Link
-                  href={item.href}
-                  className="nav-underline text-xs font-bold tracking-[0.1em] uppercase py-6 flex items-center gap-1 hover:text-[#47C269] transition-colors"
+            {navItems.map((item) => {
+              const active = isLinkActive(item.href);
+              return (
+                <li
+                  key={item.id}
+                  className="h-full flex items-center"
+                  onMouseEnter={() => {
+                    if (megaMenuData[item.id]) {
+                      setActiveMenu(item.id);
+                    } else {
+                      setActiveMenu(null);
+                    }
+                  }}
                 >
-                  {item.label}
-                  {megaMenuData[item.id] && (
-                    <Icon
-                      icon="solar:alt-arrow-down-linear"
-                      className={`w-3.5 h-3.5 transition-transform duration-200 ${activeMenu === item.id ? 'rotate-180 text-[#47C269]' : ''}`}
-                    />
-                  )}
-                </Link>
-              </li>
-            ))}
+                  <Link
+                    href={item.href}
+                    className={`group text-xs font-bold tracking-[0.1em] uppercase py-1 flex items-center gap-1 transition-colors ${
+                      active ? 'text-[#47C269]' : 'text-charcoal hover:text-[#47C269]'
+                    }`}
+                  >
+                    <span className={`nav-underline ${active ? 'active' : ''}`}>
+                      {item.label}
+                    </span>
+                    {megaMenuData[item.id] && (
+                      <Icon
+                        icon="solar:alt-arrow-down-linear"
+                        className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                          active ? 'text-[#47C269]' : ''
+                        } ${activeMenu === item.id ? 'rotate-180 text-[#47C269]' : ''}`}
+                      />
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
 
           {/* Right Action Icons */}
@@ -372,18 +397,32 @@ export default function Navbar() {
                       {megaMenuData[activeMenu].title}
                     </h5>
                     <ul className="space-y-3">
-                      {megaMenuData[activeMenu].links.map((link) => (
-                        <li key={link.label}>
-                          <Link
-                            href={link.href}
-                            onClick={() => setActiveMenu(null)}
-                            className="flex items-center gap-2.5 text-[13px] font-semibold text-charcoal/80 hover:text-forest transition-colors"
-                          >
-                            <Icon icon={link.icon} className="w-4 h-4 text-[#3eac5c]" />
-                            {link.label}
-                          </Link>
-                        </li>
-                      ))}
+                      {megaMenuData[activeMenu].links.map((link) => {
+                        const active = isLinkActive(link.href);
+                        return (
+                          <li key={link.label}>
+                            <Link
+                              href={link.href}
+                              onClick={() => setActiveMenu(null)}
+                              className={`flex items-center gap-2.5 text-[13px] font-semibold transition-all group/menulink ${
+                                active 
+                                  ? 'text-forest font-bold' 
+                                  : 'text-charcoal/80 hover:text-forest'
+                              }`}
+                            >
+                              <Icon 
+                                icon={link.icon} 
+                                className={`w-4 h-4 transition-transform group-hover/menulink:scale-110 ${
+                                  active ? 'text-[#47C269]' : 'text-[#3eac5c]'
+                                }`} 
+                              />
+                              <span className="group-hover/menulink:translate-x-1 transition-transform duration-200">
+                                {link.label}
+                              </span>
+                            </Link>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                   <div className="flex flex-col gap-4">
@@ -392,27 +431,87 @@ export default function Navbar() {
                     </h5>
                     <ul className="space-y-3">
                       <li>
-                        <Link href="/shop" onClick={() => setActiveMenu(null)} className="text-[13px] font-semibold text-charcoal/80 hover:text-forest transition-colors flex items-center gap-2">
-                          <Icon icon="solar:list-arrow-down-linear" className="w-4 h-4 text-[#3eac5c]" />
-                          Explore Full Shop
+                        <Link 
+                          href="/shop" 
+                          onClick={() => setActiveMenu(null)} 
+                          className={`text-[13px] font-semibold transition-all flex items-center gap-2 group/quicklink ${
+                            isLinkActive('/shop') 
+                              ? 'text-forest font-bold' 
+                              : 'text-charcoal/80 hover:text-forest'
+                          }`}
+                        >
+                          <Icon 
+                            icon="solar:list-arrow-down-linear" 
+                            className={`w-4 h-4 transition-transform group-hover/quicklink:scale-110 ${
+                              isLinkActive('/shop') ? 'text-[#47C269]' : 'text-[#3eac5c]'
+                            }`} 
+                          />
+                          <span className="group-hover/quicklink:translate-x-1 transition-transform duration-200">
+                            Explore Full Shop
+                          </span>
                         </Link>
                       </li>
                       <li>
-                        <Link href="/store" onClick={() => setActiveMenu(null)} className="text-[13px] font-semibold text-charcoal/80 hover:text-forest transition-colors flex items-center gap-2">
-                          <Icon icon="solar:map-point-linear" className="w-4 h-4 text-[#3eac5c]" />
-                          Visit Flagship Store
+                        <Link 
+                          href="/store" 
+                          onClick={() => setActiveMenu(null)} 
+                          className={`text-[13px] font-semibold transition-all flex items-center gap-2 group/quicklink ${
+                            isLinkActive('/store') 
+                              ? 'text-forest font-bold' 
+                              : 'text-charcoal/80 hover:text-forest'
+                          }`}
+                        >
+                          <Icon 
+                            icon="solar:map-point-linear" 
+                            className={`w-4 h-4 transition-transform group-hover/quicklink:scale-110 ${
+                              isLinkActive('/store') ? 'text-[#47C269]' : 'text-[#3eac5c]'
+                            }`} 
+                          />
+                          <span className="group-hover/quicklink:translate-x-1 transition-transform duration-200">
+                            Visit Flagship Store
+                          </span>
                         </Link>
                       </li>
                       <li>
-                        <Link href="/about" onClick={() => setActiveMenu(null)} className="text-[13px] font-semibold text-charcoal/80 hover:text-forest transition-colors flex items-center gap-2">
-                          <Icon icon="solar:info-square-linear" className="w-4 h-4 text-[#3eac5c]" />
-                          About Our Farm
+                        <Link 
+                          href="/about" 
+                          onClick={() => setActiveMenu(null)} 
+                          className={`text-[13px] font-semibold transition-all flex items-center gap-2 group/quicklink ${
+                            isLinkActive('/about') 
+                              ? 'text-forest font-bold' 
+                              : 'text-charcoal/80 hover:text-forest'
+                          }`}
+                        >
+                          <Icon 
+                            icon="solar:info-square-linear" 
+                            className={`w-4 h-4 transition-transform group-hover/quicklink:scale-110 ${
+                              isLinkActive('/about') ? 'text-[#47C269]' : 'text-[#3eac5c]'
+                            }`} 
+                          />
+                          <span className="group-hover/quicklink:translate-x-1 transition-transform duration-200">
+                            About Our Farm
+                          </span>
                         </Link>
                       </li>
                       <li>
-                        <Link href="/contact" onClick={() => setActiveMenu(null)} className="text-[13px] font-semibold text-charcoal/80 hover:text-forest transition-colors flex items-center gap-2">
-                          <Icon icon="solar:letter-opened-linear" className="w-4 h-4 text-[#3eac5c]" />
-                          Contact Support
+                        <Link 
+                          href="/contact" 
+                          onClick={() => setActiveMenu(null)} 
+                          className={`text-[13px] font-semibold transition-all flex items-center gap-2 group/quicklink ${
+                            isLinkActive('/contact') 
+                              ? 'text-forest font-bold' 
+                              : 'text-charcoal/80 hover:text-forest'
+                          }`}
+                        >
+                          <Icon 
+                            icon="solar:letter-opened-linear" 
+                            className={`w-4 h-4 transition-transform group-hover/quicklink:scale-110 ${
+                              isLinkActive('/contact') ? 'text-[#47C269]' : 'text-[#3eac5c]'
+                            }`} 
+                          />
+                          <span className="group-hover/quicklink:translate-x-1 transition-transform duration-200">
+                            Contact Support
+                          </span>
                         </Link>
                       </li>
                     </ul>
@@ -571,65 +670,79 @@ export default function Navbar() {
 
                 {/* Links Accordion list */}
                 <ul className="flex flex-col gap-1">
-                  {navItems.map((item) => (
-                    <li key={item.id} className="border-b border-gray-50/50">
-                      {megaMenuData[item.id] ? (
-                        <div>
-                          <button
-                            onClick={() => setMobileExpanded(mobileExpanded === item.id ? null : item.id)}
-                            className="w-full py-3 flex items-center justify-between text-sm font-bold text-forest hover:text-green-700 transition-colors uppercase tracking-wider text-left"
-                          >
-                            <span>{item.label}</span>
-                            <Icon
-                              icon="solar:alt-arrow-down-linear"
-                              className={`w-4 h-4 transition-transform duration-200 ${mobileExpanded === item.id ? 'rotate-180 text-green-600' : 'text-gray-400'}`}
-                            />
-                          </button>
+                  {navItems.map((item) => {
+                    const active = isLinkActive(item.href);
+                    return (
+                      <li key={item.id} className="border-b border-gray-50/50">
+                        {megaMenuData[item.id] ? (
+                          <div>
+                            <button
+                              onClick={() => setMobileExpanded(mobileExpanded === item.id ? null : item.id)}
+                              className={`w-full py-3 flex items-center justify-between text-sm font-bold transition-colors uppercase tracking-wider text-left ${
+                                active ? 'text-[#47C269]' : 'text-forest hover:text-green-700'
+                              }`}
+                            >
+                              <span>{item.label}</span>
+                              <Icon
+                                icon="solar:alt-arrow-down-linear"
+                                className={`w-4 h-4 transition-transform duration-200 ${mobileExpanded === item.id ? 'rotate-180 text-[#47C269]' : 'text-gray-400'}`}
+                              />
+                            </button>
 
-                          <AnimatePresence initial={false}>
-                            {mobileExpanded === item.id && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden pl-4 border-l-2 border-green-50 mb-2 space-y-1.5"
-                              >
-                                {megaMenuData[item.id].links.map((link) => (
-                                  <Link
-                                    key={link.label}
-                                    href={link.href}
-                                    onClick={() => {
-                                      setMobileOpen(false);
-                                      setMobileExpanded(null);
-                                    }}
-                                    className="flex items-center gap-2 py-2 text-xs font-semibold text-charcoal/70 hover:text-green-700 transition-colors"
-                                  >
-                                    <Icon icon={link.icon} className="w-3.5 h-3.5 text-green-500" />
-                                    {link.label}
-                                  </Link>
-                                ))}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      ) : (
-                        <Link
-                          href={item.href}
-                          onClick={() => setMobileOpen(false)}
-                          className="block py-3 text-sm font-bold text-forest hover:text-green-700 transition-colors uppercase tracking-wider"
-                        >
-                          {item.label}
-                        </Link>
-                      )}
-                    </li>
-                  ))}
+                            <AnimatePresence initial={false}>
+                              {mobileExpanded === item.id && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden pl-4 border-l-2 border-green-50 mb-2 space-y-1.5"
+                                >
+                                  {megaMenuData[item.id].links.map((link) => {
+                                    const subActive = isLinkActive(link.href);
+                                    return (
+                                      <Link
+                                        key={link.label}
+                                        href={link.href}
+                                        onClick={() => {
+                                          setMobileOpen(false);
+                                          setMobileExpanded(null);
+                                        }}
+                                        className={`flex items-center gap-2 py-2 text-xs font-semibold transition-colors ${
+                                          subActive ? 'text-[#47C269]' : 'text-charcoal/70 hover:text-green-700'
+                                        }`}
+                                      >
+                                        <Icon icon={link.icon} className={`w-3.5 h-3.5 ${subActive ? 'text-[#47C269]' : 'text-green-500'}`} />
+                                        {link.label}
+                                      </Link>
+                                    );
+                                  })}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        ) : (
+                          <Link
+                            href={item.href}
+                            onClick={() => setMobileOpen(false)}
+                            className={`block py-3 text-sm font-bold transition-colors uppercase tracking-wider ${
+                              active ? 'text-[#47C269]' : 'text-forest hover:text-green-700'
+                            }`}
+                          >
+                            {item.label}
+                          </Link>
+                        )}
+                      </li>
+                    );
+                  })}
 
                   {/* Additional Mobile Pages */}
                   <li>
                     <Link
                       href="/store"
                       onClick={() => setMobileOpen(false)}
-                      className="block py-3 text-sm font-bold text-forest hover:text-green-700 transition-colors uppercase tracking-wider border-b border-gray-50/50"
+                      className={`block py-3 text-sm font-bold transition-colors uppercase tracking-wider border-b border-gray-50/50 ${
+                        isLinkActive('/store') ? 'text-[#47C269]' : 'text-forest hover:text-green-700'
+                      }`}
                     >
                       Our Store
                     </Link>
@@ -638,7 +751,9 @@ export default function Navbar() {
                     <Link
                       href="/account"
                       onClick={() => setMobileOpen(false)}
-                      className="block py-3 text-sm font-bold text-forest hover:text-green-700 transition-colors uppercase tracking-wider border-b border-gray-50/50"
+                      className={`block py-3 text-sm font-bold transition-colors uppercase tracking-wider border-b border-gray-50/50 ${
+                        isLinkActive('/account') ? 'text-[#47C269]' : 'text-forest hover:text-green-700'
+                      }`}
                     >
                       Track My Order
                     </Link>

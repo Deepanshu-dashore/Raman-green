@@ -43,7 +43,7 @@ const AdminSettings = () => {
 
     // Form states
 
-    const [packForm, setPackForm] = useState({ name: '', type: 'Box', description: '' });
+    const [packForm, setPackForm] = useState({ name: '', type: '', description: '' });
     const [unitForm, setUnitForm] = useState({ name: '', shortName: '' });
     const [cityForm, setCityForm] = useState({ name: '', state: '' });
 
@@ -119,7 +119,7 @@ const AdminSettings = () => {
             const json = await res.json();
             if (json.success) {
                 toast.success(editingId ? "Packaging updated" : "Packaging added");
-                setPackForm({ name: '', type: 'Box', description: '' });
+                setPackForm({ name: '', type: '', description: '' });
                 setEditingId(null);
                 fetchPackaging();
             }
@@ -392,14 +392,7 @@ const AdminSettings = () => {
                                 </h3>
                                 <form onSubmit={handlePackSubmit} className="space-y-5">
                                     <div>
-                                        <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Type</label>
-                                        <select value={packForm.type} onChange={(e) => setPackForm({ ...packForm, type: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all font-bold text-sm cursor-pointer appearance-none">
-                                            <option value="Box">Box</option>
-                                            <option value="Bottle">Bottle</option>
-                                            <option value="Pouch">Pouch</option>
-                                            <option value="Jar">Jar</option>
-                                            <option value="Other">Other</option>
-                                        </select>
+                                        <LabledInput value={packForm.type} onChange={(e) => setPackForm({ ...packForm, type: e.target.value })} required label='Type' placeholder="e.g. Box, Bottle, Pouch, Bag" />
                                     </div>
                                     <div>
                                         <LabledInput value={packForm.name} onChange={(e) => setPackForm({ ...packForm, name: e.target.value })} required label='Name' placeholder="e.g. Glass Bottle (250ml)" />
@@ -410,7 +403,7 @@ const AdminSettings = () => {
                                     <Button type="submit" variant="edit" fullWidth isLoading={isSubmitting} className="!py-2.5 !px-6 !rounded-lg text-xs font-bold mt-2" icon="lucide:save">
                                         {editingId ? 'Update' : 'Add'}
                                     </Button>
-                                    {editingId && <button type="button" onClick={() => { setEditingId(null); setPackForm({ name: '', type: 'Box', description: '' }); }} className="w-full py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">Cancel Edit</button>}
+                                     {editingId && <button type="button" onClick={() => { setEditingId(null); setPackForm({ name: '', type: '', description: '' }); }} className="w-full py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">Cancel Edit</button>}
                                 </form>
                             </Card>
                         </div>

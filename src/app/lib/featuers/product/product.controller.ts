@@ -72,6 +72,9 @@ export class ProductController {
             if (!product) return ApiResponse(404, null, "Product not found.");
             return ApiResponse(200, null, "Product deleted successfully.");
         } catch (error: any) {
+            if (error.message?.toLowerCase().includes("inventory")) {
+                return ApiResponse(400, { hasInventory: true }, error.message);
+            }
             return ApiResponse(500, null, error.message);
         }
     }

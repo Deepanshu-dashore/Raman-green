@@ -380,7 +380,7 @@ export class ProductService {
      * Permanently delete product, all its variants, and their Cloudinary images if no inventory exists
      */
     static async deleteProduct(id: string): Promise<IProduct | null> {
-        const product = await Product.findOne({ _id: id, ...notDeletedFilter });
+        const product = await Product.findOne({ _id: id });
         if (!product) return null;
 
         // 1. Confirm product does not have any inventory entry
@@ -389,8 +389,8 @@ export class ProductService {
             throw new Error("Cannot delete product as it has associated inventory records.");
         }
 
-        // 2. Fetch all associated variants
-        const variants = await ProductVariant.find({ productId: product._id, ...notDeletedFilter });
+        // 2. Fetch all associated variants (including soft-deleted ones)
+        const variants = await ProductVariant.find({ productId: product._id });
 
         // 3. Delete all variant images from Cloudinary
         const imageUrls = variants.flatMap((v: any) => v.images || []);

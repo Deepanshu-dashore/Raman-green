@@ -1,0 +1,89 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import ProductCard from "./ProductCard";
+import { motion } from "framer-motion";
+import { productsData } from "@/constants/products";
+
+// Default fallback new arrivals from local mock data
+const fallbackProducts = [
+  productsData.find((p) => p.id === "1")!,
+  productsData.find((p) => p.id === "2")!,
+  productsData.find((p) => p.id === "3")!,
+  productsData.find((p) => p.id === "4")!,
+].filter(Boolean).map((p) => ({
+  id: p.id,
+  name: p.name,
+  description: p.description,
+  price: p.formattedPrice,
+  originalPrice: p.originalPrice,
+  image: p.image,
+  tags: p.tags,
+}));
+
+export default function NewArrivalsShowcase() {
+  const [products, setProducts] = useState<any[]>(fallbackProducts);
+
+  useEffect(() => {
+    async function fetchNewArrivals() {
+      try {
+        const res = await fetch("/api/products/minimal?newest=true&limit=4");
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            setProducts(json.data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch new arrivals from API:", err);
+      }
+    }
+    fetchNewArrivals();
+  }, []);
+
+  return (
+    <section className="py-20 md:py-28 bg-[#faf8f4] border-t border-charcoal/5">
+      <div className="max-w-[1280px] mx-auto px-5 md:px-16">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <span className="text-[11px] font-inter font-semibold uppercase tracking-wider text-moss bg-sage/30 px-3 py-1 rounded-full">
+            FRESHLY CULTIVATED
+          </span>
+          <h2 className="font-playfair text-3xl md:text-4xl font-semibold text-charcoal tracking-tight mt-3">
+            New Season Arrivals
+          </h2>
+          <p className="text-sm font-inter text-charcoal/60 mt-3 max-w-lg mx-auto leading-relaxed">
+            Experience our newly harvested botanicals and organic seeds, brought directly from heritage farms to elevate your ritual.
+          </p>
+        </div>
+
+        {/* Grid Container */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {products.map((product, idx) => (
+            <motion.div
+              key={product.id || idx}
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.6, delay: idx * 0.1 }}
+              className="h-full"
+            >
+              <ProductCard
+                product={{
+                  id: product.id,
+                  name: product.name,
+                  description: product.description,
+                  price: product.price,
+                  originalPrice: product.originalPrice,
+                  image: product.image,
+                  tags: product.tags,
+                }}
+                index={idx}
+              />
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

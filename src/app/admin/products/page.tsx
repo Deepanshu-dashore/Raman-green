@@ -164,9 +164,9 @@ const AdminProducts = () => {
           setSelectedProduct(null);
         }}
         onConfirm={handleDeleteConfirm}
-        title="Delete Product"
-        message={`Are you sure you want to delete "${selectedProduct?.name}"? This action cannot be undone.`}
-        confirmButtonText="Delete"
+        title="Move to Trash"
+        message={`Are you sure you want to move "${selectedProduct?.name}" to the trash? You can restore it later.`}
+        confirmButtonText="Move to Trash"
       />
     </div>
   );
