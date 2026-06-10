@@ -152,8 +152,15 @@ const AdminProducts = () => {
           }
         ]}
         onView={(p) => router.push(`/admin/products/${p._id}`)}
-        onEdit={(p) => router.push(`/admin/products/edit/${p._id}/variants`)}
+        onEdit={(p) => router.push(`/admin/products/edit/${p._id}`)}
         onDelete={handleDeleteClick}
+        additionalActions={[
+          {
+            label: "Manage Variants",
+            icon: "solar:clipboard-list-bold-duotone",
+            onClick: (p) => router.push(`/admin/products/edit/${p._id}/variants`)
+          }
+        ]}
         hiddenActions={[]}
       />
 

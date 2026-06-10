@@ -32,6 +32,7 @@ interface VariantState {
   mfgDate: string;
   expiryDate: string;
   notes: string;
+  usageInstructions: string;
   showInventory: boolean;
 }
 
@@ -76,6 +77,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     mfgDate: '',
     expiryDate: '',
     notes: '',
+    usageInstructions: '',
     showInventory: false
   });
 
@@ -114,6 +116,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       mfgDate: '',
       expiryDate: '',
       notes: '',
+      usageInstructions: '',
       showInventory: false
     });
     setEditingVariantId(null);
@@ -156,6 +159,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
       mfgDate: formattedMfg,
       expiryDate: formattedExp,
       notes: v.notes || '',
+      usageInstructions: Array.isArray(v.usageInstructions) ? v.usageInstructions.join('\n') : (v.usageInstructions || ''),
       showInventory: !!(v.batchNumber || v.mfgDate || v.expiryDate || v.lowStockLimit)
     });
     revokeGalleryPreviews(gallery);
@@ -273,6 +277,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
     if (variantForm.mfgDate) body.append('mfgDate', variantForm.mfgDate);
     if (variantForm.expiryDate) body.append('expiryDate', variantForm.expiryDate);
     if (variantForm.notes) body.append('notes', variantForm.notes);
+    body.append('usageInstructions', variantForm.usageInstructions || '');
 
     const imageOrder: VariantImageOrderItem[] = [];
     let newIndex = 0;
@@ -484,6 +489,20 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                       );
                     }),
                 },
+                {
+                  key: 'usageInstructions',
+                  label: 'Usage Instructions',
+                  render: (row: any) => {
+                    const insts = Array.isArray(row.usageInstructions)
+                      ? row.usageInstructions.join(', ')
+                      : (row.usageInstructions || '');
+                    return (
+                      <span className="text-[12px] text-gray-500 font-medium line-clamp-2 max-w-[200px]" title={insts}>
+                        {insts || '-'}
+                      </span>
+                    );
+                  },
+                },
               ]}
               loading={loading}
               rowKey={(row: any) => row._id || row.id}
@@ -596,6 +615,19 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                       selectedValues={variantForm.packaging}
                       onChange={togglePackaging}
                       placeholder="Select packaging"
+                    />
+                  </div>
+
+                  {/* Usage Instructions */}
+                  <div className="col-span-2 lg:col-span-5 mt-3">
+                    <LabledInput
+                      label="Usage Instructions"
+                      type="textarea"
+                      value={variantForm.usageInstructions}
+                      onChange={(e) => handleFormChange('usageInstructions', e.target.value)}
+                      placeholder="e.g. Take 1 scoop daily with water or milk after your workout."
+                      rows={2}
+                      className="resize-none"
                     />
                   </div>
                 </div>

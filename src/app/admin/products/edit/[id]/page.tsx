@@ -60,13 +60,16 @@ const EditProduct = ({ params }: EditProductProps) => {
     slug: '',
     description: '',
     category: '',
+    subCategory: '',
     cultivation: '',
     cultivationOrSeason: '',
     cultivation_city: [] as string[],
     brand: 'Raman Green',
     isFeatured: false,
     certificates: [] as string[],
-    spaceification: [] as { title: string, value: string }[]
+    spaceification: [] as { title: string, value: string }[],
+    ingredients: '',
+    declaration: ''
   });
 
   const [existingVariants, setExistingVariants] = useState<any[]>([]);
@@ -125,13 +128,16 @@ const EditProduct = ({ params }: EditProductProps) => {
           slug: prod.slug || '',
           description: prod.description || '',
           category: prod.category?._id || prod.category || '',
+          subCategory: prod.subCategory?._id || prod.subCategory || '',
           cultivation: prod.cultivation || '',
           cultivationOrSeason: prod.cultivationOrSeason || '',
           cultivation_city: (prod.cultivation_city || []).map((c: any) => c._id || c),
           brand: prod.brand || 'Raman Green',
           isFeatured: !!prod.isFeatured,
           certificates: (prod.certificates || []).map((c: any) => c._id || c),
-          spaceification: prod.spaceification || []
+          spaceification: prod.spaceification || [],
+          ingredients: prod.ingredients ? prod.ingredients.join(', ') : '',
+          declaration: prod.declaration || ''
         });
       } else {
         toast.error("Product not found");
@@ -203,10 +209,19 @@ const EditProduct = ({ params }: EditProductProps) => {
     setLoading(true);
 
     try {
+      const payload = {
+        ...formData,
+        subCategory: formData.subCategory || undefined,
+        ingredients: typeof formData.ingredients === 'string'
+          ? formData.ingredients.split(',').map((s: string) => s.trim()).filter(Boolean)
+          : formData.ingredients,
+        declaration: formData.declaration || ''
+      };
+
       const res = await fetch(`/api/products/${productId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       const json = await res.json();
@@ -223,6 +238,14 @@ const EditProduct = ({ params }: EditProductProps) => {
       setLoading(false);
     }
   };
+
+  const rootCategories = categories.filter(cat => !cat.parent);
+  const subCategories = formData.category
+    ? categories.filter(cat => {
+        const parentId = typeof cat.parent === 'object' && cat.parent ? cat.parent._id : cat.parent;
+        return parentId === formData.category;
+      })
+    : [];
 
   if (fetching) {
     return (
@@ -276,10 +299,21 @@ const EditProduct = ({ params }: EditProductProps) => {
                 <LabeledSelect
                   label="Category"
                   required
-                  options={categories.map(cat => ({ id: cat._id, label: cat.name }))}
+                  options={rootCategories.map(cat => ({ id: cat._id, label: cat.name }))}
                   selectedValue={formData.category}
-                  onChange={(val) => setFormData(prev => ({ ...prev, category: val }))}
+                  onChange={(val) => setFormData(prev => ({ ...prev, category: val, subCategory: '' }))}
                   placeholder="Select Category"
+                />
+              </div>
+
+              <div className="space-y-1.5 flex flex-col justify-center min-h-[80px]">
+                <LabeledSelect
+                  label="Subcategory"
+                  disabled={subCategories.length === 0}
+                  options={subCategories.map(cat => ({ id: cat._id, label: cat.name }))}
+                  selectedValue={formData.subCategory}
+                  onChange={(val) => setFormData(prev => ({ ...prev, subCategory: val }))}
+                  placeholder={subCategories.length === 0 ? "No Subcategories" : "Select Subcategory"}
                 />
               </div>
 
@@ -331,6 +365,28 @@ const EditProduct = ({ params }: EditProductProps) => {
                   placeholder="Select cities"
                 />
               </div>
+
+              <LabledInput
+                label="Ingredients (comma-separated)"
+                type="textarea"
+                name="ingredients"
+                rows={2}
+                value={formData.ingredients}
+                onChange={handleInputChange}
+                placeholder="e.g. Organic Pearl Millet, Ragi, Rolled Oats"
+                className="col-span-2"
+              />
+
+              <LabledInput
+                label="Declarations / Features (comma-separated)"
+                type="textarea"
+                name="declaration"
+                rows={2}
+                value={formData.declaration}
+                onChange={handleInputChange}
+                placeholder="e.g. 100% Organic, No Added Sugar, Gluten Free"
+                className="col-span-2"
+              />
 
               <LabledInput
                 label="Product Description"

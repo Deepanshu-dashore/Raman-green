@@ -60,7 +60,8 @@ export class VariantService {
                 weight: Number(varData.weight || varData.value || 0),
                 images: varData.images || [],
                 imageOrder: varData.imageOrder || [],
-                sku: varData.sku
+                sku: varData.sku,
+                usageInstructions: varData.usageInstructions
             });
             await variant.save({ session });
 
@@ -149,7 +150,8 @@ export class VariantService {
                 weight: Number(varData.weight || varData.value || 0),
                 images: varData.images || [],
                 imageOrder: varData.imageOrder || [],
-                sku: varData.sku
+                sku: varData.sku,
+                usageInstructions: varData.usageInstructions
             },
             { new: true }
         ).populate("unit").populate("packaging");

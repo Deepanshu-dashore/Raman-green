@@ -18,6 +18,7 @@ interface LabeledSelectProps {
   placeholder?: string;
   required?: boolean;
   className?: string;
+  disabled?: boolean;
 }
 
 export function LabeledSelect({
@@ -27,7 +28,8 @@ export function LabeledSelect({
   onChange,
   placeholder = "Select...",
   required = false,
-  className = ""
+  className = "",
+  disabled = false
 }: LabeledSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,9 +47,9 @@ export function LabeledSelect({
   // Compute display value
   const selectedOption = options.find(o => o.id === selectedValue);
   const displayText = !selectedOption ? (
-    <span className="text-gray-400 font-medium">{placeholder}</span>
+    <span className={disabled ? "text-gray-300 font-medium" : "text-gray-400 font-medium"}>{placeholder}</span>
   ) : (
-    <span className="text-gray-900 font-semibold truncate block w-full">{selectedOption.label}</span>
+    <span className={`${disabled ? "text-gray-400" : "text-gray-900"} font-semibold truncate block w-full`}>{selectedOption.label}</span>
   );
 
   return (
@@ -58,16 +60,20 @@ export function LabeledSelect({
       <div className="relative w-full">
         {/* Trigger */}
         <div
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full h-11 px-3 bg-white border border-gray-200 rounded-lg cursor-pointer flex items-center justify-between transition-all hover:shadow-sm"
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          className={`w-full h-11 px-3 rounded-lg flex items-center justify-between transition-all ${
+            disabled
+              ? "bg-gray-50 border-gray-150 cursor-not-allowed text-gray-400"
+              : "bg-white border border-gray-200 cursor-pointer hover:shadow-sm text-gray-600"
+          }`}
         >
-          <div className="flex-1 flex text-xs items-center gap-2 overflow-hidden pr-2 text-gray-600">
+          <div className="flex-1 flex text-xs items-center gap-2 overflow-hidden pr-2">
             {displayText}
           </div>
           {isOpen ? (
-            <ChevronUpIcon className="w-5 h-5 text-gray-500 stroke-2" />
+            <ChevronUpIcon className="w-5 h-5 text-gray-400 stroke-2" />
           ) : (
-            <ChevronDownIcon className="w-5 h-5 text-gray-500 stroke-2" />
+            <ChevronDownIcon className="w-5 h-4 text-gray-400 stroke-2" />
           )}
         </div>
 

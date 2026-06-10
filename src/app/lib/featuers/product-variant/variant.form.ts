@@ -18,6 +18,7 @@ export interface ParsedVariantForm {
   mfgDate?: Date;
   expiryDate?: Date;
   notes?: string;
+  usageInstructions?: string[];
 }
 
 /**
@@ -127,6 +128,10 @@ export async function parseVariantFormData(
   const mfgDateRaw = formData.get("mfgDate") as string | null;
   const expiryDateRaw = formData.get("expiryDate") as string | null;
   const notes = (formData.get("notes") as string)?.trim() || undefined;
+  const usageInstructionsRaw = (formData.get("usageInstructions") as string)?.trim();
+  const usageInstructions = usageInstructionsRaw 
+    ? usageInstructionsRaw.split('\n').map(s => s.trim()).filter(Boolean)
+    : undefined;
 
   return {
     data: {
@@ -143,6 +148,7 @@ export async function parseVariantFormData(
       mfgDate: mfgDateRaw ? new Date(mfgDateRaw) : undefined,
       expiryDate: expiryDateRaw ? new Date(expiryDateRaw) : undefined,
       notes,
+      usageInstructions,
     },
     uploadedUrls,
   };

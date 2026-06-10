@@ -37,12 +37,15 @@ const AddProduct = () => {
     slug: '',
     description: '',
     category: '',
+    subCategory: '',
     cultivationOrSeason: '',
     cultivation_city: [] as string[],
     brand: 'Raman Green',
     isFeatured: false,
     certificates: [] as string[],
-    spaceification: [] as { title: string, value: string }[]
+    spaceification: [] as { title: string, value: string }[],
+    ingredients: '',
+    declaration: ''
   });
 
   useEffect(() => {
@@ -115,10 +118,17 @@ const AddProduct = () => {
     setLoading(true);
 
     try {
+      const payload = {
+        ...formData,
+        subCategory: formData.subCategory || undefined,
+        ingredients: formData.ingredients.split(',').map(s => s.trim()).filter(Boolean),
+        declaration: formData.declaration || ''
+      };
+
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       const json = await res.json();
@@ -136,6 +146,14 @@ const AddProduct = () => {
       setLoading(false);
     }
   };
+
+  const rootCategories = categories.filter(cat => !cat.parent);
+  const subCategories = formData.category
+    ? categories.filter(cat => {
+        const parentId = typeof cat.parent === 'object' && cat.parent ? cat.parent._id : cat.parent;
+        return parentId === formData.category;
+      })
+    : [];
 
   return (
     <div className="max-w-3xl mx-auto pb-16 px-4 animate-in fade-in duration-500">
@@ -179,10 +197,21 @@ const AddProduct = () => {
               <LabeledSelect
                 label="Category"
                 required
-                options={categories.map(cat => ({ id: cat._id, label: cat.name }))}
+                options={rootCategories.map(cat => ({ id: cat._id, label: cat.name }))}
                 selectedValue={formData.category}
-                onChange={(val) => setFormData(prev => ({ ...prev, category: val }))}
+                onChange={(val) => setFormData(prev => ({ ...prev, category: val, subCategory: '' }))}
                 placeholder="Select Category"
+              />
+            </div>
+
+            <div className="space-y-1.5 flex flex-col justify-center">
+              <LabeledSelect
+                label="Subcategory"
+                disabled={subCategories.length === 0}
+                options={subCategories.map(cat => ({ id: cat._id, label: cat.name }))}
+                selectedValue={formData.subCategory}
+                onChange={(val) => setFormData(prev => ({ ...prev, subCategory: val }))}
+                placeholder={subCategories.length === 0 ? "No Subcategories" : "Select Subcategory"}
               />
             </div>
 
@@ -224,6 +253,28 @@ const AddProduct = () => {
                  placeholder="Select cities"
               />
             </div>
+
+            <LabledInput
+              label="Ingredients (comma-separated)"
+              type="textarea"
+              name="ingredients"
+              rows={2}
+              value={formData.ingredients}
+              onChange={handleInputChange}
+              placeholder="e.g. Organic Pearl Millet, Ragi, Rolled Oats"
+              className="col-span-2"
+            />
+
+            <LabledInput
+              label="Declarations / Features (comma-separated)"
+              type="textarea"
+              name="declaration"
+              rows={2}
+              value={formData.declaration}
+              onChange={handleInputChange}
+              placeholder="e.g. 100% Organic, No Added Sugar, Gluten Free"
+              className="col-span-2"
+            />
 
             <LabledInput
               label="Product Description"

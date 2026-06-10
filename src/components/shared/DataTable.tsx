@@ -103,8 +103,8 @@ function DropdownMenu<T>({
       const rect = triggerRef.current.getBoundingClientRect();
       // Display slightly below and align right edge of the menu with the right edge of the trigger button
       setStyle({
-        top: rect.bottom + window.scrollY + 6,
-        left: rect.right - 176 + window.scrollX, // 176 is w-44 width
+        top: rect.bottom + 6,
+        left: rect.right - 176, // 176 is w-44 width
         opacity: 1
       });
     }

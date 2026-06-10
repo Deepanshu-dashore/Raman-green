@@ -86,7 +86,7 @@ export class ProductService {
 
         // Return fully populated product
         const populatedProduct = await Product.findById(product._id)
-            .populate("category certificates cultivation_city")
+            .populate("category subCategory certificates cultivation_city")
             .populate(variantPopulate);
         return populatedProduct as IProduct;
     }
@@ -155,7 +155,7 @@ export class ProductService {
      */
     static async getAllProducts(query: any = {}): Promise<IProduct[]> {
         return await Product.find({ ...query, ...notDeletedFilter })
-            .populate("category certificates cultivation_city")
+            .populate("category subCategory certificates cultivation_city")
             .populate(variantPopulate);
     }
 
@@ -165,12 +165,12 @@ export class ProductService {
     static async getProductBySlug(slug: string): Promise<IProduct | null> {
         if (slug.match(/^[0-9a-fA-F]{24}$/)) {
             const product = await Product.findOne({ _id: slug, ...notDeletedFilter })
-                .populate("category certificates cultivation_city")
+                .populate("category subCategory certificates cultivation_city")
                 .populate(variantPopulate);
             if (product) return product;
         }
         return await Product.findOne({ slug, ...notDeletedFilter })
-            .populate("category certificates cultivation_city")
+            .populate("category subCategory certificates cultivation_city")
             .populate(variantPopulate);
     }
 
@@ -179,7 +179,7 @@ export class ProductService {
      */
     static async getProductById(id: string): Promise<IProduct | null> {
         return await Product.findOne({ _id: id, ...notDeletedFilter })
-            .populate("category certificates cultivation_city")
+            .populate("category subCategory certificates cultivation_city")
             .populate(variantPopulate);
     }
 
@@ -292,7 +292,7 @@ export class ProductService {
 
         // Return fully populated updated product
         return await Product.findById(product._id)
-            .populate("category certificates cultivation_city")
+            .populate("category subCategory certificates cultivation_city")
             .populate(variantPopulate);
     }
 
@@ -418,7 +418,7 @@ export class ProductService {
      */
     static async getTrashProducts(): Promise<IProduct[]> {
         return await Product.find({ isDeleted: true })
-            .populate("category certificates cultivation_city")
+            .populate("category subCategory certificates cultivation_city")
             .populate({
                 path: "variants",
                 match: { isDeleted: true },

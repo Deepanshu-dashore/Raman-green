@@ -6,6 +6,7 @@ export interface IProduct extends Document {
     slug: string;
     description?: string;
     category: ICategory['_id'];
+    subCategory?: ICategory['_id'];
     cultivationOrSeason: string;
     cultivation?: string;
     cultivation_city: {
@@ -25,6 +26,8 @@ export interface IProduct extends Document {
     brand?: string;
     tags?: string[];
     spaceification?: any[],
+    ingredients?: string[],
+    declaration?: string,
     certificates?: string[]; // Array of Certificate IDs
 }
 
@@ -48,6 +51,11 @@ const productSchema = new Schema<IProduct>({
         type: Schema.Types.ObjectId,
         ref: 'Category',
         required: true
+    },
+    subCategory: {
+        type: Schema.Types.ObjectId,
+        ref: 'Category',
+        required: false
     },
 
     cultivationOrSeason: {
@@ -121,7 +129,16 @@ const productSchema = new Schema<IProduct>({
         default: []
     },
 
+    ingredients: {
+        type: [String],
+        default: []
+    },
+
     brand: {
+        type: String,
+    },
+
+    declaration: {
         type: String,
     }
 }, { timestamps: true });

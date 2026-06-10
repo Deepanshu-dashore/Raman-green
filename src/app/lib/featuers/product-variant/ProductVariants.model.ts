@@ -14,7 +14,9 @@ export interface IProductVariant extends Document {
     )[];
     packaging?: Schema.Types.ObjectId[];
     sku: string;
+    usageInstructions?: string[];
     isDeleted?: boolean;
+    lowStockAlert?: number;
     deletedAt?: Date;
 }
 
@@ -74,10 +76,17 @@ const productVariantSchema = new Schema<IProductVariant>({
         type: String,
         required: true
     },
+    usageInstructions: {
+        type: [String]
+    },
 
     isDeleted: {
         type: Boolean,
         default: false
+    },
+    lowStockAlert: {
+        type: Number,
+        default: 10
     },
 
     deletedAt: {
