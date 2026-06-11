@@ -390,7 +390,7 @@ export default function Navbar() {
                     </div>
                     <div className="w-1/2 relative h-full min-h-[140px]">
                       <img
-                        src="/centerImg.png"
+                        src="/home/centerImg.png"
                         alt="Flagship Store"
                         className="absolute inset-0 w-full h-full object-cover group-hover/promo:scale-105 transition-transform duration-500"
                       />

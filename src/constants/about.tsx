@@ -42,7 +42,7 @@ export const timelineSteps = [
     year: "Processing Precision",
     title: "Nutrient-Rich Flour & Snacks",
     desc: "Millets are carefully milled and baked in hygienic, GMP-compliant facilities to produce healthy, fiber-rich alternatives to refined flour (maida) products.",
-    image: "/category_crops.png",
+    image: "/home/category_crops.png",
   },
   {
     year: "Value Addition",

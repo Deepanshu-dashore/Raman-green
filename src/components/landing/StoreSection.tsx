@@ -18,7 +18,7 @@ export default function StoreSection() {
             className="rounded-lg overflow-hidden h-[350px] md:h-[420px]"
           >
             <img
-              src="/centerImg.png"
+              src="/home/centerImg.png"
               alt="Raman Green Khandwa campus and farm"
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
             />

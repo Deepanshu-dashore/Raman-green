@@ -17,25 +17,25 @@ const DEFAULT_CATEGORIES: CategoryItem[] = [
   {
     title: "Heritage Seeds",
     wellnessTag: "VITALITY",
-    image: "/category_seeds.png",
+    image: "/home/category_seeds.png",
     href: "/shop?category=seeds",
   },
   {
     title: "Organic Crops",
     wellnessTag: "PERFORMANCE",
-    image: "/category_crops.png",
+    image: "/home/category_crops.png",
     href: "/shop?category=crops",
   },
   {
     title: "Artisanal Dry Foods",
     wellnessTag: "HERITAGE",
-    image: "/category_dry_foods.png",
+    image: "/home/category_dry_foods.png",
     href: "/shop?category=dry-foods",
   },
   {
     title: "Instant Food Grains",
     wellnessTag: "PURITY",
-    image: "/category_instant.png",
+    image: "/home/category_instant.png",
     href: "/shop?category=instant",
   },
 ];
@@ -70,7 +70,7 @@ export default function CategoryGrid() {
             return {
               title: name,
               wellnessTag,
-              image: cat.image || "/category_seeds.png",
+              image: cat.image || "/home/category_seeds.png",
               href: `/shop?category=${cat.slug || ""}`,
             };
           });

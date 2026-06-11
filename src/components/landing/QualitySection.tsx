@@ -44,14 +44,14 @@ export default function QualitySection() {
           >
             <div className="rounded-lg overflow-hidden h-[220px]">
               <img
-                src="/quality_processing.png"
+                src="/home/quality_processing.png"
                 alt="Modern food cold-processing facility"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
               />
             </div>
             <div className="rounded-lg overflow-hidden h-[220px] mt-8">
               <img
-                src="/quality_lab.png"
+                src="/home/quality_lab.png"
                 alt="Quality control testing lab at CVRU"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
               />

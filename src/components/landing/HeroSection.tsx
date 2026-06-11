@@ -7,26 +7,26 @@ import Link from "next/link";
 
 const slides = [
   {
-    image: "/organic_seeds_hero.png",
+    image: "/home/organic_seeds_hero.png",
     tag: "Premium Organic Seeds",
     title: "Cultivating Heritage, Defining Wellness",
     desc: "Sustainably harvested organic seeds, pumpkin seeds, flax, and chia seeds packed with raw omega-3 nutrients."
   },
   {
-    image: "/instant_mix_hero.png",
+    image: "/home/instant_mix_hero.png",
     tag: "Pure Instant Mixes",
     title: "Wholesome Nourishment in an Instant",
     desc: "Nutrient-rich, preservative-free instant millet mixes and organic breakfast blends crafted for modern health."
   },
   {
-    image: "/herbs_powder_hero.png",
+    image: "/home/herbs_powder_hero.png",
     tag: "Organic Herbal Powders",
     title: "Pure Wellness, Stone-Ground to Perfection",
     desc: "100% natural, glyphosate-free Moringa, Ashwagandha, and botanical powders rich in living nutrients."
   },
 
   {
-    image: "/sambhar_masala_hero.png",
+    image: "/home/sambhar_masala_hero.png",
     tag: "Indian Culinary Flavours",
     title: "Authentic Indian Sambhar Masala",
     desc: "Experience heritage Indian tastes crafted with freshly stone-ground whole chillies, coriander seeds, and cumin seeds."
