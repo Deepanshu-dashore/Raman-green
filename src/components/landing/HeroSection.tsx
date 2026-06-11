@@ -13,16 +13,23 @@ const slides = [
     desc: "Sustainably harvested organic seeds, pumpkin seeds, flax, and chia seeds packed with raw omega-3 nutrients."
   },
   {
+    image: "/instant_mix_hero.png",
+    tag: "Pure Instant Mixes",
+    title: "Wholesome Nourishment in an Instant",
+    desc: "Nutrient-rich, preservative-free instant millet mixes and organic breakfast blends crafted for modern health."
+  },
+  {
+    image: "/herbs_powder_hero.png",
+    tag: "Organic Herbal Powders",
+    title: "Pure Wellness, Stone-Ground to Perfection",
+    desc: "100% natural, glyphosate-free Moringa, Ashwagandha, and botanical powders rich in living nutrients."
+  },
+
+  {
     image: "/sambhar_masala_hero.png",
     tag: "Indian Culinary Flavours",
     title: "Authentic Indian Sambhar Masala",
     desc: "Experience heritage Indian tastes crafted with freshly stone-ground whole chillies, coriander seeds, and cumin seeds."
-  },
-  {
-    image: "/dry_herbs_hero.png",
-    tag: "Pure Botanical Herbs",
-    title: "Premium Dried Botanical Herbs",
-    desc: "Nourishing dry crops, basil, mint leaves, and fresh green tea leaves direct from local eco-friendly farms."
   },
 ];
 
@@ -66,7 +73,7 @@ export default function HeroSection() {
       </AnimatePresence>
 
       {/* Ambient Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-forest/75 via-forest/45 to-forest/80" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/70" />
 
       {/* Next/Prev Navigation Arrows - Hidden by default, visible on hover */}
       <button

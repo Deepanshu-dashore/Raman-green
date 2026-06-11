@@ -130,7 +130,7 @@ export function CertificationsSection() {
   ];
 
   return (
-    <section className="bg-cream py-16 md:py-24 text-charcoal">
+    <section id="certifications" className="bg-cream py-16 md:py-24 text-charcoal">
       <div className="max-w-[1280px] mx-auto px-5 md:px-16 text-center">
         
         {/* Heading */}

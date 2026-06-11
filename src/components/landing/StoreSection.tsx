@@ -18,8 +18,8 @@ export default function StoreSection() {
             className="rounded-lg overflow-hidden h-[350px] md:h-[420px]"
           >
             <img
-              src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=800&q=80"
-              alt="Raman Green flagship store interior"
+              src="/centerImg.png"
+              alt="Raman Green Khandwa campus and farm"
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
             />
           </motion.div>
@@ -35,18 +35,13 @@ export default function StoreSection() {
               A Physical Extension of Our Philosophy
             </h2>
             <p className="text-sm font-inter text-charcoal/65 mt-5 leading-relaxed">
-              Step into the Raman Green flagship store, a sanctuary
-              designed to reflect our profound connection to nature and
-              wellness.
+              Step into the world of Raman Green, a sustainable FMCG and agricultural initiative founded by the AISECT Group and Dr. C.V. Raman University (CVRU) in Khandwa, Madhya Pradesh. We merge scientific research with traditional, grassroots farming to process and deliver the highest quality of chemical-free, nutrient-dense millets.
             </p>
             <p className="text-sm font-inter text-charcoal/65 mt-4 leading-relaxed">
-              More than just a retail space, our stores are immersive environments
-              where you can consult with our wellness experts, explore our bulk
-              organic offerings, and experience the tactile beauty of natural,
-              sustainable living.
+              By working hand-in-hand with tribal communities in the region, we ensure our ancient grains like Kodo and Kutki millets are cultivated responsibly. We preserve soil biology and empower farmers, bringing pure wellness directly to your home.
             </p>
             <Link
-              href="/store"
+              href="/about"
               className="inline-flex items-center gap-1.5 mt-8 text-sm font-inter font-semibold text-forest hover:text-moss transition-colors"
             >
               Explore Our Flagship Store

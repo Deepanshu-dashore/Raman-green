@@ -6,7 +6,7 @@ import { Icon } from "@iconify/react";
 
 export default function QualitySection() {
   return (
-    <section className="py-20 md:py-28 bg-white">
+    <section id="quality" className="py-20 md:py-28 bg-white">
       <div className="max-w-[1280px] mx-auto px-5 md:px-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
           {/* Text */}
@@ -20,20 +20,16 @@ export default function QualitySection() {
               Precision Meets Purity
             </h2>
             <p className="text-sm font-inter text-charcoal/65 mt-5 leading-relaxed">
-              Our commitment to quality extends far beyond the fields.
-              Inside our state-of-the-art facilities, we utilize low-impact
-              machinery to process our organic harvest.
+              Our commitment to purity and safety goes beyond traditional farming. Inside our Good Manufacturing Practices (GMP) compliant facilities, we utilize advanced cold-processing methodologies to clean, dry, and mill our organic harvests. By keeping temperatures strictly controlled, we preserve the vital dietary fibers and micronutrients.
             </p>
             <p className="text-sm font-inter text-charcoal/65 mt-4 leading-relaxed">
-              By maintaining strict temperature controls and utilizing modern,
-              clean-room technology, we ensure that every seed, crop, and blend
-              retains its maximum nutritional integrity before it reaches your table.
+              In close collaboration with research laboratories at Dr. C.V. Raman University (CVRU) in Khandwa, we verify that every batch is 100% glyphosate-free, with zero chemical residues or artificial preservatives, bringing pure, certified wellness straight to your home.
             </p>
             <Link
-              href="/about"
+              href="/shop"
               className="inline-flex items-center gap-1.5 mt-8 text-sm font-inter font-semibold text-forest hover:text-moss transition-colors"
             >
-              Learn About Our Standards
+              Explore Our Products
               <Icon icon="lucide:arrow-right" className="w-4 h-4" />
             </Link>
           </motion.div>
@@ -48,15 +44,15 @@ export default function QualitySection() {
           >
             <div className="rounded-lg overflow-hidden h-[220px]">
               <img
-                src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&q=80"
-                alt="Modern food processing facility"
+                src="/quality_processing.png"
+                alt="Modern food cold-processing facility"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
               />
             </div>
             <div className="rounded-lg overflow-hidden h-[220px] mt-8">
               <img
-                src="https://images.unsplash.com/photo-1606761568499-6d2451b23c66?w=600&q=80"
-                alt="Quality control lab"
+                src="/quality_lab.png"
+                alt="Quality control testing lab at CVRU"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
               />
             </div>

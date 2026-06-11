@@ -1,5 +1,16 @@
 import api, { del, get, unwrap } from "@/lib/axios";
 
+export interface CategoryResponse {
+  _id: string;
+  name: string;
+  slug: string;
+  image?: string;
+  description?: string;
+  parent?: any;
+  children?: any[];
+  isDeleted?: boolean;
+}
+
 export interface CategoryFormFields {
   name: string;
   slug: string;
@@ -9,7 +20,7 @@ export interface CategoryFormFields {
 }
 
 export const categoriesApi = {
-  getAll: () => get<unknown[]>("/api/categories"),
+  getAll: () => get<CategoryResponse[]>("/api/categories"),
 
   create: async (fields: CategoryFormFields) => {
     const formData = new FormData();

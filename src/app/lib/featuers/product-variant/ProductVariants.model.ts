@@ -96,4 +96,4 @@ const productVariantSchema = new Schema<IProductVariant>({
 
 delete models.ProductVariant;
 export const ProductVariant = models.ProductVariant || model<IProductVariant>('ProductVariant', productVariantSchema);
-ProductVariant.syncIndexes().catch(err => console.log("ProductVariant index sync skipped:", err));
+// ProductVariant.syncIndexes().catch(err => console.log("ProductVariant index sync skipped:", err));

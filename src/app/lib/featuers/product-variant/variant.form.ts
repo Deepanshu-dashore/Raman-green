@@ -10,6 +10,7 @@ export interface ParsedVariantForm {
   price: number;
   stock: number;
   lowStockLimit: number;
+  lowStockAlert?: number;
   sku: string;
   images: string[];
   imageOrder: VariantImageOrderItem[];
@@ -47,6 +48,11 @@ export async function parseVariantFormData(
   const lowStockLimit = lowStockLimitRaw === null || lowStockLimitRaw === ""
     ? 10
     : Number(lowStockLimitRaw);
+
+  const lowStockAlertRaw = formData.get("lowStockAlert");
+  const lowStockAlert = lowStockAlertRaw === null || lowStockAlertRaw === ""
+    ? 10
+    : Number(lowStockAlertRaw);
 
   if (!sku) throw new Error("SKU is required.");
   if (!unit) throw new Error("Unit is required.");
@@ -140,6 +146,7 @@ export async function parseVariantFormData(
       price,
       stock: Number.isNaN(stock) ? 0 : stock,
       lowStockLimit: Number.isNaN(lowStockLimit) ? 10 : lowStockLimit,
+      lowStockAlert: Number.isNaN(lowStockAlert) ? 10 : lowStockAlert,
       sku,
       images,
       imageOrder,

@@ -14,103 +14,38 @@ const announcements = [
   "✨ Festive Offer: Use code RGSEED10 to get 10% off seeds & dry foods"
 ];
 
-// Mega menu datasets
-const megaMenuData: Record<string, {
-  title: string;
-  links: { label: string; href: string; icon: string }[];
-  promo: {
-    title: string;
-    tagline: string;
-    image: string;
-    href: string;
-  };
-}> = {
-  seeds: {
-    title: "Organic Seeds",
+// Shop categories for dropdown menus
+const shopCategories = [
+  {
+    title: "Seeds",
     links: [
-      { label: "Chia Seeds", href: "/shop?category=seeds", icon: "solar:leaf-linear" },
-      { label: "Pumpkin Seeds", href: "/shop?category=seeds", icon: "solar:leaf-linear" },
-      { label: "Flax Seeds", href: "/shop?category=seeds", icon: "solar:leaf-linear" },
-      { label: "Sunflower Seeds", href: "/shop?category=seeds", icon: "solar:leaf-linear" },
-      { label: "Sesame Seeds", href: "/shop?category=seeds", icon: "solar:leaf-linear" },
+      { label: "Field Crop Seeds", href: "/shop?category=field-seeds", icon: "solar:leaf-linear" },
+      { label: "Vegetable Seeds", href: "/shop?category=vegetable-seeds", icon: "solar:leaf-linear" },
     ],
-    promo: {
-      title: "Premium Chia Seeds",
-      tagline: "Rich in Omega-3 & Antioxidants",
-      image: "https://images.unsplash.com/photo-1598030304671-5aa1d6f21128?w=300&q=80",
-      href: "/shop?category=seeds"
-    }
   },
-  "dry-foods": {
-    title: "Dry Fruits & Nuts",
+  {
+    title: "Powders",
     links: [
-      { label: "Walnut Kernels", href: "/shop?category=dry-foods", icon: "solar:star-linear" },
-      { label: "Premium Cashews", href: "/shop?category=dry-foods", icon: "solar:star-linear" },
-      { label: "Roasted Almonds", href: "/shop?category=dry-foods", icon: "solar:star-linear" },
-      { label: "Black Raisins", href: "/shop?category=dry-foods", icon: "solar:star-linear" },
-      { label: "Dried Figs", href: "/shop?category=dry-foods", icon: "solar:star-linear" },
+      { label: "Vegetable Powders", href: "/shop?category=vegetable-powders", icon: "solar:leaf-linear" },
+      { label: "Fruit Powders", href: "/shop?category=fruit-powders", icon: "solar:leaf-linear" },
+      { label: "Spice Powders", href: "/shop?category=spice-powders", icon: "solar:leaf-linear" },
+      { label: "Herbal Powders", href: "/shop?category=herbal-powders", icon: "solar:leaf-linear" },
     ],
-    promo: {
-      title: "Kashmiri Walnuts",
-      tagline: "100% Organic & Vacuum Sealed",
-      image: "https://images.unsplash.com/photo-1585559606132-277ba3031a6d?w=300&q=80",
-      href: "/shop?category=dry-foods"
-    }
   },
-  instant: {
-    title: "Instant Food Grains",
+  {
+    title: "Instant Mixes",
     links: [
-      { label: "Rolled Oats", href: "/shop?category=instant", icon: "solar:bolt-linear" },
-      { label: "Millet Muesli", href: "/shop?category=instant", icon: "solar:bolt-linear" },
-      { label: "Ready-to-Cook Mix", href: "/shop?category=instant", icon: "solar:bolt-linear" },
-      { label: "Instant Veggie Soup", href: "/shop?category=instant", icon: "solar:bolt-linear" },
+      { label: "Instant Mixes", href: "/shop?category=instant-mixes", icon: "solar:bolt-linear" },
     ],
-    promo: {
-      title: "Millet Muesli",
-      tagline: "No Added Sugar, High Dietary Fiber",
-      image: "https://images.unsplash.com/photo-1517881917430-e70dfb3610aa?w=300&q=80",
-      href: "/shop?category=instant"
-    }
   },
-  crops: {
-    title: "Organic Crops",
-    links: [
-      { label: "Heritage Wheat Grains", href: "/shop?category=crops", icon: "solar:leaf-linear" },
-      { label: "Traditional Rolled Oats", href: "/shop?category=crops", icon: "solar:leaf-linear" },
-      { label: "High-Fiber Millet Grain", href: "/shop?category=crops", icon: "solar:leaf-linear" },
-      { label: "Organic Barley Seeds", href: "/shop?category=crops", icon: "solar:leaf-linear" },
-      { label: "Premium Sorghum Grain", href: "/shop?category=crops", icon: "solar:leaf-linear" },
-    ],
-    promo: {
-      title: "Heritage Rolled Oats",
-      tagline: "100% Organic Stone-Ground Rolled Oats",
-      image: "https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=300&q=80",
-      href: "/shop?category=crops"
-    }
-  },
-  shops: {
-    title: "Store Collections",
-    links: [
-      { label: "Browse All Shops", href: "/shop", icon: "solar:shop-linear" },
-      { label: "Best Selling Products", href: "/shop?filter=best-sellers", icon: "solar:fire-linear" },
-      { label: "New Launch Products", href: "/shop?filter=new", icon: "solar:notification-lines-linear" },
-      { label: "Exclusive Offers", href: "/shop?filter=offers", icon: "solar:sale-linear" },
-    ],
-    promo: {
-      title: "Gift Boxes & Hampers",
-      tagline: "Share Wellness With Festive Hampers",
-      image: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&q=80",
-      href: "/shop?filter=gifts"
-    }
-  }
-};
+];
 
 const navItems = [
-  { label: "Seeds", id: "seeds", href: "/shop?category=seeds" },
-  { label: "Crops", id: "crops", href: "/shop?category=crops" },
-  { label: "Dry Foods", id: "dry-foods", href: "/shop?category=dry-foods" },
-  { label: "Instant", id: "instant", href: "/shop?category=instant" },
-  { label: "Our Story", id: "story", href: "/about" },
+  { label: "Home", id: "home", href: "/" },
+  { label: "Shop", id: "shop", href: "/shop" },
+  { label: "About Us", id: "about", href: "/about" },
+  { label: "Quality & Certifications", id: "quality", href: "/#quality" },
+  { label: "Contact", id: "contact", href: "/contact" },
 ];
 
 export default function Navbar() {
@@ -247,8 +182,8 @@ export default function Navbar() {
                   key={item.id}
                   className="h-full flex items-center"
                   onMouseEnter={() => {
-                    if (megaMenuData[item.id]) {
-                      setActiveMenu(item.id);
+                    if (item.id === "shop") {
+                      setActiveMenu("shop");
                     } else {
                       setActiveMenu(null);
                     }
@@ -256,19 +191,19 @@ export default function Navbar() {
                 >
                   <Link
                     href={item.href}
-                    className={`group text-xs font-bold tracking-[0.1em] uppercase py-1 flex items-center gap-1 transition-colors ${
+                    className={`group text-sm font-semibold py-1 flex items-center gap-1 transition-colors ${
                       active ? 'text-[#47C269]' : 'text-charcoal hover:text-[#47C269]'
                     }`}
                   >
                     <span className={`nav-underline ${active ? 'active' : ''}`}>
                       {item.label}
                     </span>
-                    {megaMenuData[item.id] && (
+                    {item.id === "shop" && (
                       <Icon
                         icon="solar:alt-arrow-down-linear"
                         className={`w-3.5 h-3.5 transition-transform duration-200 ${
                           active ? 'text-[#47C269]' : ''
-                        } ${activeMenu === item.id ? 'rotate-180 text-[#47C269]' : ''}`}
+                        } ${activeMenu === "shop" ? 'rotate-180 text-[#47C269]' : ''}`}
                       />
                     )}
                   </Link>
@@ -324,13 +259,13 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Contact Link */}
+            {/* Wishlist Link */}
             <Link
-              href="/contact"
-              aria-label="Contact Us"
+              href="/wishlist"
+              aria-label="My Wishlist"
               className="hover:text-[#47C269] transition-colors p-1.5 rounded-full hover:bg-gray-50 relative hidden sm:block"
             >
-              <Icon icon="solar:letter-linear" className="w-5.5 h-5.5 text-charcoal hover:text-[#3eac5c]" />
+              <Icon icon="solar:heart-linear" className="w-5.5 h-5.5 text-charcoal hover:text-[#3eac5c]" />
             </Link>
 
             {/* Cart Preview - Hover Dropdown */}
@@ -380,172 +315,83 @@ export default function Navbar() {
 
           {/* Desktop Hover Mega-Menus */}
           <AnimatePresence>
-            {activeMenu && megaMenuData[activeMenu] && (
+            {activeMenu === "shop" && (
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 15 }}
                 transition={{ duration: 0.25 }}
                 className="absolute left-0 top-full w-full bg-white border-t border-gray-100 shadow-2xl rounded-b-2xl overflow-hidden z-40 text-charcoal p-8 grid grid-cols-4 gap-8"
-                onMouseEnter={() => setActiveMenu(activeMenu)}
+                onMouseEnter={() => setActiveMenu("shop")}
                 onMouseLeave={() => setActiveMenu(null)}
               >
-                {/* Links Column 1-2: Multi column links */}
-                <div className="col-span-2 grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-4">
-                    <h5 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">
-                      {megaMenuData[activeMenu].title}
-                    </h5>
-                    <ul className="space-y-3">
-                      {megaMenuData[activeMenu].links.map((link) => {
-                        const active = isLinkActive(link.href);
-                        return (
-                          <li key={link.label}>
-                            <Link
-                              href={link.href}
-                              onClick={() => setActiveMenu(null)}
-                              className={`flex items-center gap-2.5 text-[13px] font-semibold transition-all group/menulink ${
-                                active 
-                                  ? 'text-forest font-bold' 
-                                  : 'text-charcoal/80 hover:text-forest'
-                              }`}
-                            >
-                              <Icon 
-                                icon={link.icon} 
-                                className={`w-4 h-4 transition-transform group-hover/menulink:scale-110 ${
-                                  active ? 'text-[#47C269]' : 'text-[#3eac5c]'
-                                }`} 
-                              />
-                              <span className="group-hover/menulink:translate-x-1 transition-transform duration-200">
-                                {link.label}
-                              </span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                  <div className="flex flex-col gap-4">
-                    <h5 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">
-                      Quick Links
-                    </h5>
-                    <ul className="space-y-3">
-                      <li>
-                        <Link 
-                          href="/shop" 
-                          onClick={() => setActiveMenu(null)} 
-                          className={`text-[13px] font-semibold transition-all flex items-center gap-2 group/quicklink ${
-                            isLinkActive('/shop') 
-                              ? 'text-forest font-bold' 
-                              : 'text-charcoal/80 hover:text-forest'
-                          }`}
-                        >
-                          <Icon 
-                            icon="solar:list-arrow-down-linear" 
-                            className={`w-4 h-4 transition-transform group-hover/quicklink:scale-110 ${
-                              isLinkActive('/shop') ? 'text-[#47C269]' : 'text-[#3eac5c]'
-                            }`} 
-                          />
-                          <span className="group-hover/quicklink:translate-x-1 transition-transform duration-200">
-                            Explore Full Shop
-                          </span>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link 
-                          href="/store" 
-                          onClick={() => setActiveMenu(null)} 
-                          className={`text-[13px] font-semibold transition-all flex items-center gap-2 group/quicklink ${
-                            isLinkActive('/store') 
-                              ? 'text-forest font-bold' 
-                              : 'text-charcoal/80 hover:text-forest'
-                          }`}
-                        >
-                          <Icon 
-                            icon="solar:map-point-linear" 
-                            className={`w-4 h-4 transition-transform group-hover/quicklink:scale-110 ${
-                              isLinkActive('/store') ? 'text-[#47C269]' : 'text-[#3eac5c]'
-                            }`} 
-                          />
-                          <span className="group-hover/quicklink:translate-x-1 transition-transform duration-200">
-                            Visit Flagship Store
-                          </span>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link 
-                          href="/about" 
-                          onClick={() => setActiveMenu(null)} 
-                          className={`text-[13px] font-semibold transition-all flex items-center gap-2 group/quicklink ${
-                            isLinkActive('/about') 
-                              ? 'text-forest font-bold' 
-                              : 'text-charcoal/80 hover:text-forest'
-                          }`}
-                        >
-                          <Icon 
-                            icon="solar:info-square-linear" 
-                            className={`w-4 h-4 transition-transform group-hover/quicklink:scale-110 ${
-                              isLinkActive('/about') ? 'text-[#47C269]' : 'text-[#3eac5c]'
-                            }`} 
-                          />
-                          <span className="group-hover/quicklink:translate-x-1 transition-transform duration-200">
-                            About Our Farm
-                          </span>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link 
-                          href="/contact" 
-                          onClick={() => setActiveMenu(null)} 
-                          className={`text-[13px] font-semibold transition-all flex items-center gap-2 group/quicklink ${
-                            isLinkActive('/contact') 
-                              ? 'text-forest font-bold' 
-                              : 'text-charcoal/80 hover:text-forest'
-                          }`}
-                        >
-                          <Icon 
-                            icon="solar:letter-opened-linear" 
-                            className={`w-4 h-4 transition-transform group-hover/quicklink:scale-110 ${
-                              isLinkActive('/contact') ? 'text-[#47C269]' : 'text-[#3eac5c]'
-                            }`} 
-                          />
-                          <span className="group-hover/quicklink:translate-x-1 transition-transform duration-200">
-                            Contact Support
-                          </span>
-                        </Link>
-                      </li>
-                    </ul>
-                  </div>
+                {/* Loop shopCategories */}
+                <div className="col-span-3 grid grid-cols-3 gap-6">
+                  {shopCategories.map((cat) => (
+                    <div key={cat.title} className="flex flex-col gap-4">
+                      <h5 className="text-[12px] font-bold text-gray-400 border-b border-gray-100 pb-2">
+                        {cat.title}
+                      </h5>
+                      <ul className="space-y-3">
+                        {cat.links.map((link) => {
+                          const active = isLinkActive(link.href);
+                          return (
+                            <li key={link.label}>
+                              <Link
+                                href={link.href}
+                                onClick={() => setActiveMenu(null)}
+                                className={`flex items-center gap-2.5 text-[13px] font-semibold transition-all group/menulink ${
+                                  active 
+                                    ? 'text-forest font-bold' 
+                                    : 'text-charcoal/80 hover:text-forest'
+                                }`}
+                              >
+                                <Icon 
+                                  icon={link.icon} 
+                                  className={`w-4 h-4 transition-transform group-hover/menulink:scale-110 ${
+                                    active ? 'text-[#47C269]' : 'text-[#3eac5c]'
+                                  }`} 
+                                />
+                                <span className="group-hover/menulink:translate-x-1 transition-transform duration-200">
+                                  {link.label}
+                                </span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Promo Card Column 3-4 */}
-                <div className="col-span-2 flex justify-end">
-                  <div className="w-full max-w-[400px] rounded-xl overflow-hidden border border-gray-100 shadow-sm relative group/promo flex bg-gray-50">
-                    <div className="w-1/2 p-5 flex flex-col justify-between">
+                {/* Promo Card Column */}
+                <div className="flex justify-end col-span-1">
+                  <div className="w-full max-w-[280px] rounded-xl overflow-hidden border border-gray-100 shadow-sm relative group/promo flex bg-gray-50">
+                    <div className="w-1/2 p-4 flex flex-col justify-between">
                       <div>
-                        <span className="inline-block px-2.5 py-0.5 bg-green-50 border border-green-200 text-green-700 text-[9px] font-black uppercase rounded tracking-wider">
+                        <span className="inline-block px-2 py-0.5 bg-green-50 border border-green-200 text-green-700 text-[8px] font-black uppercase rounded tracking-wider">
                           Featured
                         </span>
-                        <h6 className="font-playfair font-extrabold text-gray-900 mt-2 text-base leading-tight">
-                          {megaMenuData[activeMenu].promo.title}
+                        <h6 className="font-playfair font-extrabold text-gray-900 mt-2 text-sm leading-tight">
+                          Our Flagship Store
                         </h6>
-                        <p className="text-[11px] text-gray-400 mt-1 font-medium leading-relaxed">
-                          {megaMenuData[activeMenu].promo.tagline}
+                        <p className="text-[10px] text-gray-400 mt-1 font-medium leading-relaxed">
+                          Pure wellness & organic farm blends
                         </p>
                       </div>
                       <Link
-                        href={megaMenuData[activeMenu].promo.href}
+                        href="/about"
                         onClick={() => setActiveMenu(null)}
-                        className="text-xs font-bold text-forest hover:text-green-700 transition-colors flex items-center gap-1.5 mt-4"
+                        className="text-[11px] font-bold text-forest hover:text-green-700 transition-colors flex items-center gap-1.5 mt-4"
                       >
-                        Shop Product
+                        Explore Store
                         <Icon icon="solar:arrow-right-linear" className="w-3.5 h-3.5 group-hover/promo:translate-x-1 transition-transform" />
                       </Link>
                     </div>
-                    <div className="w-1/2 relative h-full min-h-[160px]">
+                    <div className="w-1/2 relative h-full min-h-[140px]">
                       <img
-                        src={megaMenuData[activeMenu].promo.image}
-                        alt="Promo Product"
+                        src="/centerImg.png"
+                        alt="Flagship Store"
                         className="absolute inset-0 w-full h-full object-cover group-hover/promo:scale-105 transition-transform duration-500"
                       />
                     </div>
@@ -674,48 +520,55 @@ export default function Navbar() {
                     const active = isLinkActive(item.href);
                     return (
                       <li key={item.id} className="border-b border-gray-50/50">
-                        {megaMenuData[item.id] ? (
+                        {item.id === "shop" ? (
                           <div>
                             <button
-                              onClick={() => setMobileExpanded(mobileExpanded === item.id ? null : item.id)}
-                              className={`w-full py-3 flex items-center justify-between text-sm font-bold transition-colors uppercase tracking-wider text-left ${
+                              onClick={() => setMobileExpanded(mobileExpanded === "shop" ? null : "shop")}
+                              className={`w-full py-3 flex items-center justify-between text-sm font-semibold transition-colors text-left ${
                                 active ? 'text-[#47C269]' : 'text-forest hover:text-green-700'
                               }`}
                             >
                               <span>{item.label}</span>
                               <Icon
                                 icon="solar:alt-arrow-down-linear"
-                                className={`w-4 h-4 transition-transform duration-200 ${mobileExpanded === item.id ? 'rotate-180 text-[#47C269]' : 'text-gray-400'}`}
+                                className={`w-4 h-4 transition-transform duration-200 ${mobileExpanded === "shop" ? 'rotate-180 text-[#47C269]' : 'text-gray-400'}`}
                               />
                             </button>
 
                             <AnimatePresence initial={false}>
-                              {mobileExpanded === item.id && (
+                              {mobileExpanded === "shop" && (
                                 <motion.div
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: "auto", opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden pl-4 border-l-2 border-green-50 mb-2 space-y-1.5"
+                                  className="overflow-hidden pl-4 border-l-2 border-green-50 mb-2 space-y-3"
                                 >
-                                  {megaMenuData[item.id].links.map((link) => {
-                                    const subActive = isLinkActive(link.href);
-                                    return (
-                                      <Link
-                                        key={link.label}
-                                        href={link.href}
-                                        onClick={() => {
-                                          setMobileOpen(false);
-                                          setMobileExpanded(null);
-                                        }}
-                                        className={`flex items-center gap-2 py-2 text-xs font-semibold transition-colors ${
-                                          subActive ? 'text-[#47C269]' : 'text-charcoal/70 hover:text-green-700'
-                                        }`}
-                                      >
-                                        <Icon icon={link.icon} className={`w-3.5 h-3.5 ${subActive ? 'text-[#47C269]' : 'text-green-500'}`} />
-                                        {link.label}
-                                      </Link>
-                                    );
-                                  })}
+                                  {shopCategories.map((cat) => (
+                                    <div key={cat.title}>
+                                      <h6 className="text-[11px] font-bold text-gray-400 mb-1.5">{cat.title}</h6>
+                                      <div className="pl-2 space-y-1.5">
+                                        {cat.links.map((link) => {
+                                          const subActive = isLinkActive(link.href);
+                                          return (
+                                            <Link
+                                              key={link.label}
+                                              href={link.href}
+                                              onClick={() => {
+                                                setMobileOpen(false);
+                                                setMobileExpanded(null);
+                                              }}
+                                              className={`flex items-center gap-2 py-1.5 text-xs font-semibold transition-colors ${
+                                                subActive ? 'text-[#47C269]' : 'text-charcoal/70 hover:text-green-700'
+                                              }`}
+                                            >
+                                              <Icon icon={link.icon} className={`w-3.5 h-3.5 ${subActive ? 'text-[#47C269]' : 'text-green-500'}`} />
+                                              {link.label}
+                                            </Link>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  ))}
                                 </motion.div>
                               )}
                             </AnimatePresence>
@@ -724,7 +577,7 @@ export default function Navbar() {
                           <Link
                             href={item.href}
                             onClick={() => setMobileOpen(false)}
-                            className={`block py-3 text-sm font-bold transition-colors uppercase tracking-wider ${
+                            className={`block py-3 text-sm font-semibold transition-colors ${
                               active ? 'text-[#47C269]' : 'text-forest hover:text-green-700'
                             }`}
                           >
@@ -740,7 +593,7 @@ export default function Navbar() {
                     <Link
                       href="/store"
                       onClick={() => setMobileOpen(false)}
-                      className={`block py-3 text-sm font-bold transition-colors uppercase tracking-wider border-b border-gray-50/50 ${
+                      className={`block py-3 text-sm font-semibold transition-colors border-b border-gray-50/50 ${
                         isLinkActive('/store') ? 'text-[#47C269]' : 'text-forest hover:text-green-700'
                       }`}
                     >
@@ -751,7 +604,7 @@ export default function Navbar() {
                     <Link
                       href="/account"
                       onClick={() => setMobileOpen(false)}
-                      className={`block py-3 text-sm font-bold transition-colors uppercase tracking-wider border-b border-gray-50/50 ${
+                      className={`block py-3 text-sm font-semibold transition-colors border-b border-gray-50/50 ${
                         isLinkActive('/account') ? 'text-[#47C269]' : 'text-forest hover:text-green-700'
                       }`}
                     >
@@ -772,18 +625,27 @@ export default function Navbar() {
                     <p className="text-charcoal mt-0.5">+91 98765 43210</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 mt-1">
-                  <Link
-                    href="/admin/login"
-                    onClick={() => setMobileOpen(false)}
-                    className="py-2.5 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block"
-                  >
-                    My Account
-                  </Link>
+                <div className="flex flex-col gap-2 mt-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Link
+                      href="/admin/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="py-2.5 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block"
+                    >
+                      My Account
+                    </Link>
+                    <Link
+                      href="/wishlist"
+                      onClick={() => setMobileOpen(false)}
+                      className="py-2.5 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block"
+                    >
+                      Wishlist
+                    </Link>
+                  </div>
                   <Link
                     href="/cart"
                     onClick={() => setMobileOpen(false)}
-                    className="py-2.5 px-4 bg-forest hover:bg-forest/90 text-white text-center text-xs font-bold rounded-xl transition-colors block"
+                    className="w-full py-2.5 bg-forest hover:bg-forest/90 text-white text-center text-xs font-bold rounded-xl transition-colors block"
                   >
                     Cart ({cartCount})
                   </Link>

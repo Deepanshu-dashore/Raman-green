@@ -53,7 +53,8 @@ export class ProductService {
                     weight: Number(varData.weight || varData.value || 0),
                     images: varData.images || [],
                     imageOrder: varData.imageOrder || [],
-                    sku: varData.sku
+                    sku: varData.sku,
+                    lowStockAlert: Number(varData.lowStockAlert) || 10
                 });
                 await variant.save();
                 createdVariantIds.push(variant._id);
@@ -121,7 +122,8 @@ export class ProductService {
             weight: Number(varData.weight || varData.value || 0),
             images: varData.images || [],
             imageOrder: varData.imageOrder || [],
-            sku: varData.sku
+            sku: varData.sku,
+            lowStockAlert: Number(varData.lowStockAlert) || 10
         });
         await variant.save();
 
@@ -233,7 +235,8 @@ export class ProductService {
                             weight: Number(varData.weight || varData.value || 0),
                             images: varData.images || [],
                             imageOrder: varData.imageOrder || [],
-                            sku: skuStr
+                            sku: skuStr,
+                            lowStockAlert: Number(varData.lowStockAlert) || 10
                         },
                         { new: true }
                     );
@@ -257,7 +260,8 @@ export class ProductService {
                         weight: Number(varData.weight || varData.value || 0),
                         images: varData.images || [],
                         imageOrder: varData.imageOrder || [],
-                        sku: skuStr
+                        sku: skuStr,
+                        lowStockAlert: Number(varData.lowStockAlert) || 10
                     });
                     await variant.save();
 
@@ -327,7 +331,8 @@ export class ProductService {
                 weight: Number(varData.weight || varData.value || 0),
                 images: varData.images || [],
                 imageOrder: varData.imageOrder || [],
-                sku: varData.sku
+                sku: varData.sku,
+                lowStockAlert: Number(varData.lowStockAlert) || 10
             },
             { new: true }
         ).populate("unit").populate("packaging");
