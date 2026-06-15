@@ -63,7 +63,7 @@ export function LabeledSelect({
           onClick={() => !disabled && setIsOpen(!isOpen)}
           className={`w-full h-11 px-3 rounded-lg flex items-center justify-between transition-all ${
             disabled
-              ? "bg-gray-50 border-gray-150 cursor-not-allowed text-gray-400"
+              ? "bg-gray-50 border border-gray-200 cursor-not-allowed text-gray-400"
               : "bg-white border border-gray-200 cursor-pointer hover:shadow-sm text-gray-600"
           }`}
         >

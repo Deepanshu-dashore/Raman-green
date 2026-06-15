@@ -4,30 +4,9 @@ import { useRef, useState, useEffect } from "react";
 import ProductCard from "./ProductCard";
 import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
-import { productsData } from "@/constants/products";
-
-// Default fallback homepage showcase items from unified products database
-const fallbackProducts = [
-  productsData.find((p) => p.id === "7")!,
-  productsData.find((p) => p.id === "13")!,
-  productsData.find((p) => p.id === "14")!,
-  productsData.find((p) => p.id === "15")!,
-  productsData.find((p) => p.id === "16")!,
-  productsData.find((p) => p.id === "17")!,
-  productsData.find((p) => p.id === "18")!,
-].filter(Boolean).map((p) => ({
-  id: p.id,
-  name: p.name,
-  description: p.description,
-  price: p.formattedPrice,
-  originalPrice: p.originalPrice,
-  image: p.image,
-  tags: p.tags,
-}));
-
 export default function ProductShowcase() {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [products, setProducts] = useState<any[]>(fallbackProducts);
+  const [products, setProducts] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardWidth, setCardWidth] = useState(280);
   const [visibleItems, setVisibleItems] = useState(4);
@@ -39,8 +18,9 @@ export default function ProductShowcase() {
         const res = await fetch("/api/products/minimal?featured=true");
         if (res.ok) {
           const json = await res.json();
-          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-            setProducts(json.data);
+          const productsArray = Array.isArray(json.data) ? json.data : json.data?.products;
+          if (json.success && Array.isArray(productsArray) && productsArray.length > 0) {
+            setProducts(productsArray);
           }
         }
       } catch (err) {
@@ -184,6 +164,7 @@ export default function ProductShowcase() {
                       price: product.price,
                       originalPrice: product.originalPrice,
                       image: product.image,
+                      hoverImage: product.hoverImage,
                       tags: product.tags,
                     }}
                     index={i}
@@ -193,21 +174,7 @@ export default function ProductShowcase() {
             </motion.div>
           </div>
 
-          {/* Navigation Dots Indicator */}
-          <div className="flex justify-center items-center gap-1.5 mt-8">
-            {Array.from({ length: maxIndex + 1 }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentIndex(i)}
-                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  currentIndex === i
-                    ? "w-6 bg-forest"
-                    : "w-1.5 bg-charcoal/20 hover:bg-charcoal/40"
-                }`}
-                aria-label={`Go to slide ${i + 1}`}
-              />
-            ))}
-          </div>
+
         </div>
       </div>
     </section>

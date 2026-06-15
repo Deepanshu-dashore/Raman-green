@@ -13,6 +13,7 @@ export interface ProductCardFields {
   price: string;
   originalPrice?: string; // Optional strikethrough price
   image: string;
+  hoverImage?: string; // Optional second image for hover effect
   tags: string[];
 }
 
@@ -74,8 +75,16 @@ export default function ProductCard({ product, index, onAddToCart }: ProductCard
             src={product.image}
             alt={product.name}
             draggable="false"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 select-none"
+            className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500 select-none"
           />
+          {product.hoverImage && (
+            <img
+              src={product.hoverImage}
+              alt={`${product.name} alternate view`}
+              draggable="false"
+              className="absolute inset-0 w-full h-full object-cover scale-100 opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 select-none"
+            />
+          )}
         </div>
 
         {/* Info */}
@@ -86,17 +95,7 @@ export default function ProductCard({ product, index, onAddToCart }: ProductCard
           {product.description}
         </p>
 
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {product.tags.map((tag) => (
-            <span
-              key={tag}
-              className="px-2.5 py-0.5 text-[10px] font-inter font-medium uppercase tracking-wider text-moss bg-sage/30 rounded"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
+
       </Link>
 
       {/* Price & CTA */}

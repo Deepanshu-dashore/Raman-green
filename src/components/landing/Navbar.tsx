@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Icon } from "@iconify/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import toast from "react-hot-toast";
 
 // Ticker announcements
 const announcements = [
@@ -72,6 +73,43 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
+  const [user, setUser] = useState<{ name: string; email?: string; role: string } | null>(null);
+
+  // Load authenticated user info
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        const json = await res.json();
+        if (json.success && json.data) {
+          setUser(json.data);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        setUser(null);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Successfully logged out.");
+        setUser(null);
+        localStorage.removeItem("rg-user");
+        router.refresh();
+        router.push("/");
+      } else {
+        toast.error("Logout failed.");
+      }
+    } catch (err) {
+      toast.error("An error occurred during logout.");
+    }
+  };
 
   // Mobile accordion states
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
@@ -240,21 +278,37 @@ export default function Navbar() {
                 <div className="w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 text-charcoal">
                   <div className="px-4 py-2.5 border-b border-gray-50 mb-1.5">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Welcome</p>
-                    <p className="text-sm font-bold text-forest truncate">Guest User</p>
+                    <p className="text-sm font-bold text-forest truncate">{user ? user.name : "Guest User"}</p>
                   </div>
+                  {user && user.role === "admin" && (
+                    <Link href="/admin" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
+                      <Icon icon="solar:settings-bold-duotone" className="w-4 h-4 text-gray-400" />
+                      Admin Panel
+                    </Link>
+                  )}
                   <Link href="/account" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
                     <Icon icon="solar:user-linear" className="w-4 h-4 text-gray-400" />
                     My Profile
                   </Link>
-                  <Link href="/admin/orders" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
+                  <Link href={user?.role === "admin" ? "/admin/orders" : "/account/orders"} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
                     <Icon icon="solar:cart-large-2-linear" className="w-4 h-4 text-gray-400" />
                     My Orders
                   </Link>
                   <div className="h-px bg-gray-100 my-1.5" />
-                  <Link href="/admin/login" className="flex items-center gap-3 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl text-sm font-bold text-charcoal transition-all">
-                    <Icon icon="solar:log-out-linear" className="w-4 h-4 text-red-500" />
-                    Sign In
-                  </Link>
+                  {user ? (
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl text-sm font-bold text-charcoal transition-all cursor-pointer text-left"
+                    >
+                      <Icon icon="solar:log-out-linear" className="w-4 h-4 text-red-500" />
+                      Sign Out
+                    </button>
+                  ) : (
+                    <Link href="/login" className="flex items-center gap-3 px-4 py-2 hover:bg-green-50 hover:text-green-600 rounded-xl text-sm font-bold text-charcoal transition-all">
+                      <Icon icon="solar:login-2-linear" className="w-4 h-4 text-green-500" />
+                      Sign In
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -628,11 +682,11 @@ export default function Navbar() {
                 <div className="flex flex-col gap-2 mt-1">
                   <div className="grid grid-cols-2 gap-3">
                     <Link
-                      href="/admin/login"
+                      href={user ? "/account" : "/login"}
                       onClick={() => setMobileOpen(false)}
                       className="py-2.5 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block"
                     >
-                      My Account
+                      {user ? "My Account" : "Sign In"}
                     </Link>
                     <Link
                       href="/wishlist"
@@ -642,6 +696,17 @@ export default function Navbar() {
                       Wishlist
                     </Link>
                   </div>
+                  {user && (
+                    <button
+                      onClick={() => {
+                        setMobileOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 text-center text-xs font-bold rounded-xl border border-red-200 transition-colors block cursor-pointer"
+                    >
+                      Sign Out
+                    </button>
+                  )}
                   <Link
                     href="/cart"
                     onClick={() => setMobileOpen(false)}

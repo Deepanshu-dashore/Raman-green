@@ -9,6 +9,34 @@ import toast from "react-hot-toast";
 import { productsData, Product, Review } from "@/constants/products";
 import ProductCard from "@/components/landing/ProductCard";
 
+interface DetailProduct extends Omit<Product, 'details' | 'category'> {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  formattedPrice: string;
+  originalPrice?: string;
+  category: string;
+  categoryLabel: string;
+  subCategoryLabel?: string;
+  image: string;
+  hoverImage?: string;
+  tags: string[];
+  details: {
+    origin: string;
+    prepTime: string;
+    ingredients: string;
+    nutrients: string[];
+  };
+  reviews: Review[];
+  variants?: any[];
+  spaceification?: any[];
+  certificatesList?: string[];
+  cultivationCities?: string[];
+  cultivation?: string;
+  declaration?: string;
+}
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -76,9 +104,18 @@ const tabContentMap: Record<string, {
 };
 
 // Generates fallback tab content dynamically for other products
-const getProductTabContent = (prod: Product) => {
+const getProductTabContent = (prod: DetailProduct) => {
   const custom = tabContentMap[prod.id];
   if (custom) return custom;
+
+  // Resolve ingredients description dynamically if it's a real DB product
+  const ingredientsDesc = prod.details?.ingredients || 
+    ((prod as any).ingredients && (prod as any).ingredients.length > 0
+      ? `Contains: ${(prod as any).ingredients.join(", ")}.`
+      : `100% pure organic ${(prod as any).brand || "Raman Green"} ${prod.name}.`);
+
+  const originText = prod.details?.origin || (prod as any).cultivationOrSeason || "Rajasthan Orchards";
+  const cultivationText = (prod as any).cultivation || "Direct Trade Organic";
 
   return {
     nutrition: {
@@ -94,11 +131,40 @@ const getProductTabContent = (prod: Product) => {
     },
     provenance: {
       originTitle: "Our Provenance",
-      rows: [
-        { label: "Origin", value: prod.details.origin || "Rajasthan Orchards" },
-        { label: "Purity State", value: "Certified Pesticide-Free" },
-        { label: "Cultivation", value: "Direct Trade Organic" }
-      ],
+      rows: (() => {
+        const provenanceRows = [];
+        if (prod.categoryLabel) {
+          provenanceRows.push({ label: "Category", value: prod.categoryLabel });
+        }
+        if (prod.subCategoryLabel) {
+          provenanceRows.push({ label: "Sub Category", value: prod.subCategoryLabel });
+        }
+        if (prod.cultivation) {
+          provenanceRows.push({ label: "Cultivation Type", value: prod.cultivation });
+        }
+        if (prod.cultivationCities && prod.cultivationCities.length > 0) {
+          provenanceRows.push({ label: "Cultivation Cities", value: prod.cultivationCities.join(", ") });
+        }
+        if (prod.certificatesList && prod.certificatesList.length > 0) {
+          provenanceRows.push({ label: "Certificates", value: prod.certificatesList.join(", ") });
+        }
+        if (prod.declaration) {
+          provenanceRows.push({ label: "Declarations / Features", value: prod.declaration });
+        }
+        if (prod.spaceification && prod.spaceification.length > 0) {
+          prod.spaceification.forEach((s: any) => {
+            provenanceRows.push({ label: s.title, value: s.value });
+          });
+        }
+        if (provenanceRows.length === 0) {
+          provenanceRows.push(
+            { label: "Origin", value: originText },
+            { label: "Purity State", value: "Certified Pesticide-Free" },
+            { label: "Cultivation", value: cultivationText }
+          );
+        }
+        return provenanceRows;
+      })(),
       description: `Nurtured with ancient agrarian wisdom in Rajasthan's organic agricultural belts. Packed immediately upon harvest under clean, clinical conditions to secure maximum natural vitality.`,
       pledgeTitle: "FARM TO BOWL",
       pledgeDesc: "Every purchase directly supports our community cooperative of sustainable local heritage farmers."
@@ -106,8 +172,8 @@ const getProductTabContent = (prod: Product) => {
     tips: {
       tipsTitle: "Usage Tips",
       rows: [
-        { label: "Usage", value: prod.details.prepTime || "Ready to eat" },
-        { label: "Portion", value: "Serve as desired" },
+        { label: "Usage", value: prod.details?.prepTime || "Ready to eat" },
+        { label: "Ingredients", value: ingredientsDesc },
         { label: "Storage", value: "Cool, dry airtight container" }
       ],
       description: `Our raw ${prod.name} requires minimal culinary effort. Excellent for quick wellness rituals, gourmet recipes, or enriching standard daily meals.`,
@@ -115,6 +181,50 @@ const getProductTabContent = (prod: Product) => {
       prepDesc: "Incorporate organic honey or warm botanical milk to draw out deeper natural flavors."
     }
   };
+};
+
+const renderValue = (value: string, label: string) => {
+  if (typeof value !== "string") return value;
+
+  // Split by bullet point if contains •
+  if (value.includes("•")) {
+    const items = value.split("•").map(item => item.trim()).filter(Boolean);
+    return (
+      <div className="flex flex-wrap gap-1.5 mt-0.5">
+        {items.map((item, idx) => (
+          <span 
+            key={idx} 
+            className="inline-flex items-center px-2 py-0.5 rounded bg-[#4d6700]/5 text-[#4d6700] text-[10px] font-bold tracking-wide uppercase border border-[#4d6700]/10"
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  // Split by comma for list labels
+  const listLabels = ["certificates", "cultivation cities", "cultivation_city", "ingredients", "cultivation type"];
+  const isListLabel = listLabels.includes(label.toLowerCase()) || label.includes("Certificates") || label.includes("Cities");
+  if (isListLabel && value.includes(",")) {
+    const items = value.split(",").map(item => item.trim()).filter(Boolean);
+    if (items.length > 1) {
+      return (
+        <div className="flex flex-wrap gap-1.5 mt-0.5 font-inter">
+          {items.map((item, idx) => (
+            <span 
+              key={idx} 
+              className="inline-flex items-center px-2 py-0.5 rounded bg-charcoal/5 text-charcoal/80 text-[10px] font-semibold tracking-wide uppercase border border-charcoal/10"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      );
+    }
+  }
+
+  return <span className="text-[#061907] font-bold text-left block whitespace-normal leading-relaxed">{value}</span>;
 };
 
 export default function ProductDetailPage({ params }: PageProps) {
@@ -126,25 +236,70 @@ export default function ProductDetailPage({ params }: PageProps) {
   const initialProduct = productsData.find((p) => p.id === productId) || productsData[6]; // Default to Premium Chia if not found
 
   // State
-  const [product, setProduct] = useState<Product>(initialProduct);
+  const [product, setProduct] = useState<DetailProduct>(initialProduct);
   const [activeImage, setActiveImage] = useState<string>(initialProduct.image);
   const [quantity, setQuantity] = useState<number>(1);
-  const [selectedWeight, setSelectedWeight] = useState<string>("250g");
+  const [selectedWeight, setSelectedWeight] = useState<string>("250 g");
   const [activeTab, setActiveTab] = useState<"nutrition" | "provenance" | "tips">("nutrition");
   const [reviews, setReviews] = useState<Review[]>(initialProduct.reviews);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState<boolean>(false);
   const [votedReviews, setVotedReviews] = useState<Record<string, boolean>>({});
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Find current active variant based on selected weight/unit text
+  const getActiveVariant = () => {
+    if (product.variants && product.variants.length > 0) {
+      return product.variants.find((v: any) => {
+        const weightText = `${v.weight} ${v.unit?.name || 'g'}`;
+        return weightText === selectedWeight;
+      }) || product.variants[0];
+    }
+    return null;
+  };
+
+  const activeVariant = getActiveVariant();
 
   // Dynamic pricing based on weight selection
   const getPriceForWeight = () => {
-    if (selectedWeight === "500g") return product.price;
-    if (selectedWeight === "1kg") return Math.round(product.price * 1.8);
-    return Math.round(product.price * 0.55); // 250g
+    if (selectedWeight === "500 g") return product.price;
+    if (selectedWeight === "1 kg") return Math.round(product.price * 1.8);
+    return Math.round(product.price * 0.55); // 250 g
   };
 
-  const currentPrice = getPriceForWeight();
+  const currentPrice = activeVariant 
+    ? (activeVariant.discountedPrice > 0 && activeVariant.discountedPrice < activeVariant.basePrice 
+        ? activeVariant.discountedPrice 
+        : activeVariant.basePrice)
+    : getPriceForWeight();
+
   const formattedPriceText = `₹${currentPrice.toLocaleString("en-IN")}`;
   const tabData = getProductTabContent(product);
+
+  const getTabRows = () => {
+    return activeTab === "nutrition"
+      ? tabData.nutrition.macros
+      : activeTab === "provenance"
+        ? tabData.provenance.rows
+        : tabData.tips.rows;
+  };
+
+  const currentTabRows = getTabRows();
+  const halfLength = Math.ceil(currentTabRows.length / 2);
+  const leftTabRows = currentTabRows.slice(0, halfLength);
+  const rightTabRows = currentTabRows.slice(halfLength);
+
+  const getWeightOptions = () => {
+    if (product.variants) {
+      if (product.variants.length > 0) {
+        return product.variants.map((v: any) => `${v.weight} ${v.unit?.name || 'g'}`);
+      }
+      return [];
+    }
+    return ["250 g", "500 g", "1 kg"];
+  };
+
+  const weightOptions = getWeightOptions();
 
   // Retrieve up to 4 relevant recommendations matching the current category
   const getRecommendations = () => {
@@ -163,7 +318,7 @@ export default function ProductDetailPage({ params }: PageProps) {
   const recommendedProducts = getRecommendations();
 
   // Review Form States
-  const [formRating, setFormRating] = useState<number>(5);
+  const [formRating, setFormRating] = useState<number>(1);
   const [formHoverRating, setFormHoverRating] = useState<number>(0);
   const [formAuthor, setFormAuthor] = useState<string>("");
   const [formHeadline, setFormHeadline] = useState<string>("");
@@ -177,11 +332,187 @@ export default function ProductDetailPage({ params }: PageProps) {
     "https://images.unsplash.com/photo-1601379327928-bedfaf9da2d0?w=300&q=80",
   ];
 
+  const getThumbnails = (): string[] => {
+    if (activeVariant && activeVariant.images && activeVariant.images.length > 0) {
+      return activeVariant.images;
+    }
+    return [product.image, ...uploadPresets];
+  };
+
+  const thumbnails = getThumbnails();
+
+  const getUsageBulletPoints = (): string[] => {
+    if (activeVariant && activeVariant.usageInstructions && activeVariant.usageInstructions.length > 0) {
+      return activeVariant.usageInstructions;
+    }
+    if ((tabData.tips as any).bulletPoints) {
+      return (tabData.tips as any).bulletPoints;
+    }
+    if (tabData.tips.description) {
+      return tabData.tips.description
+        .split(".")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+        .map((s) => `${s}.`);
+    }
+    return [];
+  };
+
+  // Fetch currently authenticated user
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error();
+      })
+      .then((resJson) => {
+        if (resJson.success && resJson.data) {
+          setCurrentUser(resJson.data);
+          setFormAuthor(resJson.data.name);
+        }
+      })
+      .catch(() => {
+        setCurrentUser(null);
+      });
+  }, []);
+
+  // Fetch product from database API
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+
+    fetch(`/api/products/${productId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Product not found in database");
+        return res.json();
+      })
+      .then((resJson) => {
+        if (isMounted && resJson.success && resJson.data) {
+          const dbProd = resJson.data;
+          const variants = dbProd.variants || [];
+          const firstVariant = variants[0];
+          
+          let mainImage = dbProd.image || "";
+          if (firstVariant && firstVariant.images && firstVariant.images.length > 0) {
+            mainImage = firstVariant.images[0];
+          }
+
+          const basePrice = firstVariant ? (firstVariant.discountedPrice || firstVariant.basePrice || 0) : 0;
+
+          const certificatesList = dbProd.certificates && Array.isArray(dbProd.certificates)
+            ? dbProd.certificates.map((c: any) => c.name).filter(Boolean)
+            : [];
+
+          const cultivationCities = dbProd.cultivation_city && Array.isArray(dbProd.cultivation_city)
+            ? dbProd.cultivation_city.map((city: any) => city.name).filter(Boolean)
+            : [];
+
+          const mappedProduct: DetailProduct = {
+            id: dbProd.slug || dbProd._id,
+            name: dbProd.name,
+            description: dbProd.description || "",
+            price: basePrice,
+            formattedPrice: `₹${basePrice}`,
+            category: dbProd.category?.slug || "organic",
+            categoryLabel: dbProd.category?.name || "Organic",
+            subCategoryLabel: dbProd.subCategory?.name,
+            image: mainImage,
+            hoverImage: (firstVariant && firstVariant.images && firstVariant.images.length > 1) ? firstVariant.images[1] : undefined,
+            tags: dbProd.tags || [],
+            details: {
+              origin: dbProd.cultivationOrSeason || "Rajasthan Orchards",
+              prepTime: (firstVariant && firstVariant.usageInstructions && firstVariant.usageInstructions.length > 0) 
+                ? firstVariant.usageInstructions[0] 
+                : "Ready to eat",
+              ingredients: dbProd.ingredients?.join(", ") || "100% Organic",
+              nutrients: dbProd.spaceification?.map((s: any) => `${s.title}: ${s.value}`) || []
+            },
+            reviews: [],
+            variants: variants,
+            spaceification: dbProd.spaceification || [],
+            certificatesList,
+            cultivationCities,
+            cultivation: dbProd.cultivation,
+            declaration: dbProd.declaration
+          };
+
+          setProduct(mappedProduct);
+          setActiveImage(mainImage);
+          
+          // Fetch real reviews from database
+          fetch(`/api/products/${productId}/reviews`)
+            .then((res) => {
+              if (res.ok) return res.json();
+              throw new Error();
+            })
+            .then((reviewsJson) => {
+              if (isMounted) {
+                if (reviewsJson.success && Array.isArray(reviewsJson.data)) {
+                  const mappedReviews: Review[] = reviewsJson.data.map((r: any) => ({
+                    id: r._id,
+                    author: r.userId?.name || "Anonymous User",
+                    avatarInitials: (r.userId?.name || "U")
+                      .split(" ")
+                      .map((n: string) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2),
+                    rating: r.rating,
+                    date: new Date(r.createdAt).toLocaleDateString("en-IN", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric"
+                    }),
+                    headline: r.headline || "Feedback",
+                    text: r.review,
+                    images: r.attatchments && r.attatchments.length > 0 ? r.attatchments : undefined,
+                    helpfulCount: 0,
+                    isVerified: true
+                  }));
+                  setReviews(mappedReviews);
+                } else {
+                  setReviews([]);
+                }
+              }
+            })
+            .catch(() => {
+              if (isMounted) setReviews([]);
+            });
+
+          if (variants.length > 0) {
+            const firstWeightText = `${firstVariant.weight} ${firstVariant.unit?.name || 'g'}`;
+            setSelectedWeight(firstWeightText);
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn("API Product fetch failed, falling back to static productsData:", err);
+        const fallback = productsData.find((p) => p.id === productId) || productsData[6];
+        setProduct(fallback);
+        setActiveImage(fallback.image);
+        setReviews(fallback.reviews);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [productId]);
+
   // Update image when product changes
   useEffect(() => {
     setActiveImage(product.image);
-    setReviews(product.reviews);
   }, [product]);
+
+  // Update active image when selected weight/variant changes
+  useEffect(() => {
+    const activeVar = getActiveVariant();
+    if (activeVar && activeVar.images && activeVar.images.length > 0) {
+      setActiveImage(activeVar.images[0]);
+    }
+  }, [selectedWeight]);
 
   // Handle Add to Cart
   const handleAddToCart = () => {
@@ -192,14 +523,20 @@ export default function ProductDetailPage({ params }: PageProps) {
         cart = JSON.parse(existingCart);
       }
 
+      const activeVar = getActiveVariant();
+      const variantId = activeVar ? activeVar._id : selectedWeight;
+      const variantImage = activeVar && activeVar.images && activeVar.images.length > 0
+        ? activeVar.images[0]
+        : product.image;
+
       // Add based on quantity and weight variation
       for (let i = 0; i < quantity; i++) {
         cart.push({
-          id: `${product.id}-${selectedWeight}`,
+          id: `${product.id}-${variantId}`,
           name: `${product.name} (${selectedWeight})`,
           price: currentPrice,
-          image: product.image,
-          category: product.categoryLabel,
+          image: variantImage,
+          category: product.categoryLabel || "Organic",
         });
       }
 
@@ -231,44 +568,82 @@ export default function ProductDetailPage({ params }: PageProps) {
     toast.success("Thanks for your feedback!");
   };
 
+  const handleWriteReviewClick = () => {
+    if (!currentUser) {
+      toast.error("Please login to write a review.");
+      return;
+    }
+    setIsWriteReviewOpen(true);
+  };
+
   // Handle Review Submission
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formAuthor.trim() || !formHeadline.trim() || !formText.trim()) {
+    if (!currentUser) {
+      toast.error("Please login to write a review.");
+      return;
+    }
+    if (!formHeadline.trim() || !formText.trim()) {
       toast.error("Please fill in all required review fields.");
       return;
     }
 
-    const initials = formAuthor
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2) || "U";
+    const toastId = toast.loading("Submitting your review...");
 
-    const newReview: Review = {
-      id: `r_user_${Date.now()}`,
-      author: formAuthor,
-      avatarInitials: initials,
-      rating: formRating,
-      date: "Just now",
-      headline: formHeadline,
-      text: formText,
-      images: attachedImages.length > 0 ? attachedImages : undefined,
-      helpfulCount: 0,
-      isVerified: true,
-    };
-
-    setReviews((prev) => [newReview, ...prev]);
-    setIsWriteReviewOpen(false);
-    toast.success("Review submitted! Thank you for the voice.");
-
-    // Reset Form
-    setFormAuthor("");
-    setFormHeadline("");
-    setFormText("");
-    setFormRating(5);
-    setAttachedImages([]);
+    fetch(`/api/products/${product.id}/reviews`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        rating: formRating,
+        headline: formHeadline,
+        review: formText,
+        attatchments: attachedImages
+      })
+    })
+      .then((res) => {
+        if (res.ok) return res.json();
+        return res.json().then(json => { throw new Error(json.message || "Failed to submit review."); });
+      })
+      .then((json) => {
+        toast.dismiss(toastId);
+        if (json.success && json.data) {
+          const r = json.data;
+          const newReview: Review = {
+            id: r._id,
+            author: r.userId?.name || currentUser.name || "You",
+            avatarInitials: (r.userId?.name || currentUser.name || "U")
+              .split(" ")
+              .map((n: string) => n[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2),
+            rating: r.rating,
+            date: "Just now",
+            headline: r.headline,
+            text: r.review,
+            images: r.attatchments && r.attatchments.length > 0 ? r.attatchments : undefined,
+            helpfulCount: 0,
+            isVerified: true,
+          };
+          setReviews((prev) => [newReview, ...prev]);
+          setIsWriteReviewOpen(false);
+          toast.success("Review submitted! Thank you for your feedback.");
+          
+          // Reset Form
+          setFormHeadline("");
+          setFormText("");
+          setFormRating(1);
+          setAttachedImages([]);
+        } else {
+          toast.error(json.message || "Failed to submit review.");
+        }
+      })
+      .catch((err) => {
+        toast.dismiss(toastId);
+        toast.error(err.message || "An error occurred. Please try again.");
+      });
   };
 
   // Toggle Mock Photo Attachment
@@ -287,6 +662,17 @@ export default function ProductDetailPage({ params }: PageProps) {
     totalReviewsCount
   ).toFixed(1);
 
+  if (isLoading) {
+    return (
+      <LandingLayout>
+        <div className="bg-[#fbf9f6] text-[#1b1c1a] min-h-screen py-24 flex flex-col justify-center items-center gap-3">
+          <Icon icon="mdi:loading" className="animate-spin w-10 h-10 text-forest" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-forest">Loading product details...</span>
+        </div>
+      </LandingLayout>
+    );
+  }
+
   return (
     <LandingLayout>
       <div className="bg-[#fbf9f6] text-[#1b1c1a] min-h-screen py-10 md:py-16 font-inter">
@@ -297,6 +683,14 @@ export default function ProductDetailPage({ params }: PageProps) {
             <Link href="/" className="hover:text-forest transition-colors">Home</Link>
             <Icon icon="solar:alt-arrow-right-linear" className="w-3 h-3" />
             <Link href="/shop" className="hover:text-forest transition-colors">Shop</Link>
+            <Icon icon="solar:alt-arrow-right-linear" className="w-3 h-3" />
+            <span className="hover:text-forest transition-colors">{product.categoryLabel}</span>
+            {product.subCategoryLabel && (
+              <>
+                <Icon icon="solar:alt-arrow-right-linear" className="w-3 h-3" />
+                <span className="hover:text-forest transition-colors">{product.subCategoryLabel}</span>
+              </>
+            )}
             <Icon icon="solar:alt-arrow-right-linear" className="w-3 h-3" />
             <span className="text-forest font-bold">{product.name}</span>
           </div>
@@ -309,15 +703,7 @@ export default function ProductDetailPage({ params }: PageProps) {
 
               {/* Thumbnails list */}
               <div className="flex flex-row md:flex-col gap-3 order-2 md:order-1 shrink-0 select-none overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 no-scrollbar">
-                <button
-                  onClick={() => setActiveImage(product.image)}
-                  className={`w-16 h-16 md:w-20 md:h-20 rounded-[8px] overflow-hidden border-2 bg-white transition-all cursor-pointer shrink-0 ${activeImage === product.image ? "border-[#061907] scale-95 shadow-sm" : "border-transparent opacity-75 hover:opacity-100"
-                    }`}
-                >
-                  <img src={product.image} alt="Main" className="w-full h-full object-cover pointer-events-none" />
-                </button>
-
-                {uploadPresets.map((imgUrl, i) => (
+                {thumbnails.map((imgUrl, i) => (
                   <button
                     key={i}
                     onClick={() => setActiveImage(imgUrl)}
@@ -354,10 +740,15 @@ export default function ProductDetailPage({ params }: PageProps) {
             <div className="lg:col-span-5 flex flex-col">
 
               {/* Category tag / Premium badge */}
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#4d6700] bg-sage/35 px-2.5 py-0.5 rounded-[4px]">
-                  PREMIUM HEIRLOOM
+                  {product.categoryLabel}
                 </span>
+                {product.subCategoryLabel && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-forest bg-forest/10 px-2.5 py-0.5 rounded-[4px]">
+                    {product.subCategoryLabel}
+                  </span>
+                )}
                 <div className="flex items-center gap-1.5">
                   <div className="flex text-[#4d6700] gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -376,8 +767,13 @@ export default function ProductDetailPage({ params }: PageProps) {
               </h1>
 
               {/* Price section */}
-              <div className="mb-6 font-inter text-xl md:text-2xl font-bold text-[#061907]">
-                {formattedPriceText}
+              <div className="mb-6 flex items-baseline gap-2.5 flex-wrap">
+                <span className="font-inter text-xl md:text-2xl font-bold text-[#061907]">{formattedPriceText}</span>
+                {activeVariant && activeVariant.discountedPrice > 0 && activeVariant.discountedPrice < activeVariant.basePrice && (
+                  <span className="font-inter text-sm text-charcoal/40 line-through font-medium">
+                    ₹{activeVariant.basePrice.toLocaleString("en-IN")}
+                  </span>
+                )}
               </div>
 
               {/* Short description */}
@@ -390,20 +786,24 @@ export default function ProductDetailPage({ params }: PageProps) {
                 <span className="text-[10px] font-bold text-charcoal/50 uppercase tracking-wider block mb-2.5">
                   SELECT WEIGHT
                 </span>
-                <div className="flex gap-2.5">
-                  {["250g", "500g", "1kg"].map((w) => (
-                    <button
-                      key={w}
-                      onClick={() => setSelectedWeight(w)}
-                      className={`px-5 py-2.5 text-xs font-semibold rounded-full border transition-all cursor-pointer ${selectedWeight === w
-                        ? "bg-[#061907] border-[#061907] text-white font-bold"
-                        : "bg-transparent border-[#dbdad7] text-charcoal hover:border-charcoal/30"
-                        }`}
-                    >
-                      {w}
-                    </button>
-                  ))}
-                </div>
+                {weightOptions.length > 0 ? (
+                  <div className="flex gap-2.5">
+                    {weightOptions.map((w) => (
+                      <button
+                        key={w}
+                        onClick={() => setSelectedWeight(w)}
+                        className={`px-5 py-2.5 text-xs font-semibold rounded-full border transition-all cursor-pointer ${selectedWeight === w
+                          ? "bg-[#061907] border-[#061907] text-white font-bold"
+                          : "bg-transparent border-[#dbdad7] text-charcoal hover:border-charcoal/30"
+                          }`}
+                      >
+                        {w}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs font-semibold text-charcoal/40 italic">No option available</span>
+                )}
               </div>
 
               {/* Quantity and Cart CTAs sitting on the same line */}
@@ -493,7 +893,7 @@ export default function ProductDetailPage({ params }: PageProps) {
               >
 
                 {/* Left Card: Macro/Row Values */}
-                <div className="lg:col-span-4 bg-white rounded-[16px] border border-[#1b1c1a]/5 p-6 shadow-none flex flex-col gap-4">
+                <div className="lg:col-span-12 bg-white rounded-[16px] border border-[#1b1c1a]/5 p-6 shadow-none flex flex-col gap-4">
                   <h4 className="font-playfair text-base font-bold text-[#061907]">
                     {activeTab === "nutrition"
                       ? tabData.nutrition.macroTitle
@@ -501,35 +901,53 @@ export default function ProductDetailPage({ params }: PageProps) {
                         ? tabData.provenance.originTitle
                         : tabData.tips.tipsTitle}
                   </h4>
-                  <div className="flex flex-col">
-                    {(activeTab === "nutrition"
-                      ? tabData.nutrition.macros
-                      : activeTab === "provenance"
-                        ? tabData.provenance.rows
-                        : tabData.tips.rows
-                    ).map((row, i) => (
-                      <div
-                        key={i}
-                        className="flex justify-between items-center py-3 border-b border-[#1b1c1a]/5 text-xs font-semibold last:border-b-0"
-                      >
-                        <span className="text-charcoal/45 font-medium">{row.label}</span>
-                        <span className="text-[#061907] text-right font-bold">{row.value}</span>
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-0">
+                    <div className="flex flex-col">
+                      {leftTabRows.map((row, i) => (
+                        <div
+                          key={i}
+                          className="grid grid-cols-1 sm:grid-cols-[145px_1fr] lg:grid-cols-[170px_1fr] gap-x-4 gap-y-1 py-3 border-b border-[#1b1c1a]/5 text-xs font-semibold last:border-b-0 items-start"
+                        >
+                          <span className="text-charcoal/45 font-medium">{row.label}</span>
+                          <div className="text-left w-full">
+                            {renderValue(row.value, row.label)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-col">
+                      {rightTabRows.map((row, i) => (
+                        <div
+                          key={i}
+                          className="grid grid-cols-1 sm:grid-cols-[145px_1fr] lg:grid-cols-[170px_1fr] gap-x-4 gap-y-1 py-3 border-b border-[#1b1c1a]/5 text-xs font-semibold last:border-b-0 items-start"
+                        >
+                          <span className="text-charcoal/45 font-medium">{row.label}</span>
+                          <div className="text-left w-full">
+                            {renderValue(row.value, row.label)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
                 {/* Right Column: Paragraph Description + Callout box */}
-                <div className="lg:col-span-8 flex flex-col gap-6">
+                <div className="lg:col-span-12 flex flex-col gap-6">
 
                   {/* Long Description Text */}
-                  <p className="text-xs md:text-sm text-charcoal/70 leading-relaxed font-semibold">
-                    {activeTab === "nutrition"
-                      ? tabData.nutrition.description
-                      : activeTab === "provenance"
-                        ? tabData.provenance.description
-                        : tabData.tips.description}
-                  </p>
+                  {activeTab === "tips" ? (
+                    <ul className="list-disc pl-5 space-y-2.5 text-xs md:text-sm text-charcoal/70 leading-relaxed font-semibold">
+                      {getUsageBulletPoints().map((bullet: string, i: number) => (
+                        <li key={i}>{bullet}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs md:text-sm text-charcoal/70 leading-relaxed font-semibold">
+                      {activeTab === "nutrition"
+                        ? tabData.nutrition.description
+                        : tabData.provenance.description}
+                    </p>
+                  )}
 
                   {/* High-fidelity Callout box matching screenshot */}
                   <div className="border-l-4 border-[#4d6700] bg-[#4d6700]/5 rounded-[6px] p-5 flex flex-col gap-1.5 shadow-sm">
@@ -595,6 +1013,7 @@ export default function ProductDetailPage({ params }: PageProps) {
                       price: recProd.formattedPrice,
                       originalPrice: recProd.originalPrice,
                       image: recProd.image,
+                      hoverImage: recProd.hoverImage,
                       tags: recProd.tags,
                     }}
                     index={idx}
@@ -634,7 +1053,7 @@ export default function ProductDetailPage({ params }: PageProps) {
 
               {/* Pill-shaped WRITE A REVIEW button */}
               <button
-                onClick={() => setIsWriteReviewOpen(true)}
+                onClick={handleWriteReviewClick}
                 className="inline-flex items-center justify-center px-6 py-3 bg-[#061907] hover:bg-[#1a2e1a] text-white text-[11px] font-inter font-bold uppercase tracking-wider rounded-full active:scale-95 transition-all shadow-sm cursor-pointer"
               >
                 WRITE A REVIEW
@@ -643,8 +1062,17 @@ export default function ProductDetailPage({ params }: PageProps) {
 
             {/* Reviews stream container */}
             <div className="flex flex-col gap-8">
-              <AnimatePresence initial={false}>
-                {reviews.map((rev) => (
+              {reviews.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 px-4 border border-dashed border-[#1b1c1a]/15 rounded-[20px] bg-white text-center shadow-xs">
+                  <Icon icon="solar:chat-round-line-linear" className="w-12 h-12 text-[#4d6700]/40 mb-3" />
+                  <h4 className="font-playfair text-base font-bold text-[#061907] mb-1">No reviews yet</h4>
+                  <p className="text-xs text-charcoal/50 max-w-xs leading-relaxed font-semibold">
+                    Be the first to share your thoughts about this product with the community!
+                  </p>
+                </div>
+              ) : (
+                <AnimatePresence initial={false}>
+                  {reviews.map((rev) => (
                   <motion.div
                     key={rev.id}
                     initial={{ opacity: 0, y: 15 }}
@@ -728,6 +1156,7 @@ export default function ProductDetailPage({ params }: PageProps) {
                   </motion.div>
                 ))}
               </AnimatePresence>
+              )}
             </div>
 
           </div>
@@ -805,16 +1234,14 @@ export default function ProductDetailPage({ params }: PageProps) {
                 {/* Nickname input */}
                 <div>
                   <label htmlFor="nickname" className="text-[11px] font-bold uppercase tracking-wider text-charcoal/50 block mb-2">
-                    Your Nickname *
+                    Your Nickname
                   </label>
                   <input
                     id="nickname"
                     type="text"
-                    required
-                    value={formAuthor}
-                    onChange={(e) => setFormAuthor(e.target.value)}
-                    placeholder="e.g. Anya R."
-                    className="w-full bg-[#FAF9F6] border border-[#1b1c1a]/15 rounded-[12px] px-4 py-3 text-xs font-semibold outline-none focus:border-forest/30 transition-all font-inter"
+                    disabled
+                    value={currentUser?.name || ""}
+                    className="w-full bg-gray-100 border border-[#1b1c1a]/15 rounded-[12px] px-4 py-3 text-xs font-semibold outline-none font-inter text-gray-500 cursor-not-allowed"
                   />
                 </div>
 

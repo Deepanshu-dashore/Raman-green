@@ -11,6 +11,8 @@ import { Category } from "../featuers/category/category.model";
 import { Cart } from "../featuers/cart/cart.model";
 import { Address } from "../featuers/address/address.model";
 import { Packaging } from "../featuers/product-packaging/packaging.mode";
+import { City } from "../featuers/city/city.model";
+import { Review } from "../featuers/product-review/reviw.model";
 
 export {
     User,
@@ -25,5 +27,7 @@ export {
     Category,
     Cart,
     Address,
-    Packaging
+    Packaging,
+    City,
+    Review
 };

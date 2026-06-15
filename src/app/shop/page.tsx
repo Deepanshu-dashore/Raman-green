@@ -8,17 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import ProductCard from "@/components/landing/ProductCard";
 
-import { productsData, Product } from "@/constants/products";
 
-// Load first 6 products initially
-const initialProducts: Product[] = productsData.filter((p) =>
-  ["1", "2", "3", "4", "5", "6"].includes(p.id)
-);
-
-// Extra products to load on click
-const extraProducts: Product[] = productsData.filter((p) =>
-  ["7", "8", "9", "10", "11", "12"].includes(p.id)
-);
 
 export default function StorePage() {
   return (
@@ -42,11 +32,14 @@ function StoreContent() {
   const router = useRouter();
 
   // State
-  const [products, setProducts] = useState<Product[]>([...initialProducts]);
-  const [hasLoadedMore, setHasLoadedMore] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortOption, setSortOption] = useState<string>("featured");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Sync state from query params on mount/change
   useEffect(() => {
@@ -64,68 +57,78 @@ function StoreContent() {
     } else {
       setSearchQuery("");
     }
+    setCurrentPage(1); // Reset to page 1 on query param change
   }, [searchParams]);
 
-  // Handle Load More
-  const handleLoadMore = () => {
-    setProducts((prev) => [...prev, ...extraProducts]);
-    setHasLoadedMore(true);
-    toast.success("Loaded more heritage products!");
-  };
-
-  // Filter and Sort Logic
-  const getFilteredAndSortedProducts = () => {
-    let result = [...products];
-
-    // Filter by Category
-    if (selectedCategory !== "all") {
-      result = result.filter((p) => p.category === selectedCategory);
+  // Fetch categories on mount
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const res = await fetch("/api/categories");
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data)) {
+            setCategories(json.data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+      }
     }
+    fetchCategories();
+  }, []);
 
-    // Filter by Search Query
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q) ||
-          p.categoryLabel.toLowerCase().includes(q)
-      );
+  // Fetch products from API based on parameters
+  useEffect(() => {
+    async function fetchProducts() {
+      setIsLoading(true);
+      try {
+        const catQuery = selectedCategory !== "all" ? `&category=${selectedCategory}` : "";
+        const searchQueryParam = searchQuery ? `&search=${searchQuery}` : "";
+        const limit = 8;
+        const res = await fetch(
+          `/api/products/minimal?page=${currentPage}&limit=${limit}${catQuery}${searchQueryParam}&sortBy=${sortOption}`
+        );
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data) {
+            const productsArray = Array.isArray(json.data) ? json.data : json.data.products;
+            const pagination = Array.isArray(json.data) ? null : json.data.pagination;
+            setProducts(productsArray || []);
+            setTotalPages(pagination?.pages || 1);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+      } finally {
+        setIsLoading(false);
+      }
     }
-
-    // Sort
-    if (sortOption === "price-low") {
-      result.sort((a, b) => a.price - b.price);
-    } else if (sortOption === "price-high") {
-      result.sort((a, b) => b.price - a.price);
-    } else if (sortOption === "alpha") {
-      result.sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    return result;
-  };
-
-  const filteredProducts = getFilteredAndSortedProducts();
+    fetchProducts();
+  }, [selectedCategory, sortOption, searchQuery, currentPage]);
 
   // Add to Cart
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = (product: any) => {
     try {
       const existingCart = localStorage.getItem("rg-cart");
       let cart = [];
       if (existingCart) {
         cart = JSON.parse(existingCart);
       }
+      const priceNum = typeof product.price === "number" 
+        ? product.price 
+        : (parseFloat(product.price.replace(/[^\d.]/g, "")) || 0);
+
       cart.push({
         id: product.id,
         name: product.name,
-        price: product.price,
+        price: priceNum,
         image: product.image,
-        category: product.categoryLabel,
+        category: product.category || "Organic",
       });
       localStorage.setItem("rg-cart", JSON.stringify(cart));
       localStorage.setItem("rg-cart-count", cart.length.toString());
       
-      // Dispatch storage event to trigger Navbar sync
       window.dispatchEvent(new Event("storage"));
       
       toast.success(`${product.name} added to cart!`);
@@ -137,7 +140,7 @@ function StoreContent() {
   // Update Category Selection
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
-    // Update URL query parameter
+    setCurrentPage(1);
     const params = new URLSearchParams(searchParams.toString());
     if (category === "all") {
       params.delete("category");
@@ -151,6 +154,7 @@ function StoreContent() {
   const handleClearFilters = () => {
     setSelectedCategory("all");
     setSearchQuery("");
+    setCurrentPage(1);
     router.push("/shop");
   };
 
@@ -184,10 +188,11 @@ function StoreContent() {
                   className="w-full bg-[#FAF9F6] border border-gray-200 rounded-xl px-4 py-3 text-xs outline-none text-charcoal font-semibold cursor-pointer appearance-none pr-10 focus:border-forest/20 focus:ring-0 focus:outline-none"
                 >
                   <option value="all">All Categories</option>
-                  <option value="seeds">Seeds</option>
-                  <option value="crops">Crops</option>
-                  <option value="dry-foods">Dry Foods</option>
-                  <option value="instant">Instant</option>
+                  {categories.map((cat) => (
+                    <option key={cat._id || cat.slug} value={cat.slug}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
                 <Icon
                   icon="solar:alt-arrow-down-linear"
@@ -206,6 +211,7 @@ function StoreContent() {
                   <option value="price-low">Price: Low to High</option>
                   <option value="price-high">Price: High to Low</option>
                   <option value="alpha">Alphabetical</option>
+                  <option value="newest">New Season</option>
                 </select>
                 <Icon
                   icon="solar:alt-arrow-down-linear"
@@ -255,18 +261,25 @@ function StoreContent() {
           )}
 
           {/* Products Grid */}
-          {filteredProducts.length > 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center py-24 text-forest gap-3">
+              <Icon icon="mdi:loading" className="animate-spin w-8 h-8" />
+              <span className="text-sm font-semibold uppercase tracking-wider">Loading products...</span>
+            </div>
+          ) : products.length > 0 ? (
             <div className="-mx-5 md:-mx-16 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mb-16">
-              {filteredProducts.map((product, idx) => (
+              {products.map((product, idx) => (
                 <div key={product.id} className="h-full">
                   <ProductCard
                     product={{
                       id: product.id,
                       name: product.name,
                       description: product.description,
-                      price: product.formattedPrice,
+                      price: product.price,
+                      originalPrice: product.originalPrice,
                       image: product.image,
-                      tags: product.tags,
+                      hoverImage: product.hoverImage,
+                      tags: product.tags || [],
                     }}
                     index={idx}
                     onAddToCart={() => handleAddToCart(product)}
@@ -293,15 +306,27 @@ function StoreContent() {
             </div>
           )}
 
-          {/* Load More Button */}
-          {!hasLoadedMore && filteredProducts.length >= 6 && (
-            <div className="flex justify-center">
+          {/* Database Pagination Controls */}
+          {!isLoading && totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-10">
               <button
-                onClick={handleLoadMore}
-                className="bg-forest text-white text-xs font-bold uppercase tracking-wider py-4 px-10 rounded shadow-sm hover:bg-forest/95 transition-all duration-300 cursor-pointer"
-                style={{ borderRadius: "4px" }} /* Matching button radius design token (4px) */
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 rounded-xl border border-charcoal/10 text-xs font-inter font-semibold text-charcoal bg-white hover:bg-forest hover:text-white disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-charcoal transition-all duration-200 cursor-pointer flex items-center gap-1 shadow-sm"
               >
-                Load More Products
+                <Icon icon="solar:arrow-left-linear" className="w-4 h-4" />
+                Previous
+              </button>
+              <span className="text-xs font-inter font-bold text-charcoal/60 bg-[#FAF9F6] border border-gray-100 px-3 py-2 rounded-xl">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 rounded-xl border border-charcoal/10 text-xs font-inter font-semibold text-charcoal bg-white hover:bg-forest hover:text-white disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-charcoal transition-all duration-200 cursor-pointer flex items-center gap-1 shadow-sm"
+              >
+                Next
+                <Icon icon="solar:arrow-right-linear" className="w-4 h-4" />
               </button>
             </div>
           )}

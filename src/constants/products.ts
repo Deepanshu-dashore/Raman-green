@@ -30,6 +30,7 @@ export interface Product {
   category: "seeds" | "crops" | "dry-foods" | "instant";
   categoryLabel: string;
   image: string;
+  hoverImage?: string;
   tags: string[];
   details: ProductDetails;
   reviews: Review[];
@@ -46,6 +47,7 @@ export const productsData: Product[] = [
     category: "seeds",
     categoryLabel: "Seeds",
     image: "https://images.unsplash.com/photo-1592417817098-8f3d6eb19675?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1595855759920-86582396756a?w=600&q=80",
     tags: ["Heirloom", "High Yield"],
     details: {
       origin: "Rajasthan Orchards",
@@ -76,6 +78,7 @@ export const productsData: Product[] = [
     category: "dry-foods",
     categoryLabel: "Dry Foods",
     image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=600&q=80",
     tags: ["High Protein", "Gluten Free"],
     details: {
       origin: "Andean Foothills / Rajasthan Organic Cooperative",
@@ -107,6 +110,7 @@ export const productsData: Product[] = [
     category: "dry-foods",
     categoryLabel: "Dry Foods",
     image: "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=600&q=80",
     tags: ["Organic", "Fiber Rich"],
     details: {
       origin: "Himalayan Wetlands",
@@ -137,6 +141,7 @@ export const productsData: Product[] = [
     category: "seeds",
     categoryLabel: "Seeds",
     image: "https://images.unsplash.com/photo-1515471209610-dae1c92d8777?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1592417817098-8f3d6eb19675?w=600&q=80",
     tags: ["High Germination", "Aromatic"],
     details: {
       origin: "Domestic Nursery",
@@ -156,6 +161,7 @@ export const productsData: Product[] = [
     category: "crops",
     categoryLabel: "Crops",
     image: "https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1517881917430-e70dfb3610aa?w=600&q=80",
     tags: ["100% Organic", "Heart Healthy"],
     details: {
       origin: "Punjab Soil Co-op",
@@ -186,6 +192,7 @@ export const productsData: Product[] = [
     category: "dry-foods",
     categoryLabel: "Dry Foods",
     image: "https://images.unsplash.com/photo-1515942400420-2b98fed1f515?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1585559606132-277ba3031a6d?w=600&q=80",
     tags: ["Organic", "Iron Rich"],
     details: {
       origin: "Certified Organic Estates",
@@ -204,6 +211,7 @@ export const productsData: Product[] = [
     category: "seeds",
     categoryLabel: "Seeds",
     image: "https://images.unsplash.com/photo-1598030304671-5aa1d6f21128?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=600&q=80",
     tags: ["High Fiber", "Vegan", "Organic"],
     details: {
       origin: "Rajasthan Farms",
@@ -249,6 +257,7 @@ export const productsData: Product[] = [
     category: "dry-foods",
     categoryLabel: "Dry Foods",
     image: "https://images.unsplash.com/photo-1585559606132-277ba3031a6d?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=600&q=80",
     tags: ["Heirloom", "Brain Health"],
     details: {
       origin: "Kashmir Valley Orchards",
@@ -279,6 +288,7 @@ export const productsData: Product[] = [
     category: "instant",
     categoryLabel: "Instant",
     image: "https://images.unsplash.com/photo-1517881917430-e70dfb3610aa?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=600&q=80",
     tags: ["Organic", "No Refined Sugar"],
     details: {
       origin: "Rajasthan Orchards & Grains",
@@ -309,6 +319,7 @@ export const productsData: Product[] = [
     category: "seeds",
     categoryLabel: "Seeds",
     image: "https://images.unsplash.com/photo-1607532941433-304659e8198a?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1598030304671-5aa1d6f21128?w=600&q=80",
     tags: ["Pure Organic", "Omega-3 Rich"],
     details: {
       origin: "Madhya Pradesh Plains",
@@ -327,6 +338,7 @@ export const productsData: Product[] = [
     category: "dry-foods",
     categoryLabel: "Dry Foods",
     image: "https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1585559606132-277ba3031a6d?w=600&q=80",
     tags: ["Best Seller", "Protein Rich"],
     details: {
       origin: "Organic Almond Groves",
@@ -345,6 +357,7 @@ export const productsData: Product[] = [
     category: "instant",
     categoryLabel: "Instant",
     image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&q=80",
     tags: ["Quick Prep", "100% Natural"],
     details: {
       origin: "Organic Farms Collective",
@@ -364,6 +377,7 @@ export const productsData: Product[] = [
     category: "dry-foods",
     categoryLabel: "Dry Foods",
     image: "https://images.unsplash.com/photo-1601379327928-bedfaf9da2d0?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1607532941433-304659e8198a?w=600&q=80",
     tags: ["No Added Sugar", "Iron Rich"],
     details: {
       origin: "Rajasthan Orchards",
@@ -395,6 +409,7 @@ export const productsData: Product[] = [
     category: "instant",
     categoryLabel: "Instant",
     image: "https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1598030304671-5aa1d6f21128?w=600&q=80",
     tags: ["Gluten Free", "Quick Prep"],
     details: {
       origin: "Artisanal Blenders Co.",
@@ -426,6 +441,7 @@ export const productsData: Product[] = [
     category: "dry-foods",
     categoryLabel: "Dry Foods",
     image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=600&q=80",
     tags: ["Raw & Pure", "Single Origin"],
     details: {
       origin: "Rajasthan Orchards Honeycomb",
@@ -445,6 +461,7 @@ export const productsData: Product[] = [
     category: "crops",
     categoryLabel: "Crops",
     image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=600&q=80",
     tags: ["Gluten Free", "Iron Rich"],
     details: {
       origin: "Traditional stone mills in Rajasthan",
@@ -464,6 +481,7 @@ export const productsData: Product[] = [
     category: "dry-foods",
     categoryLabel: "Dry Foods",
     image: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=600&q=80",
     tags: ["Wood Pressed", "Heart Healthy"],
     details: {
       origin: "Traditional wood presses (Ghani)",
@@ -483,6 +501,7 @@ export const productsData: Product[] = [
     category: "dry-foods",
     categoryLabel: "Dry Foods",
     image: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=600&q=80",
+    hoverImage: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&q=80",
     tags: ["Bilona Method", "Vedic A2"],
     details: {
       origin: "Vedic Goshala",

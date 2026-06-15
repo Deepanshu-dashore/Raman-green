@@ -36,6 +36,38 @@ export class UserService {
     }
 
     /**
+     * Register a new customer user
+     * @param userData - The user data (name, phone, email, password)
+     * @returns {Promise<IUser>} - The newly created user
+     */
+    static async registerCustomer(userData: Partial<IUser>): Promise<IUser> {
+        const { phone, email } = userData;
+
+        // Check if user already exists by phone
+        const existingUserByPhone = await User.findOne({ phone });
+        if (existingUserByPhone) {
+            throw new Error("User with this phone number already exists.");
+        }
+
+        // Check if user already exists by email if provided
+        if (email) {
+            const existingUserByEmail = await User.findOne({ email });
+            if (existingUserByEmail) {
+                throw new Error("User with this email already exists.");
+            }
+        }
+
+        // Create new user with customer role
+        const newUser = new User({
+            ...userData,
+            role: 'customer'
+        });
+
+        await newUser.save();
+        return newUser;
+    }
+
+    /**
      * Login a user and return user data and token
      * @param identifier - Phone or Email
      * @param password - The plaintext password

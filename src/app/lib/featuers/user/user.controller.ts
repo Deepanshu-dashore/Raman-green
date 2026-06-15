@@ -23,6 +23,29 @@ export class UserController {
     }
 
     /**
+     * Handle customer registration
+     * @param reqData - Request body containing user details
+     */
+    static async registerCustomer(reqData: any) {
+        try {
+            const { name, phone, email, password } = reqData;
+
+            if (!name || !phone || !password) {
+                return ApiResponse(400, null, "Name, phone, and password are required.");
+            }
+
+            const newUser = await UserService.registerCustomer({ name, phone, email, password });
+
+            const userObj = newUser.toObject();
+            delete userObj.password;
+
+            return ApiResponse(201, userObj, "User registered successfully.");
+        } catch (error: any) {
+            return ApiResponse(500, null, error.message || "An error occurred during registration.");
+        }
+    }
+
+    /**
      * Handle user login
      * @param reqData - Request body containing identifier and password
      */

@@ -1,7 +1,7 @@
 "use client";
 
 import LandingLayout from "@/components/landing/LandingLayout";
-import HeroSection from "@/components/landing/HeroSection";
+import HeroIntro from "@/components/landing/HeroIntro";
 import CategoryGrid from "@/components/landing/CategoryGrid";
 import InstantBanner from "@/components/landing/InstantBanner";
 import ProductShowcase from "@/components/landing/ProductShowcase";
@@ -13,7 +13,7 @@ import { TrustStrip, CertificationsSection } from "@/components/landing/ProofSec
 export default function Home() {
   return (
     <LandingLayout>
-      <HeroSection />
+      <HeroIntro />
       <CategoryGrid />
       {/* <TrustStrip /> */}
       <InstantBanner />

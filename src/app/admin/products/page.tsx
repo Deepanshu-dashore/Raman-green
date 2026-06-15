@@ -14,11 +14,48 @@ const AdminProducts = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
 
   const handleDeleteClick = (product: any) => {
     setSelectedProduct(product);
     setDeleteModalOpen(true);
+  };
+
+  const handleTogglePublishClick = (product: any) => {
+    setSelectedProduct(product);
+    setPublishModalOpen(true);
+  };
+
+  const handleTogglePublishConfirm = () => {
+    if (!selectedProduct) return;
+    const p = selectedProduct;
+    const newStatus = !p.isPublished;
+    setPublishModalOpen(false);
+    
+    toast.promise(
+      fetch(`/api/products/${p._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ isPublished: newStatus })
+      })
+        .then(res => res.json())
+        .then(json => {
+          if (json.success) {
+            setProducts(prev => prev.map(item => item._id === p._id ? { ...item, isPublished: newStatus } : item));
+            setSelectedProduct(null);
+          } else {
+            throw new Error(json.message);
+          }
+        }),
+      {
+        loading: newStatus ? 'Publishing product...' : 'Hiding product...',
+        success: newStatus ? 'Product is now visible' : 'Product is now hidden',
+        error: (err) => err.message || 'Failed to update visibility'
+      }
+    );
   };
 
   const handleDeleteConfirm = () => {
@@ -149,6 +186,24 @@ const AdminProducts = () => {
                 {p.isFeatured ? 'Featured' : 'Active'}
               </span>
             )
+          },
+          {
+            key: 'isPublished',
+            label: 'Published',
+            custom: true,
+            render: (p) => (
+              <div className="flex items-center">
+                <button
+                  onClick={() => handleTogglePublishClick(p)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${p.isPublished ? 'bg-green-600' : 'bg-gray-200'}`}
+                  aria-label="Toggle publish status"
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${p.isPublished ? 'translate-x-5' : 'translate-x-0'}`}
+                  />
+                </button>
+              </div>
+            )
           }
         ]}
         onView={(p) => router.push(`/admin/products/${p._id}`)}
@@ -175,6 +230,47 @@ const AdminProducts = () => {
         message={`Are you sure you want to move "${selectedProduct?.name}" to the trash? You can restore it later.`}
         confirmButtonText="Move to Trash"
       />
+
+      {/* Publish/Hide Confirmation Modal */}
+      {publishModalOpen && (
+        <div
+          className="w-full mx-auto fixed inset-0 bg-black/20 z-[9999] backdrop-blur-[1px] flex items-center justify-center transition-opacity duration-200"
+          role="presentation"
+        >
+          <div className="bg-white shadow-xl rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {selectedProduct?.isPublished ? "Hide Product" : "Publish Product"}
+            </h2>
+            <p className="text-sm text-gray-700 mt-2">
+              Are you sure you want to {selectedProduct?.isPublished ? "hide" : "publish"} "{selectedProduct?.name}"? 
+              {selectedProduct?.isPublished 
+                ? " This will make the product invisible to customers on the landing page."
+                : " This will make the product visible to customers on the landing page."}
+            </p>
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => {
+                  setPublishModalOpen(false);
+                  setSelectedProduct(null);
+                }}
+                className="px-4 cursor-pointer py-2 border border-gray-300 rounded-md text-gray-800 hover:bg-gray-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                className={`px-4 py-2 cursor-pointer text-white font-semibold rounded-lg shadow transition ${
+                  selectedProduct?.isPublished 
+                    ? "bg-red-500 hover:bg-red-600" 
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
+                onClick={handleTogglePublishConfirm}
+              >
+                {selectedProduct?.isPublished ? "Hide" : "Publish"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

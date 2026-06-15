@@ -3,26 +3,8 @@
 import { useState, useEffect } from "react";
 import ProductCard from "./ProductCard";
 import { motion } from "framer-motion";
-import { productsData } from "@/constants/products";
-
-// Default fallback new arrivals from local mock data
-const fallbackProducts = [
-  productsData.find((p) => p.id === "1")!,
-  productsData.find((p) => p.id === "2")!,
-  productsData.find((p) => p.id === "3")!,
-  productsData.find((p) => p.id === "4")!,
-].filter(Boolean).map((p) => ({
-  id: p.id,
-  name: p.name,
-  description: p.description,
-  price: p.formattedPrice,
-  originalPrice: p.originalPrice,
-  image: p.image,
-  tags: p.tags,
-}));
-
 export default function NewArrivalsShowcase() {
-  const [products, setProducts] = useState<any[]>(fallbackProducts);
+  const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchNewArrivals() {
@@ -30,8 +12,9 @@ export default function NewArrivalsShowcase() {
         const res = await fetch("/api/products/minimal?newest=true&limit=4");
         if (res.ok) {
           const json = await res.json();
-          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-            setProducts(json.data);
+          const productsArray = Array.isArray(json.data) ? json.data : json.data?.products;
+          if (json.success && Array.isArray(productsArray) && productsArray.length > 0) {
+            setProducts(productsArray);
           }
         }
       } catch (err) {
@@ -76,6 +59,7 @@ export default function NewArrivalsShowcase() {
                   price: product.price,
                   originalPrice: product.originalPrice,
                   image: product.image,
+                  hoverImage: product.hoverImage,
                   tags: product.tags,
                 }}
                 index={idx}

@@ -178,7 +178,7 @@ const AdminCategories = () => {
               </span>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {subcats.map((sub) => (
-                  <div key={sub._id} className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-gray-150/60 shadow-sm hover:shadow-md transition-all duration-200">
+                  <div key={sub._id} className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
                     <div className="flex items-center gap-3">
                       {sub.image ? (
                         <img src={sub.image} alt={sub.name} className="w-10 h-10 rounded-xl object-cover bg-gray-50 border border-gray-100 shadow-sm shrink-0" />
