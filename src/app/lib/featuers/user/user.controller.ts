@@ -1,5 +1,6 @@
 import { UserService } from "./user.service";
 import { ApiResponse } from "../../utils/ApiResponse";
+import { JWTHelper } from "../../utils/JWTHelper";
 
 export class UserController {
     /**
@@ -36,10 +37,24 @@ export class UserController {
 
             const newUser = await UserService.registerCustomer({ name, phone, email, password });
 
+            const token = JWTHelper.generateToken({
+                id: newUser._id,
+                role: newUser.role
+            });
+
             const userObj = newUser.toObject();
             delete userObj.password;
 
-            return ApiResponse(201, userObj, "User registered successfully.");
+            const response = ApiResponse(201, { user: userObj, token }, "User registered successfully.");
+
+            response.cookies.set("token", token, {
+                httpOnly: true,
+                sameSite: "strict",
+                path: "/",
+                maxAge: 60 * 60 * 24 * 1, // 1 day
+            });
+
+            return response;
         } catch (error: any) {
             return ApiResponse(500, null, error.message || "An error occurred during registration.");
         }
@@ -59,7 +74,7 @@ export class UserController {
 
             const { user, token } = await UserService.login(identifier, password);
 
-            const response = ApiResponse(200, { user }, "Login successful.");
+            const response = ApiResponse(200, { user, token }, "Login successful.");
 
             response.cookies.set("token", token, {
                 httpOnly: true,
@@ -71,6 +86,40 @@ export class UserController {
             return response;
         } catch (error: any) {
             return ApiResponse(401, null, error.message || "An error occurred during login.");
+        }
+    }
+
+    /**
+     * Handle Google sign-in or registration
+     * @param reqData - Request body containing Google email, name, and optional phone/googleId
+     */
+    static async loginGoogle(reqData: any) {
+        try {
+            const { email, name, phone, googleId } = reqData;
+
+            if (!email || !name) {
+                return ApiResponse(400, null, "Email and name are required.");
+            }
+
+            const result = await UserService.loginGoogle({ email, name, phone, googleId });
+
+            if (result.phoneRequired) {
+                return ApiResponse(200, { phoneRequired: true }, "Phone number required to complete registration.");
+            }
+
+            const { user, token } = result;
+            const response = ApiResponse(200, { user, token }, "Google login successful.");
+
+            response.cookies.set("token", token!, {
+                httpOnly: true,
+                sameSite: "strict",
+                path: "/",
+                maxAge: 60 * 60 * 24 * 1, // 1 day
+            });
+
+            return response;
+        } catch (error: any) {
+            return ApiResponse(500, null, error.message || "An error occurred during Google sign-in.");
         }
     }
 

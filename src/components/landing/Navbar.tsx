@@ -74,6 +74,7 @@ export default function Navbar() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
   const [user, setUser] = useState<{ name: string; email?: string; role: string } | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   // Load authenticated user info
   useEffect(() => {
@@ -88,6 +89,8 @@ export default function Navbar() {
         }
       } catch (err) {
         setUser(null);
+      } finally {
+        setLoadingAuth(false);
       }
     };
     fetchUser();
@@ -101,6 +104,7 @@ export default function Navbar() {
         toast.success("Successfully logged out.");
         setUser(null);
         localStorage.removeItem("rg-user");
+        localStorage.removeItem("rg-token");
         router.refresh();
         router.push("/");
       } else {
@@ -264,55 +268,6 @@ export default function Navbar() {
               <Icon icon="solar:magnifer-linear" className="w-5.5 h-5.5 text-charcoal hover:text-[#3eac5c]" />
             </button>
 
-            {/* Account Profile - Hover Dropdown */}
-            <div className="relative group/account hidden sm:block">
-              <Link
-                href="/account"
-                aria-label="Account Settings"
-                className="hover:text-[#47C269] transition-colors p-1.5 rounded-full hover:bg-gray-50 block"
-              >
-                <Icon icon="solar:user-circle-linear" className="w-5.5 h-5.5 text-charcoal hover:text-[#3eac5c]" />
-              </Link>
-              {/* Dropdown Box */}
-              <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover/account:opacity-100 group-hover/account:translate-y-0 group-hover/account:pointer-events-auto transition-all duration-300 z-50">
-                <div className="w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 text-charcoal">
-                  <div className="px-4 py-2.5 border-b border-gray-50 mb-1.5">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Welcome</p>
-                    <p className="text-sm font-bold text-forest truncate">{user ? user.name : "Guest User"}</p>
-                  </div>
-                  {user && user.role === "admin" && (
-                    <Link href="/admin" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
-                      <Icon icon="solar:settings-bold-duotone" className="w-4 h-4 text-gray-400" />
-                      Admin Panel
-                    </Link>
-                  )}
-                  <Link href="/account" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
-                    <Icon icon="solar:user-linear" className="w-4 h-4 text-gray-400" />
-                    My Profile
-                  </Link>
-                  <Link href={user?.role === "admin" ? "/admin/orders" : "/account/orders"} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
-                    <Icon icon="solar:cart-large-2-linear" className="w-4 h-4 text-gray-400" />
-                    My Orders
-                  </Link>
-                  <div className="h-px bg-gray-100 my-1.5" />
-                  {user ? (
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl text-sm font-bold text-charcoal transition-all cursor-pointer text-left"
-                    >
-                      <Icon icon="solar:log-out-linear" className="w-4 h-4 text-red-500" />
-                      Sign Out
-                    </button>
-                  ) : (
-                    <Link href="/login" className="flex items-center gap-3 px-4 py-2 hover:bg-green-50 hover:text-green-600 rounded-xl text-sm font-bold text-charcoal transition-all">
-                      <Icon icon="solar:login-2-linear" className="w-4 h-4 text-green-500" />
-                      Sign In
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </div>
-
             {/* Wishlist Link */}
             <Link
               href="/wishlist"
@@ -353,6 +308,67 @@ export default function Navbar() {
                 </div>
               </div>
             </div>
+
+            {loadingAuth ? (
+              <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse hidden sm:block" />
+            ) : user ? (
+              /* Account Profile - Hover Dropdown */
+              <div className="relative group/account hidden sm:block">
+                <Link
+                  href="/account"
+                  aria-label="Account Settings"
+                  className="hover:text-[#47C269] transition-colors p-1.5 rounded-full hover:bg-gray-50 block"
+                >
+                  <Icon icon="solar:user-circle-linear" className="w-5.5 h-5.5 text-charcoal hover:text-[#3eac5c]" />
+                </Link>
+                {/* Dropdown Box */}
+                <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover/account:opacity-100 group-hover/account:translate-y-0 group-hover/account:pointer-events-auto transition-all duration-300 z-50">
+                  <div className="w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 text-charcoal">
+                    <div className="px-4 py-2.5 border-b border-gray-50 mb-1.5">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Welcome</p>
+                      <p className="text-sm font-bold text-forest truncate">{user.name}</p>
+                    </div>
+                    {user.role === "admin" && (
+                      <Link href="/admin" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
+                        <Icon icon="solar:settings-bold-duotone" className="w-4 h-4 text-gray-400" />
+                        Admin Panel
+                      </Link>
+                    )}
+                    <Link href="/account" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
+                      <Icon icon="solar:user-linear" className="w-4 h-4 text-gray-400" />
+                      My Profile
+                    </Link>
+                    <Link href={user.role === "admin" ? "/admin/orders" : "/account/orders"} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
+                      <Icon icon="solar:cart-large-2-linear" className="w-4 h-4 text-gray-400" />
+                      My Orders
+                    </Link>
+                    <div className="h-px bg-gray-100 my-1.5" />
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl text-sm font-bold text-charcoal transition-all cursor-pointer text-left"
+                    >
+                      <Icon icon="solar:log-out-linear" className="w-4 h-4 text-red-500" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="hidden sm:flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="text-sm font-semibold text-charcoal hover:text-[#47C269] transition-colors py-1.5 px-3"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-[#47C269] hover:bg-[#3eac5c] text-white text-xs font-semibold py-2 px-4 rounded-xl transition-all shadow-sm"
+                >
+                  Register
+                </Link>
+              </div>
+            )}
 
             {/* Mobile Menu Toggle */}
             <button
@@ -681,21 +697,51 @@ export default function Navbar() {
                 </div>
                 <div className="flex flex-col gap-2 mt-1">
                   <div className="grid grid-cols-2 gap-3">
-                    <Link
-                      href={user ? "/account" : "/login"}
-                      onClick={() => setMobileOpen(false)}
-                      className="py-2.5 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block"
-                    >
-                      {user ? "My Account" : "Sign In"}
-                    </Link>
+                    {user ? (
+                      <>
+                        <Link
+                          href="/account"
+                          onClick={() => setMobileOpen(false)}
+                          className="py-2.5 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block"
+                        >
+                          My Account
+                        </Link>
+                        <Link
+                          href="/wishlist"
+                          onClick={() => setMobileOpen(false)}
+                          className="py-2.5 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block"
+                        >
+                          Wishlist
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          href="/login"
+                          onClick={() => setMobileOpen(false)}
+                          className="py-2.5 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block"
+                        >
+                          Sign In
+                        </Link>
+                        <Link
+                          href="/register"
+                          onClick={() => setMobileOpen(false)}
+                          className="py-2.5 px-4 bg-forest hover:bg-forest/90 text-white text-center text-xs font-bold rounded-xl transition-colors block"
+                        >
+                          Register
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                  {!user && (
                     <Link
                       href="/wishlist"
                       onClick={() => setMobileOpen(false)}
-                      className="py-2.5 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block"
+                      className="w-full py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block"
                     >
                       Wishlist
                     </Link>
-                  </div>
+                  )}
                   {user && (
                     <button
                       onClick={() => {

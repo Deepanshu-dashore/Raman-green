@@ -21,3 +21,4 @@ export async function GET() {
         return ApiResponse(500, null, error.message || "Internal server error");
     }
 }
+
