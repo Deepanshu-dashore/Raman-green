@@ -42,6 +42,7 @@ export const metadata: Metadata = {
 };
 
 import { Toaster } from "react-hot-toast";
+import StoreProvider from "@/providers/StoreProvider";
 
 export default function RootLayout({
   children,
@@ -54,8 +55,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${publicSans.variable} ${lato.variable} ${sourceSerif.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {children}
-        <Toaster position="top-right" />
+        <StoreProvider>
+          {children}
+          <Toaster position="top-right" />
+        </StoreProvider>
       </body>
     </html>
   );

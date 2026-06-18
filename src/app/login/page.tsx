@@ -7,13 +7,16 @@ import Image from "next/image";
 import { Icon } from "@iconify/react";
 import toast from "react-hot-toast";
 import LandingLayout from "@/components/landing/LandingLayout";
-
 import { get, post } from "@/lib/axios";
+import { useAppDispatch } from "@/store/hooks";
+import { setCredentials } from "@/store/authSlice";
+import { isValidEmail, isValidPhone, isValidPassword } from "@/app/lib/utils/sanitize";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/";
+  const dispatch = useAppDispatch();
 
   const [formData, setFormData] = useState({
     identifier: "",
@@ -45,18 +48,38 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.identifier || !formData.password) {
+    const identifier = formData.identifier.trim();
+    const password = formData.password;
+
+    if (!identifier || !password) {
       toast.error("Please fill in all fields.");
+      return;
+    }
+
+    // Validate email or phone formatting
+    if (identifier.includes("@")) {
+      if (!isValidEmail(identifier)) {
+        toast.error("Please enter a valid email address.");
+        return;
+      }
+    } else {
+      if (!isValidPhone(identifier)) {
+        toast.error("Please enter a valid 10-digit mobile number.");
+        return;
+      }
+    }
+
+    if (!isValidPassword(password)) {
+      toast.error("Password must be at least 6 characters long.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const json = await post<any>("/api/auth/login", formData);
+      const json = await post<any>("/api/auth/login", { identifier, password });
       toast.success("Welcome back! Login successful.");
-      localStorage.setItem("rg-token", json.data.token);
-      localStorage.setItem("rg-user", JSON.stringify(json.data.user));
+      dispatch(setCredentials({ user: json.data.user, token: json.data.token }));
       window.location.href = redirectUrl;
     } catch (err: any) {
       toast.error(err.message || "Invalid credentials.");
@@ -74,8 +97,7 @@ function LoginForm() {
         setGoogleStep("phone");
       } else {
         toast.success("Signed in with Google successfully!");
-        localStorage.setItem("rg-token", json.data.token);
-        localStorage.setItem("rg-user", JSON.stringify(json.data.user));
+        dispatch(setCredentials({ user: json.data.user, token: json.data.token }));
         window.location.href = redirectUrl;
       }
     } catch (err: any) {
@@ -86,8 +108,13 @@ function LoginForm() {
   };
 
   const handleGoogleRegister = async () => {
-    if (!googleUser.phone) {
+    const phone = googleUser.phone.trim();
+    if (!phone) {
       toast.error("Phone number is required.");
+      return;
+    }
+    if (!isValidPhone(phone)) {
+      toast.error("Please enter a valid 10-digit phone number.");
       return;
     }
     setGoogleLoading(true);
@@ -95,11 +122,10 @@ function LoginForm() {
       const json = await post<any>("/api/auth/google", {
         name: googleUser.name,
         email: googleUser.email,
-        phone: googleUser.phone,
+        phone,
       });
       toast.success("Welcome! Account created and logged in successfully.");
-      localStorage.setItem("rg-token", json.data.token);
-      localStorage.setItem("rg-user", JSON.stringify(json.data.user));
+      dispatch(setCredentials({ user: json.data.user, token: json.data.token }));
       window.location.href = redirectUrl;
     } catch (err: any) {
       toast.error(err.message || "Failed to complete Google registration.");
@@ -216,37 +242,6 @@ function LoginForm() {
             )}
           </button>
         </form>
-
-        {/* Divider */}
-        <div className="flex items-center my-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-          <div className="flex-1 h-px bg-gray-100" />
-          <span className="px-3">or continue with</span>
-          <div className="flex-1 h-px bg-gray-100" />
-        </div>
-
-        {/* Social Options */}
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={() => {
-              setGoogleStep("choose");
-              setGoogleUser({ name: "", email: "", phone: "" });
-              setGoogleModalOpen(true);
-            }}
-            className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl bg-white text-xs font-bold text-charcoal hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer"
-          >
-            <Icon icon="flat-color-icons:google" className="w-4.5 h-4.5" />
-            Continue with Google
-          </button>
-          <button
-            type="button"
-            onClick={() => toast.success("Email OTP login is being configured.")}
-            className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl bg-white text-xs font-bold text-charcoal hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer"
-          >
-            <Icon icon="solar:letter-linear" className="w-4.5 h-4.5 text-[#47C269]" />
-            Continue with Email (OTP)
-          </button>
-        </div>
 
         {/* Secure Login Banner */}
         <div className="mt-6 p-3 bg-green-50/50 border border-green-100/50 rounded-2xl flex items-start gap-2.5">

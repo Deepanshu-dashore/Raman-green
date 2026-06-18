@@ -9,11 +9,15 @@ import toast from "react-hot-toast";
 import LandingLayout from "@/components/landing/LandingLayout";
 
 import { get, post } from "@/lib/axios";
+import { useAppDispatch } from "@/store/hooks";
+import { setCredentials } from "@/store/authSlice";
+import { isValidEmail, isValidPhone, isValidPassword } from "@/app/lib/utils/sanitize";
 
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/";
+  const dispatch = useAppDispatch();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -47,8 +51,28 @@ function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.phone || !formData.password) {
-      toast.error("Name, phone, and password are required.");
+    const name = formData.name.trim();
+    const phone = formData.phone.trim();
+    const email = formData.email.trim();
+    const password = formData.password;
+
+    if (!name || !phone || !email || !password) {
+      toast.error("Name, phone, email, and password are required.");
+      return;
+    }
+
+    if (!isValidPhone(phone)) {
+      toast.error("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    if (!isValidPassword(password)) {
+      toast.error("Password must be at least 6 characters long.");
       return;
     }
 
@@ -56,17 +80,15 @@ function RegisterForm() {
 
     try {
       // Create user
-      const json = await post<any>("/api/auth/register", {
-        name: formData.name,
-        phone: formData.phone,
-        email: formData.email || undefined,
-        password: formData.password,
+      await post<any>("/api/auth/register", {
+        name,
+        phone,
+        email,
+        password,
       });
 
-      toast.success("Account created successfully! Welcome to Raman Green.");
-      localStorage.setItem("rg-token", json.data.token);
-      localStorage.setItem("rg-user", JSON.stringify(json.data.user));
-      window.location.href = redirectUrl;
+      toast.success("Account created successfully! Please log in to continue.");
+      router.push(`/login${redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`);
     } catch (err: any) {
       toast.error(err.message || "Registration failed.");
     } finally {
@@ -83,8 +105,7 @@ function RegisterForm() {
         setGoogleStep("phone");
       } else {
         toast.success("Signed in with Google successfully!");
-        localStorage.setItem("rg-token", json.data.token);
-        localStorage.setItem("rg-user", JSON.stringify(json.data.user));
+        dispatch(setCredentials({ user: json.data.user, token: json.data.token }));
         window.location.href = redirectUrl;
       }
     } catch (err: any) {
@@ -95,8 +116,13 @@ function RegisterForm() {
   };
 
   const handleGoogleRegister = async () => {
-    if (!googleUser.phone) {
+    const phone = googleUser.phone.trim();
+    if (!phone) {
       toast.error("Phone number is required.");
+      return;
+    }
+    if (!isValidPhone(phone)) {
+      toast.error("Please enter a valid 10-digit phone number.");
       return;
     }
     setGoogleLoading(true);
@@ -104,11 +130,10 @@ function RegisterForm() {
       const json = await post<any>("/api/auth/google", {
         name: googleUser.name,
         email: googleUser.email,
-        phone: googleUser.phone,
+        phone,
       });
       toast.success("Welcome! Account created and logged in successfully.");
-      localStorage.setItem("rg-token", json.data.token);
-      localStorage.setItem("rg-user", JSON.stringify(json.data.user));
+      dispatch(setCredentials({ user: json.data.user, token: json.data.token }));
       window.location.href = redirectUrl;
     } catch (err: any) {
       toast.error(err.message || "Failed to complete Google registration.");
@@ -175,10 +200,10 @@ function RegisterForm() {
             </div>
           </div>
 
-          {/* Email (Optional) */}
+          {/* Email Address */}
           <div>
             <label className="block text-xs font-bold text-charcoal/80 mb-2 pl-1">
-              Email Address <span className="text-gray-400/60 lowercase font-medium">(optional)</span>
+              Email Address
             </label>
             <div className="relative flex items-center group">
               <Icon
@@ -188,6 +213,7 @@ function RegisterForm() {
               <input
                 type="email"
                 placeholder="john@example.com"
+                required
                 className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:bg-white focus:border-forest focus:ring-4 focus:ring-forest/5 outline-none transition-all text-sm font-semibold text-gray-900 placeholder:text-gray-400"
                 value={formData.email}
                 onChange={(e) =>
@@ -271,29 +297,6 @@ function RegisterForm() {
             )}
           </button>
         </form>
-
-        {/* Divider */}
-        <div className="flex items-center my-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-          <div className="flex-1 h-px bg-gray-100" />
-          <span className="px-3">or continue with</span>
-          <div className="flex-1 h-px bg-gray-100" />
-        </div>
-
-        {/* Social Options */}
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={() => {
-              setGoogleStep("choose");
-              setGoogleUser({ name: "", email: "", phone: "" });
-              setGoogleModalOpen(true);
-            }}
-            className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl bg-white text-xs font-bold text-charcoal hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer"
-          >
-            <Icon icon="flat-color-icons:google" className="w-4.5 h-4.5" />
-            Continue with Google
-          </button>
-        </div>
       </div>
 
       {/* Google Sign-in Modal */}

@@ -7,6 +7,7 @@ export interface IUser extends Document {
   email?: string | null;
   role: 'customer' | 'admin';
   password?: string;
+  image?: string | null;
 }
 
 const userSchema = new Schema<IUser>({
@@ -37,6 +38,11 @@ const userSchema = new Schema<IUser>({
     type: String,
     required: true,
     select: false
+  },
+
+  image: {
+    type: String,
+    required: false
   }
 },{timestamps: true});
 

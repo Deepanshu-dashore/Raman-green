@@ -8,6 +8,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { productsData, Product, Review } from "@/constants/products";
 import ProductCard from "@/components/landing/ProductCard";
+import { useAppDispatch } from "@/store/hooks";
+import { addItemToCart } from "@/store/cartSlice";
+import AddedToCartToast from "@/components/shared/AddedToCartToast";
 
 interface DetailProduct extends Omit<Product, 'details' | 'category'> {
   id: string;
@@ -232,6 +235,8 @@ export default function ProductDetailPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const productId = resolvedParams.id;
 
+  const dispatch = useAppDispatch();
+
   // Find target product
   const initialProduct = productsData.find((p) => p.id === productId) || productsData[6]; // Default to Premium Chia if not found
 
@@ -246,6 +251,7 @@ export default function ProductDetailPage({ params }: PageProps) {
   const [votedReviews, setVotedReviews] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAddingToCart, setIsAddingToCart] = useState<boolean>(false);
 
   // Find current active variant based on selected weight/unit text
   const getActiveVariant = () => {
@@ -515,40 +521,58 @@ export default function ProductDetailPage({ params }: PageProps) {
   }, [selectedWeight]);
 
   // Handle Add to Cart
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    if (isAddingToCart) return;
+
     try {
-      const existingCart = localStorage.getItem("rg-cart");
-      let cart = [];
-      if (existingCart) {
-        cart = JSON.parse(existingCart);
-      }
-
+      setIsAddingToCart(true);
       const activeVar = getActiveVariant();
-      const variantId = activeVar ? activeVar._id : selectedWeight;
-      const variantImage = activeVar && activeVar.images && activeVar.images.length > 0
-        ? activeVar.images[0]
-        : product.image;
+      
+      const variantObj = activeVar || {
+        weight: selectedWeight,
+        price: currentPrice,
+        sku: `${product.id}-${selectedWeight}`
+      };
 
-      // Add based on quantity and weight variation
-      for (let i = 0; i < quantity; i++) {
-        cart.push({
-          id: `${product.id}-${variantId}`,
-          name: `${product.name} (${selectedWeight})`,
-          price: currentPrice,
-          image: variantImage,
-          category: product.categoryLabel || "Organic",
-        });
-      }
+      const productInfo = {
+        name: product.name,
+        image: product.image,
+        category: product.categoryLabel
+      };
 
-      localStorage.setItem("rg-cart", JSON.stringify(cart));
-      localStorage.setItem("rg-cart-count", cart.length.toString());
+      const res = await dispatch(
+        addItemToCart({
+          productId: product.id,
+          variant: variantObj,
+          quantity: quantity,
+          productInfo
+        })
+      ).unwrap();
 
-      // Dispatch storage event to trigger Navbar sync
-      window.dispatchEvent(new Event("storage"));
-
-      toast.success(`Added ${quantity} x ${product.name} (${selectedWeight}) to cart!`);
-    } catch (e) {
-      toast.error("Failed to add items to cart.");
+      // Trigger custom attractive toast below navigation bar
+      toast.custom(
+        (t) => (
+          <AddedToCartToast
+            visible={t.visible}
+            id={t.id}
+            productName={product.name}
+            productImage={product.image}
+            variantWeight={selectedWeight}
+            variantPrice={currentPrice}
+            quantity={quantity}
+            cartTotalItems={res.totalItems ?? 0}
+            cartTotalPrice={res.totalPrice ?? 0}
+          />
+        ),
+        {
+          duration: 6000,
+          position: "top-right",
+        }
+      );
+    } catch (e: any) {
+      toast.error(typeof e === "string" ? e : (e.message || "Failed to add items to cart."));
+    } finally {
+      setIsAddingToCart(false);
     }
   };
 
@@ -665,9 +689,99 @@ export default function ProductDetailPage({ params }: PageProps) {
   if (isLoading) {
     return (
       <LandingLayout>
-        <div className="bg-[#fbf9f6] text-[#1b1c1a] min-h-screen py-24 flex flex-col justify-center items-center gap-3">
-          <Icon icon="mdi:loading" className="animate-spin w-10 h-10 text-forest" />
-          <span className="text-sm font-semibold uppercase tracking-wider text-forest">Loading product details...</span>
+        <div className="bg-[#fbf9f6] text-[#1b1c1a] min-h-screen py-10 md:py-16 font-inter animate-pulse">
+          <div className="max-w-[1280px] mx-auto px-5">
+            {/* Breadcrumb Skeleton */}
+            <div className="flex items-center gap-2 mb-8">
+              <div className="h-3 w-12 bg-charcoal/10 rounded-md"></div>
+              <div className="h-3.5 w-3.5 bg-charcoal/10 rounded-full"></div>
+              <div className="h-3 w-16 bg-charcoal/10 rounded-md"></div>
+              <div className="h-3.5 w-3.5 bg-charcoal/10 rounded-full"></div>
+              <div className="h-3 w-24 bg-charcoal/10 rounded-md"></div>
+            </div>
+
+            {/* Showcase Split */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start mb-20">
+              {/* Gallery Column */}
+              <div className="lg:col-span-7 flex flex-col md:flex-row gap-4">
+                {/* Thumbnails (3 items) */}
+                <div className="flex flex-row md:flex-col gap-3 order-2 md:order-1">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="w-16 h-16 md:w-20 md:h-20 rounded-[8px] bg-charcoal/10"></div>
+                  ))}
+                </div>
+                {/* Main Image */}
+                <div className="flex-grow aspect-square rounded-[16px] bg-charcoal/10"></div>
+              </div>
+
+              {/* Info Column */}
+              <div className="lg:col-span-5 flex flex-col">
+                {/* Category / Rating Row */}
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="h-5 w-24 bg-charcoal/10 rounded-md"></div>
+                  <div className="h-3.5 w-32 bg-charcoal/10 rounded-md"></div>
+                </div>
+                {/* Title */}
+                <div className="h-10 w-3/4 bg-charcoal/10 rounded-md mb-4"></div>
+                {/* Price */}
+                <div className="h-8 w-1/3 bg-charcoal/10 rounded-md mb-6"></div>
+                {/* Description Lines */}
+                <div className="space-y-2.5 mb-8">
+                  <div className="h-3 w-full bg-charcoal/10 rounded-md"></div>
+                  <div className="h-3 w-full bg-charcoal/10 rounded-md"></div>
+                  <div className="h-3 w-2/3 bg-charcoal/10 rounded-md"></div>
+                </div>
+                {/* Weight Options */}
+                <div className="mb-6">
+                  <div className="h-3.5 w-28 bg-charcoal/10 rounded-md mb-3"></div>
+                  <div className="flex gap-3">
+                    {[1, 2, 3].map((w) => (
+                      <div key={w} className="h-10 w-20 bg-charcoal/10 rounded-full"></div>
+                    ))}
+                  </div>
+                </div>
+                {/* Quantity and CTA */}
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="h-12 w-32 bg-charcoal/10 rounded-full"></div>
+                  <div className="h-12 flex-grow bg-charcoal/10 rounded-[8px]"></div>
+                </div>
+                {/* Trust Badges Grid */}
+                <div className="grid grid-cols-2 gap-5 border-t border-charcoal/5 pt-8">
+                  {[1, 2, 3, 4].map((b) => (
+                    <div key={b} className="flex items-center gap-3">
+                      <div className="w-5.5 h-5.5 rounded-full bg-charcoal/10"></div>
+                      <div className="h-3 w-24 bg-charcoal/10 rounded-md"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Tab Accordion Details */}
+            <div className="border-t border-charcoal/5 pt-12 mb-20">
+              <div className="flex gap-8 mb-6 border-b border-[#1b1c1a]/5 pb-3">
+                <div className="h-5 w-24 bg-charcoal/10 rounded-md"></div>
+                <div className="h-5 w-24 bg-charcoal/10 rounded-md"></div>
+                <div className="h-5 w-24 bg-charcoal/10 rounded-md"></div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex justify-between items-center py-2 border-b border-charcoal/5">
+                      <div className="h-3.5 w-20 bg-charcoal/10 rounded-md"></div>
+                      <div className="h-3.5 w-32 bg-charcoal/10 rounded-md"></div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-4">
+                  <div className="h-4 w-32 bg-charcoal/10 rounded-md"></div>
+                  <div className="h-3.5 w-full bg-charcoal/10 rounded-md"></div>
+                  <div className="h-3.5 w-full bg-charcoal/10 rounded-md"></div>
+                  <div className="h-3.5 w-4/5 bg-charcoal/10 rounded-md"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </LandingLayout>
     );
@@ -828,10 +942,20 @@ export default function ProductDetailPage({ params }: PageProps) {
                 {/* Add to Cart CTA */}
                 <button
                   onClick={handleAddToCart}
-                  className="flex-grow h-12 inline-flex items-center justify-center gap-2 bg-forest hover:bg-forest/90 text-white text-[11px] font-bold uppercase tracking-wider rounded-[8px] active:scale-98 transition-all shadow-sm cursor-pointer"
+                  disabled={isAddingToCart}
+                  className="flex-grow h-12 inline-flex items-center justify-center gap-2 bg-forest hover:bg-forest/90 text-white text-[11px] font-bold uppercase tracking-wider rounded-[8px] active:scale-98 transition-all shadow-sm cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
                 >
-                  ADD TO CART
-                  <Icon icon="lucide:shopping-bag" className="w-4.5 h-4.5" />
+                  {isAddingToCart ? (
+                    <>
+                      ADDING TO CART...
+                      <Icon icon="mdi:loading" className="animate-spin w-4.5 h-4.5" />
+                    </>
+                  ) : (
+                    <>
+                      ADD TO CART
+                      <Icon icon="lucide:shopping-bag" className="w-4.5 h-4.5" />
+                    </>
+                  )}
                 </button>
               </div>
 

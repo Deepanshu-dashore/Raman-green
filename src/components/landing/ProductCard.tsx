@@ -1,9 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Icon } from "@iconify/react";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { useAppDispatch } from "@/store/hooks";
+import { addItemToCart } from "@/store/cartSlice";
+import AddedToCartToast from "@/components/shared/AddedToCartToast";
 
 // Interface defining the fields of the Product Card
 export interface ProductCardFields {
@@ -25,36 +29,64 @@ export interface ProductCardProps {
 }
 
 export default function ProductCard({ product, index, onAddToCart }: ProductCardProps) {
-  const handleAddToCartClick = (e: React.MouseEvent) => {
+  const dispatch = useAppDispatch();
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddToCartClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onAddToCart) {
       onAddToCart();
       return;
     }
 
-    // Default interactive add to cart mapping (so it works seamlessly on Homepage carousel too!)
     try {
-      const existingCart = localStorage.getItem("rg-cart");
-      let cart = [];
-      if (existingCart) {
-        cart = JSON.parse(existingCart);
-      }
-      cart.push({
-        id: product.id || Math.random().toString(),
+      setIsAdding(true);
+      const parsedPrice = parseFloat(product.price.replace(/[^\d.]/g, "")) || 0;
+      const variantObj = {
+        weight: "250 g", // Default weight since variant is not selected in card listing
+        price: parsedPrice,
+        sku: `${product.id || 'unknown'}-250g`
+      };
+
+      const productInfo = {
         name: product.name,
-        price: parseFloat(product.price.replace(/[^\d.]/g, "")) || 0,
         image: product.image,
-        category: product.tags[0] || "Organic",
-      });
-      localStorage.setItem("rg-cart", JSON.stringify(cart));
-      localStorage.setItem("rg-cart-count", cart.length.toString());
-      
-      // Dispatch storage event to trigger Navbar sync
-      window.dispatchEvent(new Event("storage"));
-      
-      toast.success(`${product.name} added to cart!`);
-    } catch (err) {
-      toast.error("Failed to add product to cart.");
+        category: product.tags[0] || "Organic"
+      };
+
+      const res = await dispatch(
+        addItemToCart({
+          productId: product.id || "unknown",
+          variant: variantObj,
+          quantity: 1,
+          productInfo
+        })
+      ).unwrap();
+
+      // Trigger custom attractive toast below navigation bar
+      toast.custom(
+        (t) => (
+          <AddedToCartToast
+            visible={t.visible}
+            id={t.id}
+            productName={product.name}
+            productImage={product.image}
+            variantWeight="250 g"
+            variantPrice={parsedPrice}
+            quantity={1}
+            cartTotalItems={res.totalItems ?? 0}
+            cartTotalPrice={res.totalPrice ?? 0}
+          />
+        ),
+        {
+          duration: 6000,
+          position: "top-right",
+        }
+      );
+    } catch (err: any) {
+      toast.error(typeof err === "string" ? err : (err.message || "Failed to add product to cart."));
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -110,10 +142,20 @@ export default function ProductCard({ product, index, onAddToCart }: ProductCard
         </Link>
         <button 
           onClick={handleAddToCartClick}
-          className="inline-flex items-center gap-1 px-3 py-1.5 bg-forest text-white text-[11px] font-inter font-semibold tracking-wider rounded hover:bg-forest/90 active:scale-95 transition-all duration-200 shadow-sm cursor-pointer"
+          disabled={isAdding}
+          className="inline-flex items-center justify-center gap-1 min-w-[95px] px-3 py-1.5 bg-forest text-white text-[11px] font-inter font-semibold tracking-wider rounded hover:bg-forest/90 active:scale-95 transition-all duration-200 shadow-sm cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
         >
-          <Icon icon="solar:cart-large-2-linear" className="w-3 h-3" />
-          Add to Cart
+          {isAdding ? (
+            <>
+              <Icon icon="mdi:loading" className="animate-spin w-3 h-3" />
+              Adding...
+            </>
+          ) : (
+            <>
+              <Icon icon="solar:cart-large-2-linear" className="w-3 h-3" />
+              Add to Cart
+            </>
+          )}
         </button>
       </div>
     </motion.div>

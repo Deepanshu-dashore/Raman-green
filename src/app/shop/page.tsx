@@ -107,35 +107,7 @@ function StoreContent() {
     fetchProducts();
   }, [selectedCategory, sortOption, searchQuery, currentPage]);
 
-  // Add to Cart
-  const handleAddToCart = (product: any) => {
-    try {
-      const existingCart = localStorage.getItem("rg-cart");
-      let cart = [];
-      if (existingCart) {
-        cart = JSON.parse(existingCart);
-      }
-      const priceNum = typeof product.price === "number" 
-        ? product.price 
-        : (parseFloat(product.price.replace(/[^\d.]/g, "")) || 0);
 
-      cart.push({
-        id: product.id,
-        name: product.name,
-        price: priceNum,
-        image: product.image,
-        category: product.category || "Organic",
-      });
-      localStorage.setItem("rg-cart", JSON.stringify(cart));
-      localStorage.setItem("rg-cart-count", cart.length.toString());
-      
-      window.dispatchEvent(new Event("storage"));
-      
-      toast.success(`${product.name} added to cart!`);
-    } catch (e) {
-      toast.error("Failed to add product to cart.");
-    }
-  };
 
   // Update Category Selection
   const handleCategoryChange = (category: string) => {
@@ -282,7 +254,6 @@ function StoreContent() {
                       tags: product.tags || [],
                     }}
                     index={idx}
-                    onAddToCart={() => handleAddToCart(product)}
                   />
                 </div>
               ))}

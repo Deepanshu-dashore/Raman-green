@@ -7,6 +7,8 @@ import { Icon } from "@iconify/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { logoutUser } from "@/store/authSlice";
 
 // Ticker announcements
 const announcements = [
@@ -72,46 +74,27 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const [cartCount, setCartCount] = useState(0);
-  const [user, setUser] = useState<{ name: string; email?: string; role: string } | null>(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
+  const cartCount = useAppSelector((state) => state.cart.totalItems);
+  const cartItems = useAppSelector((state) => state.cart.items);
+  const cartTotalPrice = useAppSelector((state) => state.cart.totalPrice);
+  const [mounted, setMounted] = useState(false);
 
-  // Load authenticated user info
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
+  const loadingAuth = useAppSelector((state) => state.auth.loading);
+
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch("/api/auth/me");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setUser(json.data);
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        setUser(null);
-      } finally {
-        setLoadingAuth(false);
-      }
-    };
-    fetchUser();
+    setMounted(true);
   }, []);
 
   const handleLogout = async () => {
     try {
-      const res = await fetch("/api/auth/logout", { method: "POST" });
-      const json = await res.json();
-      if (json.success) {
-        toast.success("Successfully logged out.");
-        setUser(null);
-        localStorage.removeItem("rg-user");
-        localStorage.removeItem("rg-token");
-        router.refresh();
-        router.push("/");
-      } else {
-        toast.error("Logout failed.");
-      }
-    } catch (err) {
-      toast.error("An error occurred during logout.");
+      await dispatch(logoutUser()).unwrap();
+      toast.success("Successfully logged out.");
+      router.refresh();
+      router.push("/");
+    } catch (err: any) {
+      toast.error(err.message || "Logout failed.");
     }
   };
 
@@ -126,27 +109,7 @@ export default function Navbar() {
     return () => clearInterval(timer);
   }, []);
 
-  // Sync Cart items count
-  useEffect(() => {
-    const syncCartCount = () => {
-      try {
-        const localCart = localStorage.getItem("rg-cart");
-        if (localCart) {
-          const parsed = JSON.parse(localCart);
-          setCartCount(Array.isArray(parsed) ? parsed.length : 0);
-        } else {
-          const count = localStorage.getItem("rg-cart-count");
-          setCartCount(count ? parseInt(count) || 0 : 0);
-        }
-      } catch (e) {
-        setCartCount(0);
-      }
-    };
-
-    syncCartCount();
-    window.addEventListener("storage", syncCartCount);
-    return () => window.removeEventListener("storage", syncCartCount);
-  }, []);
+  // Cart count sync handles automatically via Redux provider on mount
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,15 +231,6 @@ export default function Navbar() {
               <Icon icon="solar:magnifer-linear" className="w-5.5 h-5.5 text-charcoal hover:text-[#3eac5c]" />
             </button>
 
-            {/* Wishlist Link */}
-            <Link
-              href="/wishlist"
-              aria-label="My Wishlist"
-              className="hover:text-[#47C269] transition-colors p-1.5 rounded-full hover:bg-gray-50 relative hidden sm:block"
-            >
-              <Icon icon="solar:heart-linear" className="w-5.5 h-5.5 text-charcoal hover:text-[#3eac5c]" />
-            </Link>
-
             {/* Cart Preview - Hover Dropdown */}
             <div className="relative group/cart">
               <Link
@@ -285,7 +239,7 @@ export default function Navbar() {
                 className="hover:text-[#47C269] transition-colors p-1.5 rounded-full hover:bg-gray-50 relative block"
               >
                 <Icon icon="solar:bag-3-linear" className="w-5.5 h-5.5 text-charcoal hover:text-[#3eac5c]" />
-                {cartCount > 0 && (
+                {mounted && cartCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 bg-[#47C269] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-white animate-pulse">
                     {cartCount}
                   </span>
@@ -293,62 +247,152 @@ export default function Navbar() {
               </Link>
               {/* Mini Cart Preview */}
               <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover/cart:opacity-100 group-hover/cart:translate-y-0 group-hover/cart:pointer-events-auto transition-all duration-300 z-50">
-                <div className="w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 text-charcoal text-center flex flex-col items-center">
-                  <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mb-3">
-                    <Icon icon="solar:bag-3-bold-duotone" className="w-7 h-7 text-[#3eac5c]" />
-                  </div>
-                  <h5 className="font-bold text-base text-gray-900 mb-1">Your Cart is Empty</h5>
-                  <p className="text-xs text-gray-400 max-w-[200px] mb-4">Add organic crops and seeds to get started on wellness.</p>
-                  <Link
-                    href="/shop"
-                    className="w-full bg-forest text-white text-xs font-bold uppercase tracking-wider py-2.5 rounded-xl hover:bg-forest/90 transition-colors text-center block"
-                  >
-                    Browse Collections
-                  </Link>
+                <div className="w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 text-charcoal flex flex-col">
+                  {cartCount === 0 ? (
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mb-3">
+                        <Icon icon="solar:bag-3-bold-duotone" className="w-7 h-7 text-[#3eac5c]" />
+                      </div>
+                      <h5 className="font-bold text-base text-gray-900 mb-1">Your Cart is Empty</h5>
+                      <p className="text-xs text-gray-400 max-w-[200px] mb-4">Add organic crops and seeds to get started on wellness.</p>
+                      <Link
+                        href="/shop"
+                        className="w-full bg-forest text-white text-xs font-bold uppercase tracking-wider py-2.5 rounded-xl hover:bg-forest/90 transition-colors text-center block"
+                      >
+                        Browse Collections
+                      </Link>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-center mb-3 border-b border-gray-100 pb-2">
+                        <span className="font-bold text-sm">Cart ({cartCount})</span>
+                        <Link href="/cart" className="text-[#3eac5c] text-xs font-semibold hover:underline">View All</Link>
+                      </div>
+                      <div className="max-h-60 overflow-y-auto space-y-3 mb-3 pr-1">
+                        {cartItems.map((item: any, idx: number) => {
+                          const price = item.price || item.variant?.price || 0;
+                          return (
+                            <div key={idx} className="flex gap-3 items-center">
+                              <div className="w-12 h-12 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden shrink-0">
+                                {item.product?.image ? (
+                                  <img src={item.product.image} alt={item.product?.name || "Product"} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center"><Icon icon="lucide:package" className="w-5 h-5 text-gray-300" /></div>
+                                )}
+                              </div>
+                              <div className="flex flex-col flex-1 min-w-0 text-left">
+                                <span className="text-sm font-bold truncate">{item.product?.name || "Organic Product"}</span>
+                                <span className="text-[10px] text-gray-500 font-medium">{item.variant?.weight || "Default"} &bull; Qty: {item.quantity}</span>
+                              </div>
+                              <div className="text-sm font-bold text-forest">
+                                ₹{(price * item.quantity).toLocaleString("en-IN")}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="flex justify-between items-center mb-4 pt-2 border-t border-gray-100">
+                        <span className="font-bold text-sm text-gray-600">Subtotal</span>
+                        <span className="font-bold text-lg text-forest">₹{cartTotalPrice.toLocaleString("en-IN")}</span>
+                      </div>
+                      <Link
+                        href="/checkout"
+                        className="w-full bg-forest text-white text-xs font-bold uppercase tracking-wider py-2.5 rounded-xl hover:bg-forest/90 transition-colors text-center block"
+                      >
+                        Checkout Securely
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
 
-            {loadingAuth ? (
+            {!mounted || loadingAuth ? (
               <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse hidden sm:block" />
             ) : user ? (
               /* Account Profile - Hover Dropdown */
               <div className="relative group/account hidden sm:block">
-                <Link
-                  href="/account"
+                <button
                   aria-label="Account Settings"
-                  className="hover:text-[#47C269] transition-colors p-1.5 rounded-full hover:bg-gray-50 block"
+                  className="flex items-center gap-1.5 focus:outline-none cursor-pointer group-hover/account:opacity-90 py-1.5"
                 >
-                  <Icon icon="solar:user-circle-linear" className="w-5.5 h-5.5 text-charcoal hover:text-[#3eac5c]" />
-                </Link>
+                  <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 shadow-xs transition-transform duration-300 group-hover/account:scale-105 bg-gray-50 flex items-center justify-center">
+                    <Image
+                      src="/placeholder/boy.png"
+                      alt="User Avatar"
+                      width={32}
+                      height={32}
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-emerald-400 ring-1.5 ring-white animate-pulse" />
+                  </div>
+                  <Icon icon="solar:alt-arrow-down-linear" className="w-3 h-3 text-gray-400 group-hover/account:rotate-180 transition-transform duration-300" />
+                </button>
                 {/* Dropdown Box */}
                 <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover/account:opacity-100 group-hover/account:translate-y-0 group-hover/account:pointer-events-auto transition-all duration-300 z-50">
-                  <div className="w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 text-charcoal">
-                    <div className="px-4 py-2.5 border-b border-gray-50 mb-1.5">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Welcome</p>
-                      <p className="text-sm font-bold text-forest truncate">{user.name}</p>
+                  <div className="w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_20px_50px_rgba(27,48,34,0.08)] border border-gray-100 p-2.5 text-charcoal">
+                    {/* User Profile Info Card */}
+                    <div className="flex items-center gap-3 px-3 py-3 border-b border-gray-50 mb-2 bg-gradient-to-br from-[#FAF9E6]/30 to-emerald-50/20 rounded-xl">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-100 bg-white flex items-center justify-center shadow-xs">
+                        <Image
+                          src="/placeholder/boy.png"
+                          alt="User Avatar"
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-900 truncate leading-snug">{user.name}</p>
+                        <p className="text-[10px] text-gray-400 font-semibold truncate leading-none mt-0.5">
+                          {user.email || user.phone || 'Verified User'}
+                        </p>
+                      </div>
                     </div>
-                    {user.role === "admin" && (
-                      <Link href="/admin" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
-                        <Icon icon="solar:settings-bold-duotone" className="w-4 h-4 text-gray-400" />
-                        Admin Panel
+                    {/* Navigation Items */}
+                    <div className="space-y-0.5">
+                      {user.role === "admin" && (
+                        <Link href="/admin" className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50/80 rounded-xl text-xs font-semibold text-charcoal transition-all duration-200 group/item">
+                          <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center transition-colors group-hover/item:bg-amber-100">
+                            <Icon icon="solar:shield-keyhole-linear" className="w-4.5 h-4.5" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-800">Admin Panel</span>
+                            <span className="text-[9px] text-gray-400 font-medium">Manage systems & store</span>
+                          </div>
+                        </Link>
+                      )}
+                      <Link href="/account" className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50/80 rounded-xl text-xs font-semibold text-charcoal transition-all duration-200 group/item">
+                        <div className="w-7 h-7 rounded-lg bg-green-50 text-forest flex items-center justify-center transition-colors group-hover/item:bg-[#FAF9E6]">
+                          <Icon icon="solar:user-linear" className="w-4.5 h-4.5" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-800">My Profile</span>
+                          <span className="text-[9px] text-gray-400 font-medium">Edit details & address</span>
+                        </div>
                       </Link>
-                    )}
-                    <Link href="/account" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
-                      <Icon icon="solar:user-linear" className="w-4 h-4 text-gray-400" />
-                      My Profile
-                    </Link>
-                    <Link href={user.role === "admin" ? "/admin/orders" : "/account/orders"} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 rounded-xl text-sm font-semibold text-charcoal transition-colors">
-                      <Icon icon="solar:cart-large-2-linear" className="w-4 h-4 text-gray-400" />
-                      My Orders
-                    </Link>
+                      <Link href={user.role === "admin" ? "/admin/orders" : "/account/orders"} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50/80 rounded-xl text-xs font-semibold text-charcoal transition-all duration-200 group/item">
+                        <div className="w-7 h-7 rounded-lg bg-green-50 text-forest flex items-center justify-center transition-colors group-hover/item:bg-[#FAF9E6]">
+                          <Icon icon="solar:cart-large-2-linear" className="w-4.5 h-4.5" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-800">My Orders</span>
+                          <span className="text-[9px] text-gray-400 font-medium">Track order history</span>
+                        </div>
+                      </Link>
+                    </div>
                     <div className="h-px bg-gray-100 my-1.5" />
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl text-sm font-bold text-charcoal transition-all cursor-pointer text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2 hover:bg-rose-50 hover:text-rose-600 rounded-xl text-xs font-bold text-charcoal transition-all cursor-pointer text-left group/item"
                     >
-                      <Icon icon="solar:log-out-linear" className="w-4 h-4 text-red-500" />
-                      Sign Out
+                      <div className="w-7 h-7 rounded-lg bg-rose-50/50 text-rose-500 flex items-center justify-center transition-colors group-hover/item:bg-rose-100">
+                        <Icon icon="solar:logout-3-linear" className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-extrabold text-rose-600">Sign Out</span>
+                        <span className="text-[9px] text-rose-400 font-medium">End active session</span>
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -770,7 +814,7 @@ export default function Navbar() {
                     onClick={() => setMobileOpen(false)}
                     className="w-full py-2.5 bg-forest hover:bg-forest/90 text-white text-center text-xs font-bold rounded-xl transition-colors block"
                   >
-                    Cart ({cartCount})
+                    Cart ({mounted ? cartCount : 0})
                   </Link>
                 </div>
               </div>

@@ -1,9 +1,12 @@
-import { UserController } from "@/app/lib/featuers/user/user.controller";
+import { CustomerController } from "@/app/lib/featuers/customer/customer.controller";
+import { verifyJWT } from "@/app/lib/middlewares/verifyJWT";
 
 export async function POST() {
-    return UserController.logout();
+    const userPayload = await verifyJWT();
+    return CustomerController.logout(userPayload?.id);
 }
 
 export async function GET() {
-    return UserController.logout();
+    const userPayload = await verifyJWT();
+    return CustomerController.logout(userPayload?.id);
 }

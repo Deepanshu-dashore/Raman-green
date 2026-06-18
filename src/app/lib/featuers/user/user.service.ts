@@ -80,13 +80,18 @@ export class UserService {
         }).select("+password"); // Need to select password for comparison
 
         if (!user) {
-            throw new Error("Invalid phone/email or password.");
+            const isEmail = identifier.includes("@");
+            if (isEmail) {
+                throw new Error(`Account can't be found with that email.`);
+            } else {
+                throw new Error(`Account can't be found with that mobile number.`);
+            }
         }
 
         // Compare password
         const isMatch = await comparePasswords(password, user.password as string);
         if (!isMatch) {
-            throw new Error("Invalid phone/email or password.");
+            throw new Error("Incorrect password. Please try again.");
         }
 
         // Generate token

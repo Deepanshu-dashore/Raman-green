@@ -1,4 +1,5 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
+import toast from "react-hot-toast";
 
 export interface ApiResult<T = unknown> {
   success: boolean;
@@ -23,6 +24,28 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 401 && typeof window !== "undefined") {
+      // Clear session local states
+      localStorage.removeItem("rg-token");
+      localStorage.removeItem("rg-user");
+      localStorage.removeItem("adminToken");
+      document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+      
+      const currentPath = window.location.pathname;
+      const isAdminPage = currentPath.startsWith("/admin");
+      
+      // Only redirect on protected paths (admin panel or customer checkout/account)
+      const protectedCustomerPaths = ["/checkout", "/account"];
+      const isProtectedCustomerPage = protectedCustomerPaths.some(path => currentPath.startsWith(path));
+      
+      if (isAdminPage && currentPath !== "/admin/login") {
+        toast.error("Session expired. Please log in again.");
+        window.location.href = "/admin/login";
+      } else if (isProtectedCustomerPage && currentPath !== "/login") {
+        toast.error("Session expired. Please log in again.");
+        window.location.href = "/login";
+      }
+    }
     const message =
       error.response?.data?.message || error.message || "Request failed";
     return Promise.reject(new Error(message));

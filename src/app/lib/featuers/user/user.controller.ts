@@ -1,6 +1,7 @@
 import { UserService } from "./user.service";
 import { ApiResponse } from "../../utils/ApiResponse";
 import { JWTHelper } from "../../utils/JWTHelper";
+import { sanitizeNoSql } from "../../utils/sanitize";
 
 export class UserController {
     /**
@@ -9,7 +10,8 @@ export class UserController {
      */
     static async registerAdmin(reqData: any) {
         try {
-            const { name, phone, email, password } = reqData;
+            const sanitizedData = sanitizeNoSql(reqData);
+            const { name, phone, email, password } = sanitizedData;
 
             if (!name || !phone || !password) {
                 return ApiResponse(400, null, "Name, phone, and password are required.");
@@ -29,7 +31,8 @@ export class UserController {
      */
     static async registerCustomer(reqData: any) {
         try {
-            const { name, phone, email, password } = reqData;
+            const sanitizedData = sanitizeNoSql(reqData);
+            const { name, phone, email, password } = sanitizedData;
 
             if (!name || !phone || !password) {
                 return ApiResponse(400, null, "Name, phone, and password are required.");
@@ -49,6 +52,7 @@ export class UserController {
 
             response.cookies.set("token", token, {
                 httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
                 sameSite: "strict",
                 path: "/",
                 maxAge: 60 * 60 * 24 * 1, // 1 day
@@ -66,7 +70,8 @@ export class UserController {
      */
     static async login(reqData: any) {
         try {
-            const { identifier, password } = reqData;
+            const sanitizedData = sanitizeNoSql(reqData);
+            const { identifier, password } = sanitizedData;
 
             if (!identifier || !password) {
                 return ApiResponse(400, null, "Identifier (phone/email) and password are required.");
@@ -78,6 +83,7 @@ export class UserController {
 
             response.cookies.set("token", token, {
                 httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
                 sameSite: "strict",
                 path: "/",
                 maxAge: 60 * 60 * 24 * 1, // 1 day
@@ -95,7 +101,8 @@ export class UserController {
      */
     static async loginGoogle(reqData: any) {
         try {
-            const { email, name, phone, googleId } = reqData;
+            const sanitizedData = sanitizeNoSql(reqData);
+            const { email, name, phone, googleId } = sanitizedData;
 
             if (!email || !name) {
                 return ApiResponse(400, null, "Email and name are required.");
@@ -112,6 +119,7 @@ export class UserController {
 
             response.cookies.set("token", token!, {
                 httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
                 sameSite: "strict",
                 path: "/",
                 maxAge: 60 * 60 * 24 * 1, // 1 day
