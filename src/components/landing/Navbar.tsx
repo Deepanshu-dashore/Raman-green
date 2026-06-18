@@ -18,25 +18,25 @@ const announcements = [
 // Shop categories for dropdown menus
 const shopCategories = [
   {
-    title: "Seeds",
+    title: "Organic Seeds",
     links: [
-      { label: "Field Crop Seeds", href: "/shop?category=field-seeds", icon: "solar:leaf-linear" },
-      { label: "Vegetable Seeds", href: "/shop?category=vegetable-seeds", icon: "solar:leaf-linear" },
+      { label: "Field Crop Seeds", description: "Premium seeds for high-yield farming.", href: "/shop?category=field-seeds", icon: "lucide:wheat" },
+      { label: "Vegetable Seeds", description: "Non-hybrid seeds for home gardening.", href: "/shop?category=vegetable-seeds", icon: "lucide:sprout" },
     ],
   },
   {
-    title: "Powders",
+    title: "Nutritious Powders",
     links: [
-      { label: "Vegetable Powders", href: "/shop?category=vegetable-powders", icon: "solar:leaf-linear" },
-      { label: "Fruit Powders", href: "/shop?category=fruit-powders", icon: "solar:leaf-linear" },
-      { label: "Spice Powders", href: "/shop?category=spice-powders", icon: "solar:leaf-linear" },
-      { label: "Herbal Powders", href: "/shop?category=herbal-powders", icon: "solar:leaf-linear" },
+      { label: "Vegetable Powders", description: "100% pure dehydrated vegetable blends.", href: "/shop?category=vegetable-powders", icon: "lucide:carrot" },
+      { label: "Fruit Powders", description: "Organic fruit concentrates rich in nutrients.", href: "/shop?category=fruit-powders", icon: "lucide:apple" },
+      { label: "Spice Powders", description: "Freshly ground farm-direct spices.", href: "/shop?category=spice-powders", icon: "lucide:flame" },
+      { label: "Herbal Powders", description: "Traditional wellness and herbal blends.", href: "/shop?category=herbal-powders", icon: "lucide:flower-2" },
     ],
   },
   {
-    title: "Instant Mixes",
+    title: "Instant Food Mixes",
     links: [
-      { label: "Instant Mixes", href: "/shop?category=instant-mixes", icon: "solar:bolt-linear" },
+      { label: "Instant Mixes", description: "Quick, nutritious, and wholesome meals.", href: "/shop?category=instant-mixes", icon: "lucide:zap" },
     ],
   },
 ];
@@ -391,18 +391,18 @@ export default function Navbar() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 15 }}
                 transition={{ duration: 0.25 }}
-                className="absolute left-0 top-full w-full bg-white border-t border-gray-100 shadow-2xl rounded-b-2xl overflow-hidden z-40 text-charcoal p-8 grid grid-cols-4 gap-8"
+                className="absolute left-0 top-full w-full bg-white/98 backdrop-blur-md border-t border-gray-100 shadow-[0_20px_50px_rgba(0,0,0,0.06)] rounded-b-3xl overflow-hidden z-40 text-charcoal p-8 grid grid-cols-4 gap-8"
                 onMouseEnter={() => setActiveMenu("shop")}
                 onMouseLeave={() => setActiveMenu(null)}
               >
                 {/* Loop shopCategories */}
                 <div className="col-span-3 grid grid-cols-3 gap-6">
                   {shopCategories.map((cat) => (
-                    <div key={cat.title} className="flex flex-col gap-4">
-                      <h5 className="text-[12px] font-bold text-gray-400 border-b border-gray-100 pb-2">
+                    <div key={cat.title} className="flex flex-col gap-3">
+                      <h5 className="text-[11px] font-extrabold text-forest uppercase tracking-widest border-b border-gray-100 pb-2.5 mb-2 pl-2">
                         {cat.title}
                       </h5>
-                      <ul className="space-y-3">
+                      <ul className="space-y-2">
                         {cat.links.map((link) => {
                           const active = isLinkActive(link.href);
                           return (
@@ -410,21 +410,32 @@ export default function Navbar() {
                               <Link
                                 href={link.href}
                                 onClick={() => setActiveMenu(null)}
-                                className={`flex items-center gap-2.5 text-[13px] font-semibold transition-all group/menulink ${
+                                className={`flex items-start gap-3.5 p-3 rounded-xl transition-all duration-300 group/menulink ${
                                   active 
-                                    ? 'text-forest font-bold' 
-                                    : 'text-charcoal/80 hover:text-forest'
+                                    ? 'bg-[#FAF9E6] border border-forest/10 shadow-xs' 
+                                    : 'border border-transparent hover:bg-gray-50'
                                 }`}
                               >
-                                <Icon 
-                                  icon={link.icon} 
-                                  className={`w-4 h-4 transition-transform group-hover/menulink:scale-110 ${
-                                    active ? 'text-[#47C269]' : 'text-[#3eac5c]'
-                                  }`} 
-                                />
-                                <span className="group-hover/menulink:translate-x-1 transition-transform duration-200">
-                                  {link.label}
-                                </span>
+                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-300 ${
+                                  active ? 'bg-forest text-white' : 'bg-green-50 text-[#3eac5c] group-hover/menulink:bg-forest group-hover/menulink:text-white'
+                                }`}>
+                                  <Icon 
+                                    icon={link.icon} 
+                                    className="w-5 h-5 transition-transform group-hover/menulink:scale-110" 
+                                  />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className={`text-[13px] font-bold transition-colors ${
+                                    active ? 'text-forest' : 'text-charcoal group-hover/menulink:text-forest'
+                                  }`}>
+                                    {link.label}
+                                  </span>
+                                  {link.description && (
+                                    <span className="text-[11px] text-charcoal/50 group-hover/menulink:text-charcoal/70 transition-colors mt-0.5 font-medium leading-tight">
+                                      {link.description}
+                                    </span>
+                                  )}
+                                </div>
                               </Link>
                             </li>
                           );
@@ -436,34 +447,35 @@ export default function Navbar() {
 
                 {/* Promo Card Column */}
                 <div className="flex justify-end col-span-1">
-                  <div className="w-full max-w-[280px] rounded-xl overflow-hidden border border-gray-100 shadow-sm relative group/promo flex bg-gray-50">
-                    <div className="w-1/2 p-4 flex flex-col justify-between">
+                  <div className="w-full max-w-[280px] rounded-2xl overflow-hidden border border-gray-100 shadow-sm relative group/promo flex flex-col bg-gray-50/50">
+                    <div className="relative w-full h-36 overflow-hidden">
+                      <img
+                        src="/home/centerImg.png"
+                        alt="Flagship Store"
+                        className="w-full h-full object-cover group-hover/promo:scale-105 transition-transform duration-700 ease-out"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                      <span className="absolute top-3 left-3 px-2.5 py-1 bg-[#47C269] text-white text-[9px] font-extrabold uppercase rounded-full tracking-wider shadow-sm">
+                        Featured Blends
+                      </span>
+                    </div>
+                    <div className="p-4 flex flex-col justify-between flex-1">
                       <div>
-                        <span className="inline-block px-2 py-0.5 bg-green-50 border border-green-200 text-green-700 text-[8px] font-black uppercase rounded tracking-wider">
-                          Featured
-                        </span>
-                        <h6 className="font-playfair font-extrabold text-gray-900 mt-2 text-sm leading-tight">
+                        <h6 className="font-playfair font-extrabold text-gray-900 text-[15px] leading-snug">
                           Our Flagship Store
                         </h6>
-                        <p className="text-[10px] text-gray-400 mt-1 font-medium leading-relaxed">
-                          Pure wellness & organic farm blends
+                        <p className="text-[11px] text-gray-500 mt-1 font-medium leading-relaxed">
+                          Discover pure wellness & organic farm blends crafted for vitality.
                         </p>
                       </div>
                       <Link
                         href="/about"
                         onClick={() => setActiveMenu(null)}
-                        className="text-[11px] font-bold text-forest hover:text-green-700 transition-colors flex items-center gap-1.5 mt-4"
+                        className="text-[11px] font-bold text-forest hover:text-green-700 transition-colors flex items-center gap-1.5 mt-4 group-hover/promo:translate-x-1 duration-300"
                       >
-                        Explore Store
-                        <Icon icon="solar:arrow-right-linear" className="w-3.5 h-3.5 group-hover/promo:translate-x-1 transition-transform" />
+                        Explore Story
+                        <Icon icon="solar:arrow-right-linear" className="w-3.5 h-3.5" />
                       </Link>
-                    </div>
-                    <div className="w-1/2 relative h-full min-h-[140px]">
-                      <img
-                        src="/home/centerImg.png"
-                        alt="Flagship Store"
-                        className="absolute inset-0 w-full h-full object-cover group-hover/promo:scale-105 transition-transform duration-500"
-                      />
                     </div>
                   </div>
                 </div>

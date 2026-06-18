@@ -64,9 +64,8 @@ export default function Footer() {
       {/* 2. Main Footer Columns */}
       <div className="max-w-[1280px] mx-auto px-5 md:px-16 pt-16 pb-36 md:pb-48 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-12">
-          
-          {/* Column 1: Brand Info */}
-          <div className="md:col-span-4 flex flex-col justify-start z-10">
+                  {/* Column 1: Brand Info */}
+          <div className="md:col-span-3 flex flex-col justify-start z-10">
             <div className="mb-4">
               <Image
                 src="/logo.png"
@@ -77,39 +76,15 @@ export default function Footer() {
                 priority
               />
             </div>
-            <p className="text-[13px] text-charcoal/80 leading-relaxed font-semibold max-w-sm">
+            <p className="text-[13px] text-charcoal/80 leading-relaxed font-semibold max-w-sm mb-6">
               Raman Green was founded to create an effective bridge between Indian marginal farmers and buyers across the world seeking high-quality organic produce.
             </p>
-            
-            {/* Social Icons (Vibrant colored circle design matching attached reference) */}
-            <div className="flex items-center gap-3 mt-6">
-              <a 
-                href="https://facebook.com" 
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook" 
-                className="w-8 h-8 rounded-full bg-[#1877F2] flex items-center justify-center text-white hover:opacity-90 hover:scale-110 transition-all cursor-pointer shadow-sm"
-              >
-                <Icon icon="ri:facebook-fill" className="w-4.5 h-4.5" />
-              </a>
-              <a 
-                href="https://instagram.com" 
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Instagram" 
-                className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] flex items-center justify-center text-white hover:opacity-90 hover:scale-110 transition-all cursor-pointer shadow-sm"
-              >
-                <Icon icon="ri:instagram-line" className="w-4.5 h-4.5" />
-              </a>
-              <a 
-                href="https://twitter.com" 
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Twitter / X" 
-                className="w-8 h-8 rounded-full bg-[#000000] flex items-center justify-center text-white hover:opacity-90 hover:scale-110 transition-all cursor-pointer shadow-sm"
-              >
-                <Icon icon="ri:twitter-x-fill" className="w-4 h-4" />
-              </a>
+            <div className="text-xs font-semibold text-charcoal/85">
+              <p className="font-bold text-forest mb-1.5 text-[11px] uppercase tracking-wider">Corporate Office</p>
+              <p className="leading-relaxed">
+                D 325-326, Agro Food Park, RIICO,<br />
+                Sri Ganganagar, Rajasthan, India, 335002
+              </p>
             </div>
           </div>
 
@@ -171,35 +146,120 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 4: Contact Us */}
-          <div className="md:col-span-4 flex flex-col z-10 text-xs font-semibold text-charcoal/85">
+          {/* Column 4: Certificates */}
+          <div className="md:col-span-2 flex flex-col z-10">
+            <h4 className="font-playfair text-base font-extrabold text-forest mb-4 tracking-tight">
+              Certificates
+            </h4>
+            <ul className="space-y-2.5 font-semibold text-charcoal/85 text-xs">
+              <li>
+                <Link href="/#certifications" className="hover:text-forest transition-colors">
+                  USDA Organic
+                </Link>
+              </li>
+              <li>
+                <Link href="/#certifications" className="hover:text-forest transition-colors">
+                  India Organic
+                </Link>
+              </li>
+              <li>
+                <Link href="/#certifications" className="hover:text-forest transition-colors">
+                  FSSC 22000
+                </Link>
+              </li>
+              <li>
+                <Link href="/#certifications" className="hover:text-forest transition-colors">
+                  GMP Certified
+                </Link>
+              </li>
+              <li>
+                <Link href="/#certifications" className="hover:text-forest transition-colors">
+                  Glyphosate Free
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 5: Contact Us & Follow Us */}
+          <div className="md:col-span-3 flex flex-col z-10">
             <h4 className="font-playfair text-base font-extrabold text-forest mb-4 tracking-tight">
               Contact Us
             </h4>
             
             <div className="space-y-4">
-              <div>
-                <p className="font-bold text-forest mb-1 text-[11px] uppercase tracking-wider">Corporate Office</p>
-                <p className="leading-relaxed">
-                  D 325-326, Agro Food Park, RIICO,<br />
-                  Sri Ganganagar, Rajasthan, India, 335002
-                </p>
-              </div>
-
-              <div>
-                <p className="font-bold text-forest mb-1 text-[11px] uppercase tracking-wider">Phone</p>
-                <div className="space-y-0.5">
-                  <a href="tel:+919672520005" className="hover:text-forest block">+91 96725 20005</a>
-                  <a href="tel:+919460430830" className="hover:text-forest block">+91 94604 30830</a>
+              <div className="flex items-center gap-3">
+                <a 
+                  href="https://wa.me/919672520005"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-8 h-8 rounded-full bg-[#0EA5E9] flex items-center justify-center text-white shrink-0 shadow-sm hover:opacity-90 hover:scale-110 transition-all cursor-pointer"
+                  title="WhatsApp"
+                >
+                  <Icon icon="ri:whatsapp-fill" className="w-4.5 h-4.5" />
+                </a>
+                <div className="flex flex-col text-xs font-semibold text-charcoal/85">
+                  <a href="tel:+919672520005" className="hover:text-forest transition-colors block">+91 96725 20005</a>
+                  <a href="tel:+919460430830" className="hover:text-forest transition-colors block">+91 94604 30830</a>
                 </div>
               </div>
 
-              <div>
-                <p className="font-bold text-forest mb-1 text-[11px] uppercase tracking-wider">Email</p>
-                <a href="mailto:feedback@ramangreen.com" className="hover:text-forest">
+              <div className="flex items-center gap-3">
+                <a 
+                  href="mailto:feedback@ramangreen.com"
+                  className="w-8 h-8 rounded-full bg-[#0EA5E9] flex items-center justify-center text-white shrink-0 shadow-sm hover:opacity-90 hover:scale-110 transition-all cursor-pointer"
+                  title="Email"
+                >
+                  <Icon icon="ri:mail-fill" className="w-4.5 h-4.5" />
+                </a>
+                <a 
+                  href="mailto:feedback@ramangreen.com" 
+                  className="hover:text-forest transition-colors text-xs font-semibold text-charcoal/85 truncate"
+                >
                   feedback@ramangreen.com
                 </a>
               </div>
+            </div>
+
+            <h4 className="font-playfair text-base font-extrabold text-forest mt-6 mb-4 tracking-tight">
+              Follow Us
+            </h4>
+            <div className="flex items-center gap-3">
+              <a 
+                href="https://instagram.com" 
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram" 
+                className="w-8 h-8 rounded-full bg-[#0EA5E9] flex items-center justify-center text-white hover:opacity-90 hover:scale-110 transition-all cursor-pointer shadow-sm"
+              >
+                <Icon icon="ri:instagram-line" className="w-4.5 h-4.5" />
+              </a>
+              <a 
+                href="https://facebook.com" 
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook" 
+                className="w-8 h-8 rounded-full bg-[#0EA5E9] flex items-center justify-center text-white hover:opacity-90 hover:scale-110 transition-all cursor-pointer shadow-sm"
+              >
+                <Icon icon="ri:facebook-fill" className="w-4.5 h-4.5" />
+              </a>
+              <a 
+                href="https://youtube.com" 
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Youtube" 
+                className="w-8 h-8 rounded-full bg-[#0EA5E9] flex items-center justify-center text-white hover:opacity-90 hover:scale-110 transition-all cursor-pointer shadow-sm"
+              >
+                <Icon icon="ri:youtube-fill" className="w-4.5 h-4.5" />
+              </a>
+              <a 
+                href="https://linkedin.com" 
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="LinkedIn" 
+                className="w-8 h-8 rounded-full bg-[#0EA5E9] flex items-center justify-center text-white hover:opacity-90 hover:scale-110 transition-all cursor-pointer shadow-sm"
+              >
+                <Icon icon="ri:linkedin-fill" className="w-4.5 h-4.5" />
+              </a>
             </div>
           </div>
 
