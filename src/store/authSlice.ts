@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { get, post, put } from "@/lib/axios";
+import { get, post, put, del } from "@/lib/axios";
 
 export interface User {
   _id: string;
@@ -78,6 +78,19 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
+// Async thunk to remove profile image
+export const removeProfileImage = createAsyncThunk(
+  "auth/removeProfileImage",
+  async (_, { rejectWithValue }) => {
+    try {
+      await del("/api/auth/me");
+      return null;
+    } catch (err: any) {
+      return rejectWithValue(err.message || "Failed to remove profile image");
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -116,13 +129,22 @@ const authSlice = createSlice({
         state.initialized = true;
         if (typeof window !== "undefined") {
           localStorage.setItem("rg-user", JSON.stringify(action.payload));
+          (window as any).__auth_initialized = true;
         }
       })
       .addCase(fetchMe.rejected, (state, action) => {
         state.user = null;
+        state.token = null;
         state.loading = false;
         state.initialized = true;
         state.error = action.payload as string;
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("rg-user");
+          localStorage.removeItem("rg-token");
+          localStorage.removeItem("adminToken");
+          document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+          (window as any).__auth_initialized = true;
+        }
       })
       // loginUser
       .addCase(loginUser.pending, (state) => {
@@ -167,6 +189,24 @@ const authSlice = createSlice({
         }
       })
       .addCase(updateProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // removeProfileImage
+      .addCase(removeProfileImage.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(removeProfileImage.fulfilled, (state) => {
+        state.loading = false;
+        if (state.user) {
+          state.user.image = null;
+          if (typeof window !== "undefined") {
+            localStorage.setItem("rg-user", JSON.stringify(state.user));
+          }
+        }
+      })
+      .addCase(removeProfileImage.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

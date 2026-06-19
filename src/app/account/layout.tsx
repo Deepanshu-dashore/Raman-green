@@ -127,7 +127,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
             <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-[0_15px_40px_rgba(27,48,34,0.03)] flex flex-row lg:flex-col lg:items-center gap-4 lg:text-center">
               <div className="relative w-12 h-12 lg:w-16 lg:h-16 rounded-full overflow-hidden border-2 border-gray-100 bg-gray-50 flex items-center justify-center shadow-xs">
                 <Image
-                  src="/placeholder/boy.png"
+                  src={user.image || "/placeholder/boy.png"}
                   alt="Customer Avatar"
                   width={64}
                   height={64}

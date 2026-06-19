@@ -1,6 +1,7 @@
 import { OrderService } from "./order.service";
 import { ApiResponse } from "../../utils/ApiResponse";
 import { verifyJWT } from "../../middlewares/verifyJWT";
+import { CartService } from "../cart/cart.service";
 
 export class OrderController {
     static async create(reqData: any) {
@@ -9,6 +10,10 @@ export class OrderController {
             if (!user) return ApiResponse(401, null, "Unauthorized.");
 
             const order = await OrderService.createOrder({ ...reqData, user: user.id });
+            
+            // Clear cart from database since order is placed
+            await CartService.clearCart(user.id!);
+            
             return ApiResponse(201, order, "Order placed successfully.");
         } catch (error: any) {
             return ApiResponse(500, null, error.message);

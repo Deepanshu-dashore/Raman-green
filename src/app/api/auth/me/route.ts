@@ -5,6 +5,7 @@ import User from "@/app/lib/featuers/user/user.model";
 import Customer from "@/app/lib/featuers/customer/customer.model";
 import { NextRequest } from "next/server";
 import { sanitizeNoSql } from "@/app/lib/utils/sanitize";
+import { CloudinaryService } from "@/app/lib/services/cloudinary.service";
 
 export async function GET() {
     try {
@@ -103,6 +104,49 @@ export async function PUT(req: NextRequest) {
             }
             return ApiResponse(200, updatedCustomer, "Customer profile updated successfully");
         }
+    } catch (error: any) {
+        return ApiResponse(500, null, error.message || "Internal server error");
+    }
+}
+
+export async function DELETE() {
+    try {
+        await connectDB();
+        const userPayload = await verifyJWT();
+        if (!userPayload) {
+            return ApiResponse(401, null, "Not authenticated");
+        }
+
+        let currentImage: string | null | undefined = null;
+
+        if (userPayload.role === "admin") {
+            const user = await User.findById(userPayload.id);
+            if (!user) {
+                return ApiResponse(404, null, "Admin user not found");
+            }
+            currentImage = user.image;
+            user.image = null;
+            await user.save();
+        } else {
+            const customer = await Customer.findById(userPayload.id);
+            if (!customer) {
+                return ApiResponse(404, null, "Customer not found");
+            }
+            currentImage = customer.image;
+            customer.image = null;
+            await customer.save();
+        }
+
+        // Delete from Cloudinary if it's a Cloudinary URL
+        if (currentImage && currentImage.includes("cloudinary.com")) {
+            try {
+                await CloudinaryService.delete(currentImage, "image");
+            } catch (cloudinaryError) {
+                console.error("Failed to delete image from Cloudinary:", cloudinaryError);
+            }
+        }
+
+        return ApiResponse(200, null, "Profile image removed successfully");
     } catch (error: any) {
         return ApiResponse(500, null, error.message || "Internal server error");
     }

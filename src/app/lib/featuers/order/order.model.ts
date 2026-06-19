@@ -23,6 +23,14 @@ export interface IOrder extends Document {
     paymentStatus: string;
     trackingId: string;
     status: string;
+    address: {
+        fullName: string;
+        phone: string;
+        address: string;
+        city: string;
+        state: string;
+        postalCode: string;
+    };
 }
 
 const orderSchema = new Schema<IOrder>({
@@ -74,6 +82,15 @@ const orderSchema = new Schema<IOrder>({
     paymentMethod: {
     type: String,
     enum: ['ONLINE', 'COD']
+  },
+
+  address: {
+    fullName: { type: String, required: true },
+    phone: { type: String, required: true },
+    address: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    postalCode: { type: String, required: true }
   },
 
   paymentStatus: {

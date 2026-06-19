@@ -34,13 +34,21 @@ api.interceptors.response.use(
       const currentPath = window.location.pathname;
       const isAdminPage = currentPath.startsWith("/admin");
       
-      // Only redirect on protected paths (admin panel or customer checkout/account)
+      // Check if auth is already initialized
+      const isAuthInitialized = (window as any).__auth_initialized;
+      
+      // Only redirect on protected paths if not initialized
       const protectedCustomerPaths = ["/checkout", "/account"];
       const isProtectedCustomerPage = protectedCustomerPaths.some(path => currentPath.startsWith(path));
       
       if (isAdminPage && currentPath !== "/admin/login") {
         toast.error("Session expired. Please log in again.");
         window.location.href = "/admin/login";
+      } else if (isAuthInitialized) {
+        if (currentPath !== "/login" && currentPath !== "/register") {
+          toast.error("Session expired. Please log in again.");
+          window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+        }
       } else if (isProtectedCustomerPage && currentPath !== "/login") {
         toast.error("Session expired. Please log in again.");
         window.location.href = "/login";

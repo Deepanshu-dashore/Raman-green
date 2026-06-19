@@ -318,7 +318,7 @@ export default function Navbar() {
                 >
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 shadow-xs transition-transform duration-300 group-hover/account:scale-105 bg-gray-50 flex items-center justify-center">
                     <Image
-                      src="/placeholder/boy.png"
+                      src={user.image || "/placeholder/boy.png"}
                       alt="User Avatar"
                       width={32}
                       height={32}
@@ -335,7 +335,7 @@ export default function Navbar() {
                     <div className="flex items-center gap-3 px-3 py-3 border-b border-gray-50 mb-2 bg-gradient-to-br from-[#FAF9E6]/30 to-emerald-50/20 rounded-xl">
                       <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-100 bg-white flex items-center justify-center shadow-xs">
                         <Image
-                          src="/placeholder/boy.png"
+                          src={user.image || "/placeholder/boy.png"}
                           alt="User Avatar"
                           width={40}
                           height={40}
