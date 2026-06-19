@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect, use, useMemo } from "react";
 import Link from "next/link";
 import LandingLayout from "@/components/landing/LandingLayout";
 import { Icon } from "@iconify/react";
@@ -11,6 +11,7 @@ import ProductCard from "@/components/landing/ProductCard";
 import { useAppDispatch } from "@/store/hooks";
 import { addItemToCart } from "@/store/cartSlice";
 import AddedToCartToast from "@/components/shared/AddedToCartToast";
+import { useApiQuery } from "@/hooks/useApiQuery";
 
 interface DetailProduct extends Omit<Product, 'details' | 'category'> {
   id: string;
@@ -240,8 +241,18 @@ export default function ProductDetailPage({ params }: PageProps) {
   // Find target product
   const initialProduct = productsData.find((p) => p.id === productId) || productsData[6]; // Default to Premium Chia if not found
 
+  // Caching GET Queries via useApiQuery
+  const { data: productData, isLoading: isProductLoading, error: productError } = useApiQuery<any>(
+    ["product", productId],
+    `/api/products/${productId}`
+  );
+
+  const { data: reviewsData } = useApiQuery<any[]>(
+    ["reviews", productId],
+    `/api/products/${productId}/reviews`
+  );
+
   // State
-  const [product, setProduct] = useState<DetailProduct>(initialProduct);
   const [activeImage, setActiveImage] = useState<string>(initialProduct.image);
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedWeight, setSelectedWeight] = useState<string>("250 g");
@@ -249,9 +260,106 @@ export default function ProductDetailPage({ params }: PageProps) {
   const [reviews, setReviews] = useState<Review[]>(initialProduct.reviews);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState<boolean>(false);
   const [votedReviews, setVotedReviews] = useState<Record<string, boolean>>({});
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAddingToCart, setIsAddingToCart] = useState<boolean>(false);
+
+  const isLoading = isProductLoading;
+
+  // Memoized product transformation to match DetailProduct schema format
+  const product = useMemo<DetailProduct>(() => {
+    if (!productData) {
+      return productsData.find((p) => p.id === productId) || productsData[6];
+    }
+    const dbProd = productData;
+    const variants = dbProd.variants || [];
+    const firstVariant = variants[0];
+    
+    let mainImage = dbProd.image || "";
+    if (firstVariant && firstVariant.images && firstVariant.images.length > 0) {
+      mainImage = firstVariant.images[0];
+    }
+
+    const basePrice = firstVariant ? (firstVariant.discountedPrice || firstVariant.basePrice || 0) : 0;
+
+    const certificatesList = dbProd.certificates && Array.isArray(dbProd.certificates)
+      ? dbProd.certificates.map((c: any) => c.name).filter(Boolean)
+      : [];
+
+    const cultivationCities = dbProd.cultivation_city && Array.isArray(dbProd.cultivation_city)
+      ? dbProd.cultivation_city.map((city: any) => city.name).filter(Boolean)
+      : [];
+
+    return {
+      id: dbProd.slug || dbProd._id,
+      name: dbProd.name,
+      description: dbProd.description || "",
+      price: basePrice,
+      formattedPrice: `₹${basePrice}`,
+      category: dbProd.category?.slug || "organic",
+      categoryLabel: dbProd.category?.name || "Organic",
+      subCategoryLabel: dbProd.subCategory?.name,
+      image: mainImage,
+      hoverImage: (firstVariant && firstVariant.images && firstVariant.images.length > 1) ? firstVariant.images[1] : undefined,
+      tags: dbProd.tags || [],
+      details: {
+        origin: dbProd.cultivationOrSeason || "Rajasthan Orchards",
+        prepTime: (firstVariant && firstVariant.usageInstructions && firstVariant.usageInstructions.length > 0) 
+          ? firstVariant.usageInstructions[0] 
+          : "Ready to eat",
+        ingredients: dbProd.ingredients?.join(", ") || "100% Organic",
+        nutrients: dbProd.spaceification?.map((s: any) => `${s.title}: ${s.value}`) || []
+      },
+      reviews: [],
+      variants: variants,
+      spaceification: dbProd.spaceification || [],
+      certificatesList,
+      cultivationCities,
+      cultivation: dbProd.cultivation,
+      declaration: dbProd.declaration
+    };
+  }, [productData, productId]);
+
+  // Set default weight when product variants load
+  useEffect(() => {
+    if (product.variants && product.variants.length > 0) {
+      const firstVariant = product.variants[0];
+      const firstWeightText = `${firstVariant.weight} ${firstVariant.unit?.name || 'g'}`;
+      setSelectedWeight(firstWeightText);
+    } else {
+      setSelectedWeight("250 g");
+    }
+  }, [product.variants]);
+
+  // Synchronize reviews data with local state to support seamless helpful votes and submissions
+  useEffect(() => {
+    if (reviewsData && Array.isArray(reviewsData)) {
+      const mappedReviews: Review[] = reviewsData.map((r: any) => ({
+        id: r._id,
+        author: r.userId?.name || "Anonymous User",
+        avatarInitials: (r.userId?.name || "U")
+          .split(" ")
+          .map((n: string) => n[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2),
+        rating: r.rating,
+        date: new Date(r.createdAt).toLocaleDateString("en-IN", {
+          year: "numeric",
+          month: "short",
+          day: "numeric"
+        }),
+        headline: r.headline || "Feedback",
+        text: r.review,
+        images: r.attatchments && r.attatchments.length > 0 ? r.attatchments : undefined,
+        helpfulCount: 0,
+        isVerified: true
+      }));
+      setReviews(mappedReviews);
+    } else if (productError) {
+      const fallback = productsData.find((p) => p.id === productId) || productsData[6];
+      setReviews(fallback.reviews);
+    }
+  }, [reviewsData, productId, productError]);
 
   // Find current active variant based on selected weight/unit text
   const getActiveVariant = () => {
@@ -381,131 +489,6 @@ export default function ProductDetailPage({ params }: PageProps) {
         setCurrentUser(null);
       });
   }, []);
-
-  // Fetch product from database API
-  useEffect(() => {
-    let isMounted = true;
-    setIsLoading(true);
-
-    fetch(`/api/products/${productId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Product not found in database");
-        return res.json();
-      })
-      .then((resJson) => {
-        if (isMounted && resJson.success && resJson.data) {
-          const dbProd = resJson.data;
-          const variants = dbProd.variants || [];
-          const firstVariant = variants[0];
-          
-          let mainImage = dbProd.image || "";
-          if (firstVariant && firstVariant.images && firstVariant.images.length > 0) {
-            mainImage = firstVariant.images[0];
-          }
-
-          const basePrice = firstVariant ? (firstVariant.discountedPrice || firstVariant.basePrice || 0) : 0;
-
-          const certificatesList = dbProd.certificates && Array.isArray(dbProd.certificates)
-            ? dbProd.certificates.map((c: any) => c.name).filter(Boolean)
-            : [];
-
-          const cultivationCities = dbProd.cultivation_city && Array.isArray(dbProd.cultivation_city)
-            ? dbProd.cultivation_city.map((city: any) => city.name).filter(Boolean)
-            : [];
-
-          const mappedProduct: DetailProduct = {
-            id: dbProd.slug || dbProd._id,
-            name: dbProd.name,
-            description: dbProd.description || "",
-            price: basePrice,
-            formattedPrice: `₹${basePrice}`,
-            category: dbProd.category?.slug || "organic",
-            categoryLabel: dbProd.category?.name || "Organic",
-            subCategoryLabel: dbProd.subCategory?.name,
-            image: mainImage,
-            hoverImage: (firstVariant && firstVariant.images && firstVariant.images.length > 1) ? firstVariant.images[1] : undefined,
-            tags: dbProd.tags || [],
-            details: {
-              origin: dbProd.cultivationOrSeason || "Rajasthan Orchards",
-              prepTime: (firstVariant && firstVariant.usageInstructions && firstVariant.usageInstructions.length > 0) 
-                ? firstVariant.usageInstructions[0] 
-                : "Ready to eat",
-              ingredients: dbProd.ingredients?.join(", ") || "100% Organic",
-              nutrients: dbProd.spaceification?.map((s: any) => `${s.title}: ${s.value}`) || []
-            },
-            reviews: [],
-            variants: variants,
-            spaceification: dbProd.spaceification || [],
-            certificatesList,
-            cultivationCities,
-            cultivation: dbProd.cultivation,
-            declaration: dbProd.declaration
-          };
-
-          setProduct(mappedProduct);
-          setActiveImage(mainImage);
-          
-          // Fetch real reviews from database
-          fetch(`/api/products/${productId}/reviews`)
-            .then((res) => {
-              if (res.ok) return res.json();
-              throw new Error();
-            })
-            .then((reviewsJson) => {
-              if (isMounted) {
-                if (reviewsJson.success && Array.isArray(reviewsJson.data)) {
-                  const mappedReviews: Review[] = reviewsJson.data.map((r: any) => ({
-                    id: r._id,
-                    author: r.userId?.name || "Anonymous User",
-                    avatarInitials: (r.userId?.name || "U")
-                      .split(" ")
-                      .map((n: string) => n[0])
-                      .join("")
-                      .toUpperCase()
-                      .slice(0, 2),
-                    rating: r.rating,
-                    date: new Date(r.createdAt).toLocaleDateString("en-IN", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric"
-                    }),
-                    headline: r.headline || "Feedback",
-                    text: r.review,
-                    images: r.attatchments && r.attatchments.length > 0 ? r.attatchments : undefined,
-                    helpfulCount: 0,
-                    isVerified: true
-                  }));
-                  setReviews(mappedReviews);
-                } else {
-                  setReviews([]);
-                }
-              }
-            })
-            .catch(() => {
-              if (isMounted) setReviews([]);
-            });
-
-          if (variants.length > 0) {
-            const firstWeightText = `${firstVariant.weight} ${firstVariant.unit?.name || 'g'}`;
-            setSelectedWeight(firstWeightText);
-          }
-        }
-      })
-      .catch((err) => {
-        console.warn("API Product fetch failed, falling back to static productsData:", err);
-        const fallback = productsData.find((p) => p.id === productId) || productsData[6];
-        setProduct(fallback);
-        setActiveImage(fallback.image);
-        setReviews(fallback.reviews);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [productId]);
 
   // Update image when product changes
   useEffect(() => {

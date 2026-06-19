@@ -227,28 +227,36 @@ export default function MyOrders() {
                   <div className="h-px bg-gray-100 my-2" />
 
                   {/* Summary aggregate details */}
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-semibold text-charcoal/80 pt-2">
-                    <div className="flex flex-wrap gap-x-6 gap-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-gray-400">Payment:</span>
-                        <span className="text-gray-800 font-bold uppercase tracking-wider">{order.paymentMethod}</span>
-                        <span
-                          className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
-                            order.paymentStatus === "SUCCESS"
-                              ? "bg-green-50 text-green-700"
-                              : order.paymentStatus === "FAILED"
-                              ? "bg-red-50 text-red-700"
-                              : "bg-amber-50 text-amber-700"
-                          }`}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-semibold text-charcoal/80 pt-2">
+                      <div className="flex flex-wrap gap-x-6 gap-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-gray-400">Payment:</span>
+                          <span className="text-gray-800 font-bold uppercase tracking-wider">{order.paymentMethod}</span>
+                          <span
+                            className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                              order.paymentStatus === "SUCCESS"
+                                ? "bg-green-50 text-green-700"
+                                : order.paymentStatus === "FAILED"
+                                ? "bg-red-50 text-red-700"
+                                : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {order.paymentStatus}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-sm font-extrabold text-gray-900">
+                          Total Paid: <span className="text-base text-forest">₹{order.totalPrice}</span>
+                        </div>
+                        <Link
+                          href={`/account/orders/${order._id}`}
+                          className="px-3 py-1.5 border border-forest/15 hover:bg-forest/5 text-forest text-[10px] font-bold rounded-lg transition-all"
                         >
-                          {order.paymentStatus}
-                        </span>
+                          View Details
+                        </Link>
                       </div>
                     </div>
-                    <div className="text-sm font-extrabold text-gray-900">
-                      Total Paid: <span className="text-base text-forest">₹{order.totalPrice}</span>
-                    </div>
-                  </div>
 
                   {/* Status Timeline */}
                   {!isCancelled && (

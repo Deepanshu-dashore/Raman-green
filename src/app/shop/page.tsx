@@ -7,6 +7,7 @@ import { Icon } from "@iconify/react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import ProductCard from "@/components/landing/ProductCard";
+import { useApiQuery } from "@/hooks/useApiQuery";
 
 
 
@@ -32,14 +33,10 @@ function StoreContent() {
   const router = useRouter();
 
   // State
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortOption, setSortOption] = useState<string>("featured");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Sync state from query params on mount/change
   useEffect(() => {
@@ -60,52 +57,28 @@ function StoreContent() {
     setCurrentPage(1); // Reset to page 1 on query param change
   }, [searchParams]);
 
-  // Fetch categories on mount
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const res = await fetch("/api/categories");
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && Array.isArray(json.data)) {
-            setCategories(json.data);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch categories:", err);
-      }
-    }
-    fetchCategories();
-  }, []);
+  // Fetch categories using TanStack Query
+  const { data: categoriesData } = useApiQuery<any[]>(["categories"], "/api/categories");
+  const categories = categoriesData || [];
 
-  // Fetch products from API based on parameters
-  useEffect(() => {
-    async function fetchProducts() {
-      setIsLoading(true);
-      try {
-        const catQuery = selectedCategory !== "all" ? `&category=${selectedCategory}` : "";
-        const searchQueryParam = searchQuery ? `&search=${searchQuery}` : "";
-        const limit = 8;
-        const res = await fetch(
-          `/api/products/minimal?page=${currentPage}&limit=${limit}${catQuery}${searchQueryParam}&sortBy=${sortOption}`
-        );
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            const productsArray = Array.isArray(json.data) ? json.data : json.data.products;
-            const pagination = Array.isArray(json.data) ? null : json.data.pagination;
-            setProducts(productsArray || []);
-            setTotalPages(pagination?.pages || 1);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch products:", err);
-      } finally {
-        setIsLoading(false);
-      }
+  // Fetch products using TanStack Query
+  const limit = 8;
+  const { data: productsResult, isLoading } = useApiQuery<any>(
+    ["products", selectedCategory, sortOption, searchQuery, currentPage],
+    "/api/products/minimal",
+    {
+      page: currentPage,
+      limit,
+      category: selectedCategory !== "all" ? selectedCategory : undefined,
+      search: searchQuery || undefined,
+      sortBy: sortOption,
     }
-    fetchProducts();
-  }, [selectedCategory, sortOption, searchQuery, currentPage]);
+  );
+
+  const productsData = productsResult || [];
+  const products = Array.isArray(productsData) ? productsData : productsData.products || [];
+  const pagination = Array.isArray(productsData) ? null : productsData.pagination;
+  const totalPages = pagination?.pages || 1;
 
 
 
@@ -240,8 +213,8 @@ function StoreContent() {
             </div>
           ) : products.length > 0 ? (
             <div className="-mx-5 md:-mx-16 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mb-16">
-              {products.map((product, idx) => (
-                <div key={product.id} className="h-full">
+              {products.map((product: any, idx: number) => (
+                <div key={product.id || product._id || idx} className="h-full">
                   <ProductCard
                     product={{
                       id: product.id,

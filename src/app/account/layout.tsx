@@ -149,7 +149,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
             <nav className="hidden lg:flex flex-col bg-white rounded-3xl p-3 border border-gray-100 shadow-[0_15px_40px_rgba(27,48,34,0.03)]">
               <div className="space-y-1">
                 {sidebarItems.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isActive = item.href === "/account" ? pathname === "/account" : pathname.startsWith(item.href);
                   return (
                     <Link
                       key={item.href}
@@ -189,7 +189,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
             {/* Mobile Tabbed Navigation */}
             <nav className="lg:hidden flex bg-white rounded-2xl p-1.5 border border-gray-100 shadow-[0_15px_40px_rgba(27,48,34,0.03)] overflow-x-auto gap-1">
               {sidebarItems.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = item.href === "/account" ? pathname === "/account" : pathname.startsWith(item.href);
                 return (
                   <Link
                     key={item.href}

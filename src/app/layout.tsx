@@ -43,6 +43,7 @@ export const metadata: Metadata = {
 
 import { Toaster } from "react-hot-toast";
 import StoreProvider from "@/providers/StoreProvider";
+import QueryProvider from "@/providers/QueryProvider";
 
 export default function RootLayout({
   children,
@@ -56,8 +57,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <StoreProvider>
-          {children}
-          <Toaster position="top-right" />
+          <QueryProvider>
+            {children}
+            <Toaster position="top-right" />
+          </QueryProvider>
         </StoreProvider>
       </body>
     </html>
