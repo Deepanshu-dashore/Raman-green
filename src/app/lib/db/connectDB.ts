@@ -1,29 +1,44 @@
-import mongoose from "mongoose";
+import mongoose, { Mongoose } from "mongoose";
 import "./index.model";
 
-type ConnectionObject = {
-  isConnected?: number;
+const MONGODB_URI = process.env.MONGODB_URL || process.env.DATABASE_URL;
+
+if (!MONGODB_URI) {
+    throw new Error("Please define the MONGODB_URL or DATABASE_URL environment variable inside .env");
+}
+
+type MongooseGlobal = typeof globalThis & {
+    mongoose?: {
+        conn: Mongoose | null;
+        promise: Promise<Mongoose> | null;
+    };
 };
 
-const connection: ConnectionObject = {};
+const globalWithMongoose = global as MongooseGlobal;
 
-export const connectDB = async (): Promise<void> => {
-    if (connection.isConnected) {
-        return;
+if (!globalWithMongoose.mongoose) {
+    globalWithMongoose.mongoose = { conn: null, promise: null };
+}
+const cached = globalWithMongoose.mongoose;
+
+export async function connectDB(): Promise<Mongoose> {
+    if (cached.conn) return cached.conn;
+
+    if (!cached.promise) {
+        console.log("Connecting to MongoDB...");
+        cached.promise = mongoose.connect(MONGODB_URI as string, {
+            bufferCommands: false,
+        }).then((m) => m);
     }
-    if (mongoose.connection.readyState >= 1) {
-        return;
-    }
-    const connectionString = process.env.MONGODB_URL;
-    if(!connectionString){
-        throw new Error("MONGODB_URL is not defined");
-    }
+
     try {
-        const db = await mongoose.connect(connectionString);
-        connection.isConnected = db.connections[0].readyState;
-        console.log("Raman-Green-Database connected");
+        cached.conn = await cached.promise;
+        console.log("MongoDB connected successfully");
     } catch (error) {
-        console.error("Raman-Green-Database connection error:", error);
+        console.error("MongoDB connection failed:", error);
+        cached.promise = null;
         throw error;
     }
+
+    return cached.conn;
 }

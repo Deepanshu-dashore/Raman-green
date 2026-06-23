@@ -62,7 +62,7 @@ export default function HeroIntro() {
 
 
   return (
-    <section className="relative w-full h-[520px] md:h-[85dvh] overflow-hidden bg-black group">
+    <section className="relative w-full h-[600px] md:h-dvh overflow-hidden bg-black group">
       {/* Background videos */}
       <div className="absolute inset-0">
         {slides.map((slide, idx) => (
@@ -91,7 +91,7 @@ export default function HeroIntro() {
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/70 z-20" />
 
       {/* Dynamic Slide Content */}
-      <div className="relative z-30 h-full flex flex-col items-center justify-center text-center px-6 max-w-4xl mx-auto">
+      <div className="relative z-30 h-full flex flex-col items-center justify-center text-center px-6 max-w-4xl mx-auto pt-28 md:pt-36">
         <AnimatePresence mode="wait">
           <motion.div
             key={`content-${current}`}

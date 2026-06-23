@@ -79,6 +79,11 @@ export default function Navbar() {
   const cartTotalPrice = useAppSelector((state) => state.cart.totalPrice);
   const [mounted, setMounted] = useState(false);
 
+  // Dynamic Scroll States for Premium Header Transitions
+  const [scrollY, setScrollY] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   const loadingAuth = useAppSelector((state) => state.auth.loading);
@@ -86,6 +91,29 @@ export default function Navbar() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setScrollY(currentScrollY);
+
+      // Hide on scroll down, show on scroll up
+      if (currentScrollY > lastScrollY && currentScrollY > 120) {
+        setIsVisible(false);
+      } else {
+        setIsVisible(true);
+      }
+      lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const isLandingPage = pathname === "/";
+  const isScrolled = scrollY > 50;
+  const isTransparent = isLandingPage && scrollY < 120 && !isHovered && !mobileOpen && !searchOpen;
 
   const handleLogout = async () => {
     try {
@@ -120,414 +148,522 @@ export default function Navbar() {
   };
 
   return (
-    <div className="w-full flex flex-col font-inter">
-      {/* Top Announcement Bar / Information Ticker - Forest Green Theme Background */}
-      <div className="bg-forest text-cream py-2 px-5 md:px-16 text-[11px] font-semibold border-b border-white/5 flex items-center justify-between gap-4">
-        {/* Left Side: Support Callouts */}
-        <div className="hidden lg:flex items-center gap-5 opacity-90">
-          <div className="flex items-center gap-1.5">
-            <Icon icon="solar:phone-calling-linear" className="w-3.5 h-3.5 text-[#47C269]" />
-            <span>+91 98765 43210</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Icon icon="solar:letter-linear" className="w-3.5 h-3.5 text-[#47C269]" />
-            <span>support@ramangreen.com</span>
-          </div>
-        </div>
-
-        {/* Center: Fading Ticker message */}
-        <div className="flex-1 text-center overflow-hidden h-4 relative flex items-center justify-center">
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={tickerIndex}
-              initial={{ y: 15, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -15, opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="absolute whitespace-nowrap text-center text-[10px] md:text-[11px] tracking-wide"
-            >
-              {announcements[tickerIndex]}
-            </motion.p>
-          </AnimatePresence>
-        </div>
-
-        {/* Right Side: Quick Links */}
-        <div className="hidden lg:flex items-center gap-5 opacity-90">
-          <Link href="/account" className="hover:text-[#47C269] transition-colors flex items-center gap-1">
-            <Icon icon="solar:delivery-linear" className="w-3.5 h-3.5" />
-            Track Order
-          </Link>
-        </div>
-      </div>
-
-      {/* Main Navigation - Sticky White Glassmorphism */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 text-charcoal shadow-sm">
+    <>
+      <div
+        className={`fixed top-0 left-0 w-full z-50 font-inter transition-transform duration-300 transform ${
+          isVisible ? "translate-y-0" : "-translate-y-full"
+        }`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Top Announcement Bar / Information Ticker - Forest Green Theme Background */}
         <div
-          className="max-w-[1280px] mx-auto px-5 md:px-16 flex items-center justify-between py-4 relative"
+          className={`bg-forest text-cream border-b border-white/5 flex items-center justify-between gap-4 px-5 md:px-16 text-[11px] font-semibold transition-all duration-300 overflow-hidden ${
+            isScrolled
+              ? "h-0 py-0 opacity-0 border-none pointer-events-none"
+              : "h-9 opacity-100"
+          }`}
+        >
+          {/* Left Side: Support Callouts */}
+          <div className="hidden lg:flex items-center gap-5 opacity-90">
+            <div className="flex items-center gap-1.5">
+              <Icon icon="solar:phone-calling-linear" className="w-3.5 h-3.5 text-[#47C269]" />
+              <span>+91 98765 43210</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Icon icon="solar:letter-linear" className="w-3.5 h-3.5 text-[#47C269]" />
+              <span>support@ramangreen.com</span>
+            </div>
+          </div>
+
+          {/* Center: Fading Ticker message */}
+          <div className="flex-1 text-center overflow-hidden h-4 relative flex items-center justify-center">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={tickerIndex}
+                initial={{ y: 15, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -15, opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="absolute whitespace-nowrap text-center text-[10px] md:text-[11px] tracking-wide"
+              >
+                {announcements[tickerIndex]}
+              </motion.p>
+            </AnimatePresence>
+          </div>
+
+          {/* Right Side: Quick Links */}
+          <div className="hidden lg:flex items-center gap-5 opacity-90">
+            <Link href="/account" className="hover:text-[#47C269] transition-colors flex items-center gap-1">
+              <Icon icon="solar:delivery-linear" className="w-3.5 h-3.5" />
+              Track Order
+            </Link>
+          </div>
+        </div>
+
+        {/* Main Navigation - Dynamic Transitions */}
+        <nav
+          className={`w-full relative transition-all duration-500 ${
+            isTransparent
+              ? "bg-transparent text-white border-transparent shadow-none"
+              : "bg-white/70 backdrop-blur-md text-charcoal border-b border-gray-100 shadow-xs"
+          }`}
           onMouseLeave={() => setActiveMenu(null)}
         >
-          {/* Logo */}
-          <Link href="/" className="flex items-center shrink-0">
-            <Image
-              src="/logo.png"
-              alt="Raman Green Logo"
-              width={140}
-              height={70}
-              className="h-13 w-auto object-contain transition-all duration-300"
-              priority
-            />
-          </Link>
+          <div
+            className="max-w-[1280px] mx-auto px-8 md:px-16 flex items-center justify-between py-5 relative"
+          >
+            {/* Logo */}
+            <Link href="/" className="flex items-center shrink-0">
+              <Image
+                src="/logo.png"
+                alt="Raman Green Logo"
+                width={140}
+                height={70}
+                className={`h-13 w-auto object-contain transition-all duration-300 ${
+                  isTransparent ? "brightness-0 invert" : ""
+                }`}
+                priority
+              />
+            </Link>
 
-          {/* Center Navigation Links - Desktop */}
-          <ul className="hidden md:flex items-center gap-8 h-full">
-            {navItems.map((item) => {
-              const active = isLinkActive(item.href);
-              return (
-                <li
-                  key={item.id}
-                  className="h-full flex items-center"
-                  onMouseEnter={() => {
-                    if (item.id === "shop") {
-                      setActiveMenu("shop");
-                    } else {
-                      setActiveMenu(null);
-                    }
-                  }}
-                >
+            {/* Center Navigation Links - Desktop */}
+            <ul className="hidden md:flex items-center gap-10 h-full">
+              {navItems.map((item) => {
+                const active = isLinkActive(item.href);
+                return (
+                  <li
+                    key={item.id}
+                    className="h-full flex items-center"
+                    onMouseEnter={() => {
+                      if (item.id === "shop") {
+                        setActiveMenu("shop");
+                      } else {
+                        setActiveMenu(null);
+                      }
+                    }}
+                  >
+                    <Link
+                      href={item.href}
+                      className={`group text-sm font-medium py-1 flex items-center gap-1 transition-colors ${
+                        active
+                          ? (isTransparent ? 'text-emerald-400' : 'text-[#47C269]')
+                          : (isTransparent ? 'text-white/90 hover:text-emerald-400' : 'text-charcoal hover:text-[#47C269]')
+                      }`}
+                    >
+                      <span className={`nav-underline ${active ? 'active' : ''}`}>
+                        {item.label}
+                      </span>
+                      {item.id === "shop" && (
+                        <Icon
+                          icon="lucide:chevron-down"
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                            active
+                              ? (isTransparent ? 'text-emerald-400' : 'text-[#47C269]')
+                              : (isTransparent ? 'text-white/60' : 'text-gray-400')
+                          } ${activeMenu === "shop" ? 'rotate-180' : ''}`}
+                        />
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Right Action Icons */}
+            <div className="flex items-center gap-4 lg:gap-5">
+              {/* Search Toggle */}
+              <button
+                onClick={() => {
+                  setSearchOpen(!searchOpen);
+                  setActiveMenu(null);
+                }}
+                aria-label="Search Store"
+                className={`group/btn relative transition-all duration-300 hover:scale-105 active:scale-95 p-2.5 rounded-full flex items-center justify-center cursor-pointer ${
+                  isTransparent 
+                    ? "bg-transparent border border-transparent hover:bg-white/10" 
+                    : "bg-transparent border border-transparent hover:bg-gray-50"
+                }`}
+              >
+                <Icon
+                  icon="lucide:search"
+                  className={`w-5 h-5 transition-colors duration-300 stroke-[1.5] ${
+                    isTransparent ? "text-white group-hover/btn:text-emerald-400" : "text-charcoal group-hover/btn:text-[#47C269]"
+                  }`}
+                />
+              </button>
+
+              {/* Cart Preview - Hover Dropdown */}
+              {mounted && user && (
+                <div className="relative group/cart">
                   <Link
-                    href={item.href}
-                    className={`group text-sm font-semibold py-1 flex items-center gap-1 transition-colors ${
-                      active ? 'text-[#47C269]' : 'text-charcoal hover:text-[#47C269]'
+                    href="/cart"
+                    aria-label="View Cart"
+                    className={`group/btn relative transition-all duration-300 hover:scale-105 active:scale-95 p-2.5 rounded-xl flex items-center justify-center cursor-pointer block ${
+                      isTransparent 
+                        ? "bg-transparent border border-transparent hover:bg-white/10" 
+                        : "bg-transparent border border-transparent hover:bg-gray-50"
                     }`}
                   >
-                    <span className={`nav-underline ${active ? 'active' : ''}`}>
-                      {item.label}
-                    </span>
-                    {item.id === "shop" && (
-                      <Icon
-                        icon="solar:alt-arrow-down-linear"
-                        className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                          active ? 'text-[#47C269]' : ''
-                        } ${activeMenu === "shop" ? 'rotate-180 text-[#47C269]' : ''}`}
-                      />
+                    <Icon
+                      icon="lucide:shopping-bag"
+                      className={`w-5 h-5 transition-colors duration-300 stroke-[1.5] ${
+                        isTransparent ? "text-white group-hover/btn:text-emerald-400" : "text-charcoal group-hover/btn:text-[#47C269]"
+                      }`}
+                    />
+                    {mounted && cartCount > 0 && (
+                      <span className={`absolute -top-1 -right-1 text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 animate-pulse shadow-xs ${
+                        isTransparent 
+                          ? "bg-emerald-400 text-forest border-forest" 
+                          : "bg-gradient-to-br from-emerald-500 to-[#47C269] text-white border-white"
+                      }`}>
+                        {cartCount}
+                      </span>
                     )}
                   </Link>
-                </li>
-              );
-            })}
-          </ul>
-
-          {/* Right Action Icons */}
-          <div className="flex items-center gap-4 lg:gap-5">
-            {/* Search Toggle */}
-            <button
-              onClick={() => {
-                setSearchOpen(!searchOpen);
-                setActiveMenu(null);
-              }}
-              aria-label="Search Store"
-              className="hover:text-[#47C269] transition-colors p-1.5 rounded-full hover:bg-gray-50 cursor-pointer"
-            >
-              <Icon icon="solar:magnifer-linear" className="w-5.5 h-5.5 text-charcoal hover:text-[#3eac5c]" />
-            </button>
-
-            {/* Cart Preview - Hover Dropdown */}
-            <div className="relative group/cart">
-              <Link
-                href="/cart"
-                aria-label="View Cart"
-                className="hover:text-[#47C269] transition-colors p-1.5 rounded-full hover:bg-gray-50 relative block"
-              >
-                <Icon icon="solar:bag-3-linear" className="w-5.5 h-5.5 text-charcoal hover:text-[#3eac5c]" />
-                {mounted && cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-[#47C269] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-white animate-pulse">
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
-              {/* Mini Cart Preview */}
-              <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover/cart:opacity-100 group-hover/cart:translate-y-0 group-hover/cart:pointer-events-auto transition-all duration-300 z-50">
-                <div className="w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 text-charcoal flex flex-col">
-                  {cartCount === 0 ? (
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mb-3">
-                        <Icon icon="solar:bag-3-bold-duotone" className="w-7 h-7 text-[#3eac5c]" />
-                      </div>
-                      <h5 className="font-bold text-base text-gray-900 mb-1">Your Cart is Empty</h5>
-                      <p className="text-xs text-gray-400 max-w-[200px] mb-4">Add organic crops and seeds to get started on wellness.</p>
-                      <Link
-                        href="/shop"
-                        className="w-full bg-forest text-white text-xs font-bold uppercase tracking-wider py-2.5 rounded-xl hover:bg-forest/90 transition-colors text-center block"
-                      >
-                        Browse Collections
-                      </Link>
+                  {/* Mini Cart Preview */}
+                  <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover/cart:opacity-100 group-hover/cart:translate-y-0 group-hover/cart:pointer-events-auto transition-all duration-300 z-50">
+                    <div className="w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 text-charcoal flex flex-col">
+                      {cartCount === 0 ? (
+                        <div className="flex flex-col items-center text-center">
+                          <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mb-3">
+                            <Icon icon="lucide:shopping-bag" className="w-7 h-7 text-[#3eac5c]" />
+                          </div>
+                          <h5 className="font-bold text-base text-gray-900 mb-1">Your Cart is Empty</h5>
+                          <p className="text-xs text-gray-400 max-w-[200px] mb-4">Add organic crops and seeds to get started on wellness.</p>
+                          <Link
+                            href="/shop"
+                            className="w-full bg-forest text-white text-xs font-bold uppercase tracking-wider py-2.5 rounded-xl hover:bg-forest/90 transition-colors text-center block"
+                          >
+                            Browse Collections
+                          </Link>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex justify-between items-center mb-3 border-b border-gray-100 pb-2">
+                            <span className="font-bold text-sm">Cart ({cartCount})</span>
+                            <Link href="/cart" className="text-[#3eac5c] text-xs font-semibold hover:underline">View All</Link>
+                          </div>
+                          <div className="max-h-60 overflow-y-auto space-y-3 mb-3 pr-1">
+                            {cartItems.map((item: any, idx: number) => {
+                              const price = item.price || item.variant?.price || 0;
+                              return (
+                                <div key={idx} className="flex gap-3 items-center">
+                                  <div className="w-12 h-12 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden shrink-0">
+                                    {item.product?.image ? (
+                                      <img src={item.product.image} alt={item.product?.name || "Product"} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center"><Icon icon="lucide:package" className="w-5 h-5 text-gray-300" /></div>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col flex-1 min-w-0 text-left">
+                                    <span className="text-sm font-bold truncate">{item.product?.name || "Organic Product"}</span>
+                                    <span className="text-[10px] text-gray-500 font-medium">{item.variant?.weight || "Default"} &bull; Qty: {item.quantity}</span>
+                                  </div>
+                                  <div className="text-sm font-bold text-forest">
+                                    ₹{(price * item.quantity).toLocaleString("en-IN")}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="flex justify-between items-center mb-4 pt-2 border-t border-gray-100">
+                            <span className="font-bold text-sm text-gray-600">Subtotal</span>
+                            <span className="font-bold text-lg text-forest">₹{cartTotalPrice.toLocaleString("en-IN")}</span>
+                          </div>
+                          <Link
+                            href="/checkout"
+                            className="w-full bg-forest text-white text-xs font-bold uppercase tracking-wider py-2.5 rounded-xl hover:bg-forest/90 transition-colors text-center block"
+                          >
+                            Checkout Securely
+                          </Link>
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex justify-between items-center mb-3 border-b border-gray-100 pb-2">
-                        <span className="font-bold text-sm">Cart ({cartCount})</span>
-                        <Link href="/cart" className="text-[#3eac5c] text-xs font-semibold hover:underline">View All</Link>
-                      </div>
-                      <div className="max-h-60 overflow-y-auto space-y-3 mb-3 pr-1">
-                        {cartItems.map((item: any, idx: number) => {
-                          const price = item.price || item.variant?.price || 0;
-                          return (
-                            <div key={idx} className="flex gap-3 items-center">
-                              <div className="w-12 h-12 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden shrink-0">
-                                {item.product?.image ? (
-                                  <img src={item.product.image} alt={item.product?.name || "Product"} className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center"><Icon icon="lucide:package" className="w-5 h-5 text-gray-300" /></div>
-                                )}
-                              </div>
-                              <div className="flex flex-col flex-1 min-w-0 text-left">
-                                <span className="text-sm font-bold truncate">{item.product?.name || "Organic Product"}</span>
-                                <span className="text-[10px] text-gray-500 font-medium">{item.variant?.weight || "Default"} &bull; Qty: {item.quantity}</span>
-                              </div>
-                              <div className="text-sm font-bold text-forest">
-                                ₹{(price * item.quantity).toLocaleString("en-IN")}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="flex justify-between items-center mb-4 pt-2 border-t border-gray-100">
-                        <span className="font-bold text-sm text-gray-600">Subtotal</span>
-                        <span className="font-bold text-lg text-forest">₹{cartTotalPrice.toLocaleString("en-IN")}</span>
-                      </div>
-                      <Link
-                        href="/checkout"
-                        className="w-full bg-forest text-white text-xs font-bold uppercase tracking-wider py-2.5 rounded-xl hover:bg-forest/90 transition-colors text-center block"
-                      >
-                        Checkout Securely
-                      </Link>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {!mounted || loadingAuth ? (
-              <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse hidden sm:block" />
-            ) : user ? (
-              /* Account Profile - Hover Dropdown */
-              <div className="relative group/account hidden sm:block">
-                <button
-                  aria-label="Account Settings"
-                  className="flex items-center gap-1.5 focus:outline-none cursor-pointer group-hover/account:opacity-90 py-1.5"
-                >
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 shadow-xs transition-transform duration-300 group-hover/account:scale-105 bg-gray-50 flex items-center justify-center">
-                    <Image
-                      src={user.image || "/placeholder/boy.png"}
-                      alt="User Avatar"
-                      width={32}
-                      height={32}
-                      className="w-full h-full object-cover"
-                    />
-                    <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-emerald-400 ring-1.5 ring-white animate-pulse" />
                   </div>
-                  <Icon icon="solar:alt-arrow-down-linear" className="w-3 h-3 text-gray-400 group-hover/account:rotate-180 transition-transform duration-300" />
-                </button>
-                {/* Dropdown Box */}
-                <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover/account:opacity-100 group-hover/account:translate-y-0 group-hover/account:pointer-events-auto transition-all duration-300 z-50">
-                  <div className="w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_20px_50px_rgba(27,48,34,0.08)] border border-gray-100 p-2.5 text-charcoal">
-                    {/* User Profile Info Card */}
-                    <div className="flex items-center gap-3 px-3 py-3 border-b border-gray-50 mb-2 bg-gradient-to-br from-[#FAF9E6]/30 to-emerald-50/20 rounded-xl">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-100 bg-white flex items-center justify-center shadow-xs">
-                        <Image
-                          src={user.image || "/placeholder/boy.png"}
-                          alt="User Avatar"
-                          width={40}
-                          height={40}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-gray-900 truncate leading-snug">{user.name}</p>
-                        <p className="text-[10px] text-gray-400 font-semibold truncate leading-none mt-0.5">
-                          {user.email || user.phone || 'Verified User'}
-                        </p>
-                      </div>
+                </div>
+              )}
+
+              {!mounted || loadingAuth ? (
+                <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse hidden sm:block" />
+              ) : user ? (
+                /* Account Profile - Hover Dropdown */
+                <div className="relative group/account hidden sm:block">
+                  <button
+                    aria-label="Account Settings"
+                    className="flex items-center gap-1.5 focus:outline-none cursor-pointer group-hover/account:opacity-90 py-1.5"
+                  >
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 shadow-xs transition-transform duration-300 group-hover/account:scale-105 bg-gray-50 flex items-center justify-center">
+                      <Image
+                        src={user.image || "/placeholder/boy.png"}
+                        alt="User Avatar"
+                        width={32}
+                        height={32}
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-emerald-400 ring-1.5 ring-white animate-pulse" />
                     </div>
-                    {/* Navigation Items */}
-                    <div className="space-y-0.5">
-                      {user.role === "admin" && (
-                        <Link href="/admin" className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50/80 rounded-xl text-xs font-semibold text-charcoal transition-all duration-200 group/item">
-                          <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center transition-colors group-hover/item:bg-amber-100">
-                            <Icon icon="solar:shield-keyhole-linear" className="w-4.5 h-4.5" />
+                    <Icon
+                      icon="lucide:chevron-down"
+                      className={`w-3.5 h-3.5 transition-transform duration-300 group-hover/account:rotate-180 ${
+                        isTransparent ? "text-white/60" : "text-gray-400"
+                      }`}
+                    />
+                  </button>
+                  {/* Dropdown Box */}
+                  <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover/account:opacity-100 group-hover/account:translate-y-0 group-hover/account:pointer-events-auto transition-all duration-300 z-50">
+                    <div className="w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_20px_50px_rgba(27,48,34,0.08)] border border-gray-100 p-2.5 text-charcoal">
+                      {/* User Profile Info Card */}
+                      <div className="flex items-center gap-3 px-3 py-3 border-b border-gray-50 mb-2 bg-gradient-to-br from-[#FAF9E6]/30 to-emerald-50/20 rounded-xl">
+                        <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-100 bg-white flex items-center justify-center shadow-xs">
+                          <Image
+                            src={user.image || "/placeholder/boy.png"}
+                            alt="User Avatar"
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-gray-900 truncate leading-snug">{user.name}</p>
+                          <p className="text-[10px] text-gray-400 font-semibold truncate leading-none mt-0.5">
+                            {user.email || user.phone || 'Verified User'}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Navigation Items */}
+                      <div className="space-y-0.5">
+                        {user.role === "admin" && (
+                          <Link href="/admin" className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50/80 rounded-xl text-xs font-semibold text-charcoal transition-all duration-200 group/item">
+                            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center transition-colors group-hover/item:bg-amber-100">
+                              <Icon icon="solar:shield-keyhole-linear" className="w-4.5 h-4.5" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-bold text-gray-800">Admin Panel</span>
+                              <span className="text-[9px] text-gray-400 font-medium">Manage systems & store</span>
+                            </div>
+                          </Link>
+                        )}
+                        <Link href="/account" className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50/80 rounded-xl text-xs font-semibold text-charcoal transition-all duration-200 group/item">
+                          <div className="w-7 h-7 rounded-lg bg-green-50 text-forest flex items-center justify-center transition-colors group-hover/item:bg-[#FAF9E6]">
+                            <Icon icon="solar:user-linear" className="w-4.5 h-4.5" />
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-bold text-gray-800">Admin Panel</span>
-                            <span className="text-[9px] text-gray-400 font-medium">Manage systems & store</span>
+                            <span className="font-bold text-gray-800">My Profile</span>
+                            <span className="text-[9px] text-gray-400 font-medium">Edit details & address</span>
                           </div>
                         </Link>
-                      )}
-                      <Link href="/account" className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50/80 rounded-xl text-xs font-semibold text-charcoal transition-all duration-200 group/item">
-                        <div className="w-7 h-7 rounded-lg bg-green-50 text-forest flex items-center justify-center transition-colors group-hover/item:bg-[#FAF9E6]">
-                          <Icon icon="solar:user-linear" className="w-4.5 h-4.5" />
+                        <Link href={user.role === "admin" ? "/admin/orders" : "/account/orders"} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50/80 rounded-xl text-xs font-semibold text-charcoal transition-all duration-200 group/item">
+                          <div className="w-7 h-7 rounded-lg bg-green-50 text-forest flex items-center justify-center transition-colors group-hover/item:bg-[#FAF9E6]">
+                            <Icon icon="solar:cart-large-2-linear" className="w-4.5 h-4.5" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-800">My Orders</span>
+                            <span className="text-[9px] text-gray-400 font-medium">Track order history</span>
+                          </div>
+                        </Link>
+                      </div>
+                      <div className="h-px bg-gray-100 my-1.5" />
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-rose-50 hover:text-rose-600 rounded-xl text-xs font-bold text-charcoal transition-all cursor-pointer text-left group/item"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-rose-50/50 text-rose-500 flex items-center justify-center transition-colors group-hover/item:bg-rose-100">
+                          <Icon icon="solar:logout-3-linear" className="w-4.5 h-4.5" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-bold text-gray-800">My Profile</span>
-                          <span className="text-[9px] text-gray-400 font-medium">Edit details & address</span>
+                          <span className="font-extrabold text-rose-600">Sign Out</span>
+                          <span className="text-[9px] text-rose-400 font-medium">End active session</span>
                         </div>
-                      </Link>
-                      <Link href={user.role === "admin" ? "/admin/orders" : "/account/orders"} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50/80 rounded-xl text-xs font-semibold text-charcoal transition-all duration-200 group/item">
-                        <div className="w-7 h-7 rounded-lg bg-green-50 text-forest flex items-center justify-center transition-colors group-hover/item:bg-[#FAF9E6]">
-                          <Icon icon="solar:cart-large-2-linear" className="w-4.5 h-4.5" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-gray-800">My Orders</span>
-                          <span className="text-[9px] text-gray-400 font-medium">Track order history</span>
-                        </div>
-                      </Link>
+                      </button>
                     </div>
-                    <div className="h-px bg-gray-100 my-1.5" />
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-3 py-2 hover:bg-rose-50 hover:text-rose-600 rounded-xl text-xs font-bold text-charcoal transition-all cursor-pointer text-left group/item"
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-rose-50/50 text-rose-500 flex items-center justify-center transition-colors group-hover/item:bg-rose-100">
-                        <Icon icon="solar:logout-3-linear" className="w-4.5 h-4.5" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-extrabold text-rose-600">Sign Out</span>
-                        <span className="text-[9px] text-rose-400 font-medium">End active session</span>
-                      </div>
-                    </button>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="hidden sm:flex items-center gap-2">
-                <Link
-                  href="/login"
-                  className="text-sm font-semibold text-charcoal hover:text-[#47C269] transition-colors py-1.5 px-3"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/register"
-                  className="bg-[#47C269] hover:bg-[#3eac5c] text-white text-xs font-semibold py-2 px-4 rounded-xl transition-all shadow-sm"
-                >
-                  Register
-                </Link>
-              </div>
-            )}
+              ) : (
+                <div className="hidden sm:flex items-center gap-3">
+                  <Link
+                    href="/login"
+                    className={`text-sm font-semibold border border-transparent px-4 py-2 rounded-xl transition-all duration-300 active:scale-95 ${
+                      isTransparent 
+                        ? "text-white/90 hover:text-emerald-400 hover:bg-white/10 hover:border-white/15" 
+                        : "text-charcoal hover:text-[#47C269] hover:bg-gray-50/80 hover:border-gray-100"
+                    }`}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    className={`relative overflow-hidden text-white text-xs font-bold uppercase tracking-wider py-2.5 px-5 rounded-full transition-all duration-300 flex items-center gap-1.5 active:scale-95 ${
+                      isTransparent 
+                        ? "bg-gradient-to-r from-emerald-500 to-[#47C269] hover:from-[#47C269] hover:to-emerald-500 shadow-[0_4px_12px_rgba(71,194,105,0.25)]" 
+                        : "bg-gradient-to-r from-forest to-[#2d523a] hover:from-[#25432f] hover:to-forest shadow-[0_4px_12px_rgba(27,48,34,0.15)]"
+                    }`}
+                  >
+                    <span>Register</span>
+                  </Link>
+                </div>
+              )}
 
-            {/* Mobile Menu Toggle */}
-            <button
-              className="md:hidden hover:text-[#47C269] transition-colors p-1.5 rounded-full hover:bg-gray-50 cursor-pointer"
-              onClick={() => {
-                setMobileOpen(true);
-                setSearchOpen(false);
-              }}
-              aria-label="Open Mobile Menu"
-            >
-              <Icon icon="solar:hamburger-menu-linear" className="w-6 h-6 text-charcoal hover:text-[#3eac5c]" />
-            </button>
+              {/* Mobile Menu Toggle */}
+              <button
+                className={`md:hidden transition-colors p-1.5 rounded-full hover:bg-gray-50 cursor-pointer ${
+                  isTransparent ? "text-white hover:text-emerald-400 hover:bg-white/10" : "text-charcoal hover:text-[#3eac5c]"
+                }`}
+                onClick={() => {
+                  setMobileOpen(true);
+                  setSearchOpen(false);
+                }}
+                aria-label="Open Mobile Menu"
+              >
+                <Icon icon="solar:hamburger-menu-linear" className="w-6 h-6" />
+              </button>
+            </div>
           </div>
-
-          {/* Desktop Hover Mega-Menus */}
+          {/* Desktop Hover Mega-Menu */}
           <AnimatePresence>
             {activeMenu === "shop" && (
               <motion.div
-                initial={{ opacity: 0, y: 15 }}
+                initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 15 }}
-                transition={{ duration: 0.25 }}
-                className="absolute left-0 top-full w-full bg-white/98 backdrop-blur-md border-t border-gray-100 shadow-[0_20px_50px_rgba(0,0,0,0.06)] rounded-b-3xl overflow-hidden z-40 text-charcoal p-8 grid grid-cols-4 gap-8"
-                onMouseEnter={() => setActiveMenu("shop")}
-                onMouseLeave={() => setActiveMenu(null)}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="absolute left-0 top-full w-full bg-white border-t border-gray-100 shadow-[0_24px_64px_rgba(0,0,0,0.08)] z-40 text-charcoal"
               >
-                {/* Loop shopCategories */}
-                <div className="col-span-3 grid grid-cols-3 gap-6">
-                  {shopCategories.map((cat) => (
-                    <div key={cat.title} className="flex flex-col gap-3">
-                      <h5 className="text-[11px] font-extrabold text-forest uppercase tracking-widest border-b border-gray-100 pb-2.5 mb-2 pl-2">
-                        {cat.title}
-                      </h5>
-                      <ul className="space-y-2">
-                        {cat.links.map((link) => {
-                          const active = isLinkActive(link.href);
-                          return (
-                            <li key={link.label}>
-                              <Link
-                                href={link.href}
-                                onClick={() => setActiveMenu(null)}
-                                className={`flex items-start gap-3.5 p-3 rounded-xl transition-all duration-300 group/menulink ${
-                                  active 
-                                    ? 'bg-[#FAF9E6] border border-forest/10 shadow-xs' 
-                                    : 'border border-transparent hover:bg-gray-50'
-                                }`}
-                              >
-                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-300 ${
-                                  active ? 'bg-forest text-white' : 'bg-green-50 text-[#3eac5c] group-hover/menulink:bg-forest group-hover/menulink:text-white'
-                                }`}>
-                                  <Icon 
-                                    icon={link.icon} 
-                                    className="w-5 h-5 transition-transform group-hover/menulink:scale-110" 
-                                  />
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className={`text-[13px] font-bold transition-colors ${
-                                    active ? 'text-forest' : 'text-charcoal group-hover/menulink:text-forest'
+                <div className="max-w-[1280px] mx-auto px-8 md:px-16 py-8">
+                  <div className="grid grid-cols-4 gap-10">
+                    {/* Category Columns */}
+                    <div className="col-span-3 grid grid-cols-3 gap-8">
+                      {shopCategories.map((cat) => (
+                        <div key={cat.title} className="flex flex-col">
+                          <h5 className="text-[10px] font-black text-forest/50 uppercase tracking-[0.2em] mb-4 pl-1">
+                            {cat.title}
+                          </h5>
+                          <div className="space-y-1">
+                            {cat.links.map((link) => {
+                              const active = isLinkActive(link.href);
+                              return (
+                                <Link
+                                  key={link.label}
+                                  href={link.href}
+                                  onClick={() => setActiveMenu(null)}
+                                  className={`flex items-start gap-3.5 p-3 rounded-xl transition-all duration-200 group/menulink ${
+                                    active
+                                      ? 'bg-[#FAF9E6] ring-1 ring-forest/8'
+                                      : 'hover:bg-gray-50/80'
+                                  }`}
+                                >
+                                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200 ${
+                                    active ? 'bg-forest text-white shadow-sm' : 'bg-green-50 text-[#3eac5c] group-hover/menulink:bg-forest group-hover/menulink:text-white group-hover/menulink:shadow-sm'
                                   }`}>
-                                    {link.label}
-                                  </span>
-                                  {link.description && (
-                                    <span className="text-[11px] text-charcoal/50 group-hover/menulink:text-charcoal/70 transition-colors mt-0.5 font-medium leading-tight">
-                                      {link.description}
+                                    <Icon
+                                      icon={link.icon}
+                                      className="w-[18px] h-[18px] transition-transform group-hover/menulink:scale-110"
+                                    />
+                                  </div>
+                                  <div className="flex flex-col gap-0.5 pt-0.5">
+                                    <span className={`text-[13px] font-bold leading-tight transition-colors ${
+                                      active ? 'text-forest' : 'text-gray-800 group-hover/menulink:text-forest'
+                                    }`}>
+                                      {link.label}
                                     </span>
-                                  )}
-                                </div>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
+                                    {link.description && (
+                                      <span className="text-[11px] text-gray-400 group-hover/menulink:text-gray-500 transition-colors font-medium leading-snug">
+                                        {link.description}
+                                      </span>
+                                    )}
+                                  </div>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
 
-                {/* Promo Card Column */}
-                <div className="flex justify-end col-span-1">
-                  <div className="w-full max-w-[280px] rounded-2xl overflow-hidden border border-gray-100 shadow-sm relative group/promo flex flex-col bg-gray-50/50">
-                    <div className="relative w-full h-36 overflow-hidden">
-                      <img
-                        src="/home/centerImg.png"
-                        alt="Flagship Store"
-                        className="w-full h-full object-cover group-hover/promo:scale-105 transition-transform duration-700 ease-out"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                      <span className="absolute top-3 left-3 px-2.5 py-1 bg-[#47C269] text-white text-[9px] font-extrabold uppercase rounded-full tracking-wider shadow-sm">
-                        Featured Blends
-                      </span>
-                    </div>
-                    <div className="p-4 flex flex-col justify-between flex-1">
-                      <div>
-                        <h6 className="font-playfair font-extrabold text-gray-900 text-[15px] leading-snug">
-                          Our Flagship Store
-                        </h6>
-                        <p className="text-[11px] text-gray-500 mt-1 font-medium leading-relaxed">
-                          Discover pure wellness & organic farm blends crafted for vitality.
-                        </p>
+                    {/* Promo Card */}
+                    <div className="flex items-start justify-end">
+                      <div className="w-full rounded-2xl overflow-hidden border border-gray-100 shadow-sm group/promo flex flex-col bg-gradient-to-b from-gray-50/50 to-white">
+                        <div className="relative w-full h-36 overflow-hidden">
+                          <img
+                            src="/home/centerImg.png"
+                            alt="Flagship Store"
+                            className="w-full h-full object-cover group-hover/promo:scale-105 transition-transform duration-700 ease-out"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/15 to-transparent" />
+                          <span className="absolute top-3 left-3 px-2.5 py-1 bg-[#47C269] text-white text-[9px] font-extrabold uppercase rounded-full tracking-wider shadow-sm">
+                            Featured Blends
+                          </span>
+                        </div>
+                        <div className="p-4 flex flex-col justify-between flex-1">
+                          <div>
+                            <h6 className="font-playfair font-extrabold text-gray-900 text-[15px] leading-snug">
+                              Our Flagship Store
+                            </h6>
+                            <p className="text-[11px] text-gray-500 mt-1.5 font-medium leading-relaxed">
+                              Discover pure wellness & organic farm blends crafted for vitality.
+                            </p>
+                          </div>
+                          <Link
+                            href="/about"
+                            onClick={() => setActiveMenu(null)}
+                            className="text-[11px] font-bold text-forest hover:text-green-700 transition-all flex items-center gap-1.5 mt-4 group-hover/promo:gap-2.5 duration-300"
+                          >
+                            Explore Story
+                            <Icon icon="solar:arrow-right-linear" className="w-3.5 h-3.5" />
+                          </Link>
+                        </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Quick Links */}
+                  <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-6">
                       <Link
-                        href="/about"
+                        href="/shop"
                         onClick={() => setActiveMenu(null)}
-                        className="text-[11px] font-bold text-forest hover:text-green-700 transition-colors flex items-center gap-1.5 mt-4 group-hover/promo:translate-x-1 duration-300"
+                        className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-forest transition-colors group/qlink"
                       >
-                        Explore Story
-                        <Icon icon="solar:arrow-right-linear" className="w-3.5 h-3.5" />
+                        <Icon icon="lucide:layout-grid" className="w-3.5 h-3.5 text-gray-400 group-hover/qlink:text-forest transition-colors" />
+                        View All Products
+                      </Link>
+                      <Link
+                        href="/shop?sort=newest"
+                        onClick={() => setActiveMenu(null)}
+                        className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-forest transition-colors group/qlink"
+                      >
+                        <Icon icon="lucide:sparkles" className="w-3.5 h-3.5 text-gray-400 group-hover/qlink:text-forest transition-colors" />
+                        New Arrivals
+                      </Link>
+                      <Link
+                        href="/shop?sort=bestseller"
+                        onClick={() => setActiveMenu(null)}
+                        className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-forest transition-colors group/qlink"
+                      >
+                        <Icon icon="lucide:flame" className="w-3.5 h-3.5 text-gray-400 group-hover/qlink:text-forest transition-colors" />
+                        Best Sellers
                       </Link>
                     </div>
+                    <Link
+                      href="/shop"
+                      onClick={() => setActiveMenu(null)}
+                      className="text-xs font-bold text-forest hover:text-green-700 flex items-center gap-1 transition-colors"
+                    >
+                      Browse All
+                      <Icon icon="lucide:arrow-right" className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-      </nav>
+        </nav>
+      </div>
+
+      {/* Spacer for non-landing pages to push content below the fixed navbar */}
+      {!isLandingPage && (
+        <div className="h-[120px] lg:h-[130px] block shrink-0" />
+      )}
 
       {/* Slide-Down Search Overlay */}
       <AnimatePresence>
@@ -549,7 +685,7 @@ export default function Navbar() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   autoFocus
                 />
-                <Icon icon="solar:magnifer-linear" className="absolute left-4 w-5 h-5 text-gray-400" />
+                <Icon icon="lucide:search" className="absolute left-4 w-5 h-5 text-gray-400 stroke-[1.5]" />
                 <button
                   type="submit"
                   className="absolute right-2.5 bg-[#47C269] hover:bg-[#3eac5c] text-white text-xs font-bold uppercase tracking-wider py-2 px-5 rounded-full transition-all cursor-pointer"
@@ -637,7 +773,7 @@ export default function Navbar() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
-                  <Icon icon="solar:magnifer-linear" className="absolute left-3.5 w-4 h-4 text-gray-400" />
+                  <Icon icon="lucide:search" className="absolute left-3.5 w-4 h-4 text-gray-400 stroke-[1.5]" />
                 </form>
 
                 {/* Links Accordion list */}
@@ -775,16 +911,17 @@ export default function Navbar() {
                         <Link
                           href="/login"
                           onClick={() => setMobileOpen(false)}
-                          className="py-2.5 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block"
+                          className="py-2.5 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-charcoal text-center text-xs font-bold rounded-xl transition-colors block active:scale-95"
                         >
                           Sign In
                         </Link>
                         <Link
                           href="/register"
                           onClick={() => setMobileOpen(false)}
-                          className="py-2.5 px-4 bg-forest hover:bg-forest/90 text-white text-center text-xs font-bold rounded-xl transition-colors block"
+                          className="py-2.5 px-4 bg-gradient-to-r from-forest to-[#2d523a] text-white text-xs font-bold rounded-xl transition-colors block shadow-sm flex items-center justify-center gap-1.5 active:scale-95"
                         >
-                          Register
+                          <Icon icon="lucide:user-plus" className="w-3.5 h-3.5 stroke-[2]" />
+                          <span>Register</span>
                         </Link>
                       </>
                     )}
@@ -809,20 +946,22 @@ export default function Navbar() {
                       Sign Out
                     </button>
                   )}
-                  <Link
-                    href="/cart"
-                    onClick={() => setMobileOpen(false)}
-                    className="w-full py-2.5 bg-forest hover:bg-forest/90 text-white text-center text-xs font-bold rounded-xl transition-colors block"
-                  >
-                    Cart ({mounted ? cartCount : 0})
-                  </Link>
+                  {mounted && user && (
+                    <Link
+                      href="/cart"
+                      onClick={() => setMobileOpen(false)}
+                      className="w-full py-2.5 bg-forest hover:bg-forest/90 text-white text-center text-xs font-bold rounded-xl transition-colors block"
+                    >
+                      Cart ({mounted ? cartCount : 0})
+                    </Link>
+                  )}
                 </div>
               </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
 
