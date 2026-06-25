@@ -79,6 +79,10 @@ export class UserController {
 
             const { user, token } = await UserService.login(identifier, password);
 
+            if (user.role !== 'admin') {
+                return ApiResponse(403, null, "Access denied. Admin role required.");
+            }
+
             const response = ApiResponse(200, { user, token }, "Login successful.");
 
             response.cookies.set("token", token, {

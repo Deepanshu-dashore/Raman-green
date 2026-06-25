@@ -20,12 +20,17 @@ export class OrderController {
         }
     }
 
-    static async getMyOrders() {
+    static async getMyOrders(all?: boolean) {
         try {
             const user = await verifyJWT();
             if (!user) return ApiResponse(401, null, "Unauthorized.");
 
-            const orders = await OrderService.getUserOrders(user.id!);
+            let orders;
+            if (all && user.role === 'admin') {
+                orders = await OrderService.getAllOrders();
+            } else {
+                orders = await OrderService.getUserOrders(user.id!);
+            }
             return ApiResponse(200, orders, "Orders fetched successfully.");
         } catch (error: any) {
             return ApiResponse(500, null, error.message);
@@ -41,7 +46,8 @@ export class OrderController {
             if (!order) return ApiResponse(404, null, "Order not found.");
 
             // Security: Only owner or admin can view
-            if (order.user.toString() !== user.id && user.role !== 'admin') {
+            const orderUserId = order.user?._id?.toString() || order.user?.toString();
+            if (orderUserId !== user.id && user.role !== 'admin') {
                 return ApiResponse(403, null, "Forbidden.");
             }
 
@@ -51,13 +57,25 @@ export class OrderController {
         }
     }
 
-    static async updateStatus(id: string, status: string) {
+    static async updateStatus(id: string, status?: string, trackingId?: string) {
         try {
             const user = await verifyJWT();
             if (!user || user.role !== 'admin') return ApiResponse(401, null, "Admin only.");
 
-            const order = await OrderService.updateOrderStatus(id, status);
-            return ApiResponse(200, order, "Order status updated.");
+            const order = await OrderService.updateOrderStatus(id, status, trackingId);
+            return ApiResponse(200, order, "Order updated successfully.");
+        } catch (error: any) {
+            return ApiResponse(500, null, error.message);
+        }
+    }
+
+    static async getMinimalOrders() {
+        try {
+            const user = await verifyJWT();
+            if (!user || user.role !== 'admin') return ApiResponse(401, null, "Admin only.");
+
+            const orders = await OrderService.getMinimalOrders();
+            return ApiResponse(200, orders, "Minimal orders fetched successfully.");
         } catch (error: any) {
             return ApiResponse(500, null, error.message);
         }

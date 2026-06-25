@@ -1,5 +1,4 @@
-import {Document, model, models, Schema} from "mongoose";
-import { IUser } from "../user/user.model";
+import {Document, model, models, Schema, Types} from "mongoose";
 import { IProduct } from "../product/product.model";
 
 export interface IOrderItem extends Document {
@@ -15,7 +14,7 @@ export interface IOrderItem extends Document {
 }
 
 export interface IOrder extends Document {
-    user: IUser['_id'];
+    user: Types.ObjectId | any;
     items: IOrderItem[];
     totalPrice: number;
     totalItems: number;
@@ -23,6 +22,10 @@ export interface IOrder extends Document {
     paymentStatus: string;
     trackingId: string;
     status: string;
+    statusHistory: Array<{
+        status: string;
+        updatedAt: Date;
+    }>;
     address: {
         fullName: string;
         phone: string;
@@ -111,7 +114,20 @@ const orderSchema = new Schema<IOrder>({
       'CANCELLED'
     ],
     default: 'PLACED'
-    }
+    },
+
+    statusHistory: [
+        {
+            status: {
+                type: String,
+                required: true
+            },
+            updatedAt: {
+                type: Date,
+                default: Date.now
+            }
+        }
+    ]
 }, { timestamps: true });
 
 export const Order = models.Order || model<IOrder>('Order', orderSchema);

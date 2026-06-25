@@ -11,6 +11,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     await connectDB();
     const { id } = await params;
-    const { status } = await req.json();
-    return OrderController.updateStatus(id, status);
+    const { status, trackingId } = await req.json();
+    return OrderController.updateStatus(id, status, trackingId);
 }
