@@ -441,10 +441,15 @@ export function DataTable<T>({
                                 {/* Avatar Gen */}
                                 {col.getAvatar && (() => {
                                   const ava = col.getAvatar(row);
-                                  if (typeof ava === 'string' && ava.startsWith('http')) {
-                                    return <img src={ava} className="w-10 h-10 rounded-full object-cover shrink-0 z-0 bg-gray-100 shadow-sm" alt="" />
+                                  const isImageUrl = typeof ava === 'string' && (
+                                    ava.startsWith('http') || 
+                                    ava.startsWith('/') || 
+                                    ava.startsWith('data:')
+                                  );
+                                  if (isImageUrl) {
+                                    return <img src={ava as string} className="w-10 h-10 rounded-full object-cover shrink-0 z-0 bg-gray-100 shadow-sm" alt="" />
                                   } else if (typeof ava === 'string') {
-                                    return <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-black flex items-center justify-center shrink-0 uppercase">{ava}</div>
+                                    return <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-black flex items-center justify-center shrink-0 uppercase">{ava.slice(0, 2)}</div>
                                   } else {
                                     return ava; // node
                                   }

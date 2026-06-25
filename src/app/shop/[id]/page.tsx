@@ -322,9 +322,10 @@ export default function ProductDetailPage({ params }: PageProps) {
   // Set default weight when product variants load
   useEffect(() => {
     if (product.variants && product.variants.length > 0) {
-      const firstVariant = product.variants[0];
-      const firstWeightText = `${firstVariant.weight} ${firstVariant.unit?.name || 'g'}`;
-      setSelectedWeight(firstWeightText);
+      const inStockVariant = product.variants.find((v: any) => (v.stock ?? 0) > 0);
+      const targetVariant = inStockVariant || product.variants[0];
+      const weightText = `${targetVariant.weight} ${targetVariant.unit?.name || 'g'}`;
+      setSelectedWeight(weightText);
     } else {
       setSelectedWeight("250 g");
     }
@@ -373,6 +374,7 @@ export default function ProductDetailPage({ params }: PageProps) {
   };
 
   const activeVariant = getActiveVariant();
+  const isOutOfStock = activeVariant ? (activeVariant.stock <= 0) : false;
 
   // Dynamic pricing based on weight selection
   const getPriceForWeight = () => {
@@ -406,11 +408,18 @@ export default function ProductDetailPage({ params }: PageProps) {
   const getWeightOptions = () => {
     if (product.variants) {
       if (product.variants.length > 0) {
-        return product.variants.map((v: any) => `${v.weight} ${v.unit?.name || 'g'}`);
+        return product.variants.map((v: any) => ({
+          label: `${v.weight} ${v.unit?.name || 'g'}`,
+          stock: v.stock ?? 0,
+        }));
       }
       return [];
     }
-    return ["250 g", "500 g", "1 kg"];
+    return [
+      { label: "250 g", stock: 10 },
+      { label: "500 g", stock: 10 },
+      { label: "1 kg", stock: 10 }
+    ];
   };
 
   const weightOptions = getWeightOptions();
@@ -514,12 +523,14 @@ export default function ProductDetailPage({ params }: PageProps) {
       const variantObj = activeVar || {
         weight: selectedWeight,
         price: currentPrice,
-        sku: `${product.id}-${selectedWeight}`
+        sku: `${product.id}-${selectedWeight}`,
+        images: activeVar?.images ?? []
       };
 
       const productInfo = {
         name: product.name,
-        image: product.image,
+        // Use variant specific image if available, otherwise fallback to main product image
+        image: (activeVar && activeVar.images && activeVar.images.length > 0) ? activeVar.images[0] : product.image,
         category: product.categoryLabel
       };
 
@@ -884,19 +895,33 @@ export default function ProductDetailPage({ params }: PageProps) {
                   SELECT WEIGHT
                 </span>
                 {weightOptions.length > 0 ? (
-                  <div className="flex gap-2.5">
-                    {weightOptions.map((w) => (
-                      <button
-                        key={w}
-                        onClick={() => setSelectedWeight(w)}
-                        className={`px-5 py-2.5 text-xs font-semibold rounded-full border transition-all cursor-pointer ${selectedWeight === w
-                          ? "bg-[#061907] border-[#061907] text-white font-bold"
-                          : "bg-transparent border-[#dbdad7] text-charcoal hover:border-charcoal/30"
+                  <div className="grid grid-cols-4 gap-2.5 max-w-sm">
+                    {weightOptions.map((opt) => {
+                      const isSelected = selectedWeight === opt.label;
+                      const isOptOutOfStock = opt.stock <= 0;
+                      return (
+                        <button
+                          key={opt.label}
+                          disabled={isOptOutOfStock}
+                          onClick={() => setSelectedWeight(opt.label)}
+                          className={`px-2.5 py-2.5 text-center text-xs font-semibold rounded-full border transition-all relative ${
+                            isOptOutOfStock
+                              ? "bg-transparent border-[#dbdad7] text-charcoal/35 line-through opacity-50 cursor-not-allowed"
+                              : isSelected
+                                ? "bg-[#061907] border-[#061907] text-white font-bold cursor-pointer"
+                                : "bg-transparent border-[#dbdad7] text-charcoal hover:border-charcoal/30 cursor-pointer"
                           }`}
-                      >
-                        {w}
-                      </button>
-                    ))}
+                          title={isOptOutOfStock ? `${opt.label} (Out of Stock)` : opt.label}
+                        >
+                          {opt.label}
+                          {isOptOutOfStock && (
+                            <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <span className="w-full h-[1px] bg-charcoal/30 transform rotate-12" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : (
                   <span className="text-xs font-semibold text-charcoal/40 italic">No option available</span>
@@ -925,13 +950,22 @@ export default function ProductDetailPage({ params }: PageProps) {
                 {/* Add to Cart CTA */}
                 <button
                   onClick={handleAddToCart}
-                  disabled={isAddingToCart}
-                  className="flex-grow h-12 inline-flex items-center justify-center gap-2 bg-forest hover:bg-forest/90 text-white text-[11px] font-bold uppercase tracking-wider rounded-[8px] active:scale-98 transition-all shadow-sm cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                  disabled={isAddingToCart || isOutOfStock}
+                  className={`flex-grow h-12 inline-flex items-center justify-center gap-2 text-white text-[11px] font-bold uppercase tracking-wider rounded-[8px] active:scale-98 transition-all shadow-sm ${
+                    isOutOfStock
+                      ? "bg-charcoal/20 text-charcoal/40 cursor-not-allowed"
+                      : "bg-forest hover:bg-forest/90 cursor-pointer"
+                  }`}
                 >
                   {isAddingToCart ? (
                     <>
                       ADDING TO CART...
                       <Icon icon="mdi:loading" className="animate-spin w-4.5 h-4.5" />
+                    </>
+                  ) : isOutOfStock ? (
+                    <>
+                      OUT OF STOCK
+                      <Icon icon="lucide:slash" className="w-4.5 h-4.5" />
                     </>
                   ) : (
                     <>

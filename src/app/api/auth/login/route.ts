@@ -4,6 +4,12 @@ import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
     await connectDB();
-    const body = await req.json();
+    let body: any = {};
+    try {
+        body = await req.json();
+    } catch (error) {
+        // If body is empty or not valid JSON, keep it
+        body = {};
+    }
     return CustomerController.login(body);
 }

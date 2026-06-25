@@ -263,7 +263,7 @@ const InventoryViewPage = ({ params }: InventoryViewPageProps) => {
             <div className="flex items-center gap-3">
               {activeImage ? (
                 <img
-                  src={activeImage.startsWith("http") ? activeImage : `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${activeImage}`}
+                  src={activeImage}
                   alt={inventory.productId?.name}
                   className="w-14 h-14 rounded-2xl object-cover shrink-0 border border-gray-100 bg-gray-50"
                 />

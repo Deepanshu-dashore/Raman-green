@@ -1,40 +1,64 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import toast from "react-hot-toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { removeItemFromCart, updateItemQuantity } from "@/store/cartSlice";
 import LandingLayout from "@/components/landing/LandingLayout";
+import debounce from "lodash/debounce"; // debounced quantity updates
+import type { DebouncedFunc } from "lodash";
 
 export default function CartPage() {
-  const dispatch = useAppDispatch();
-  const { items, totalPrice, totalItems, loading } = useAppSelector((state) => state.cart);
+  const { items, totalPrice, totalItems, loading, updatingItemId } = useAppSelector((state) => state.cart);
   const user = useAppSelector((state) => state.auth.user);
+  const dispatch = useAppDispatch();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleQuantityChange = async (productId: string, variant: any, currentQty: number, change: number) => {
+  // Debounced updater reference
+  const debouncedUpdateRef = useRef<DebouncedFunc<(productId: string, variant: any, qty: number, productName: string) => void> | null>(null);
+
+  useEffect(() => {
+    // Initialize debounce only once
+    debouncedUpdateRef.current = debounce(
+      async (productId: string, variant: any, qty: number, productName: string) => {
+        try {
+          await dispatch(
+            updateItemQuantity({
+              productId,
+              variant,
+              quantity: qty,
+            })
+          ).unwrap();
+          toast.success(`"${productName}" quantity updated to ${qty}`);
+        } catch (e: any) {
+          toast.error(e.message || "Failed to update item quantity.");
+        }
+      },
+      500 // 500ms debounce interval
+    );
+    // Cleanup on unmount
+    return () => {
+      debouncedUpdateRef.current?.cancel();
+    };
+  }, []);
+
+  const handleQuantityChange = (productId: string, variant: any, currentQty: number, change: number) => {
     const targetQty = currentQty + change;
     if (targetQty <= 0) {
       handleRemoveItem(productId, variant);
       return;
     }
-    try {
-      await dispatch(
-        updateItemQuantity({
-          productId,
-          variant,
-          quantity: targetQty,
-        })
-      ).unwrap();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to update item quantity.");
-    }
+    const productName = items.find(
+      (item) => item.product?._id === productId && JSON.stringify(item.variant) === JSON.stringify(variant)
+    )?.product?.name || "Product";
+    // Call debounced function with product name
+    debouncedUpdateRef.current?.(productId, variant, targetQty, productName);
   };
 
   const handleRemoveItem = async (productId: string, variant: any) => {
@@ -117,11 +141,17 @@ export default function CartPage() {
                       return (
                         <div
                           key={idx}
-                          className="flex flex-col sm:flex-row items-start sm:items-center py-4 first:pt-0 last:pb-0 border-b border-gray-100 last:border-0 gap-4"
+                          className="flex items-start py-2 border-b border-gray-100 last:border-0 gap-4 md:gap-6"
                         >
                           {/* Image */}
-                          <div className="w-20 h-20 md:w-24 md:h-24 bg-slate-50 rounded-xl flex items-center justify-center shrink-0 overflow-hidden relative border border-black/5">
-                            {item.product?.image ? (
+                          <div className="w-28 h-28 md:w-36 md:h-40 bg-[#f5f5f5] rounded-xl flex items-center justify-center shrink-0 overflow-hidden relative border border-gray-100">
+                            { (item.variant?.images?.length ?? 0) > 0 ? (
+                              <img
+                                src={item.variant?.images?.[0] ?? ''}
+                                alt={item.product?.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : item.product?.image ? (
                               <img
                                 src={item.product.image}
                                 alt={item.product?.name}
@@ -132,70 +162,79 @@ export default function CartPage() {
                             )}
                           </div>
 
-                          {/* Details */}
-                          <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch py-0.5">
+                          {/* Details & Actions */}
+                          <div className="flex-1 min-w-0 flex flex-col justify-between min-h-[112px] md:min-h-[144px]">
+                            {/* Product Name & Total Price */}
                             <div>
-                              <h4 className="text-sm md:text-base font-bold text-gray-900 mb-0.5 line-clamp-1">
-                                {item.product?.name || "Organic Product"}
-                              </h4>
-                              <p className="text-xs text-gray-400 mb-2 font-medium">
-                                Weight: {item.variant?.weight || "50 Gram"}
-                              </p>
-                              <div className="inline-flex items-center gap-1 bg-[#f5f9f5] px-2 py-0.5 rounded-md border border-[#e8f2e8]">
-                                <Icon icon="solar:leaf-linear" className="w-3 h-3 text-[#3eac5c]" />
-                                <span className="text-[10px] font-bold text-gray-600">Standard Pack</span>
+                              <div className="flex justify-between items-start gap-4">
+                                <h4 className="text-sm md:text-base font-semibold text-gray-900 line-clamp-1">
+                                  {item.product?.name || "Organic Product"}
+                                </h4>
+                                <span className="text-sm md:text-base font-bold text-gray-900 shrink-0">
+                                  ₹{(price * item.quantity).toFixed(2)}
+                                </span>
+                              </div>
+
+                              {/* Product Description (2 lines limit) */}
+                              {item.product?.description && (
+                                <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed max-w-[90%]">
+                                  {item.product.description}
+                                </p>
+                              )}
+
+                              {/* Unit Price & Stock Status */}
+                              <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-1.5">
+                                <span>₹{price.toFixed(2)}</span>
+                                <span>|</span>
+                                {item.variant?.stock && item.variant.stock <= 0 ? (
+                                  <span className="text-red-500 font-semibold">Out of stock</span>
+                                ) : (
+                                  <span className="text-gray-500">Available</span>
+                                )}
                               </div>
                             </div>
-                            
-                            <div className="flex items-center gap-1.5 mt-2 text-[10px] font-medium text-[#3eac5c]">
-                              <span>100% Natural</span>
-                              <span className="text-gray-300">•</span>
-                              <span>Organic Certified</span>
-                            </div>
-                          </div>
 
-                          {/* Controls & prices */}
-                          <div className="flex sm:flex-col items-end justify-between sm:h-full sm:self-stretch py-0.5 gap-3 sm:gap-1.5 w-full sm:w-auto mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-dashed border-gray-100">
-                            <div className="flex flex-col sm:items-end">
-                              <span className="text-[11px] text-gray-400 font-medium">Price</span>
-                              <span className="text-xs font-semibold text-gray-600">
-                                ₹{price}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2">
+                            {/* Dropdown Selector, Qty Controls, Actions */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
                               {/* Quantity Selector */}
-                              <div className="flex items-center justify-between border border-gray-200 rounded-full px-0.5 py-0.5 w-[85px] h-7 bg-white">
+                              <div className="flex items-stretch border border-gray-200 rounded-lg overflow-hidden h-8 bg-white text-xs select-none">
                                 <button
-                                  onClick={() => handleQuantityChange(item.product._id, item.variant, item.quantity, -1)}
-                                  className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-500"
+                                  onClick={() => handleQuantityChange(item.product?._id, item.variant, item.quantity, -1)}
+                                  disabled={updatingItemId === `${item.product?._id}-${JSON.stringify(item.variant)}`}
+                                  className="px-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors text-[#1b3022] font-semibold disabled:opacity-50 flex items-center justify-center border-r border-gray-200"
                                 >
-                                  <Icon icon="ic:baseline-minus" className="w-3 h-3" />
+                                  {updatingItemId === `${item.product?._id}-${JSON.stringify(item.variant)}` ? (
+                                    <Icon icon="mdi:loading" className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Icon icon="ic:baseline-minus" className="w-3.5 h-3.5 text-[#1b3022]" />
+                                  )}
                                 </button>
-                                <span className="font-bold text-xs text-gray-900 w-4 text-center">{item.quantity}</span>
+                                <span className="font-bold text-xs text-gray-900 w-10 flex items-center justify-center bg-white">
+                                  {item.quantity}
+                                </span>
                                 <button
-                                  onClick={() => handleQuantityChange(item.product._id, item.variant, item.quantity, 1)}
-                                  className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-500"
+                                  onClick={() => handleQuantityChange(item.product?._id, item.variant, item.quantity, 1)}
+                                  disabled={updatingItemId === `${item.product?._id}-${JSON.stringify(item.variant)}`}
+                                  className="px-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors text-[#1b3022] font-semibold disabled:opacity-50 flex items-center justify-center border-l border-gray-200"
                                 >
-                                  <Icon icon="ic:baseline-plus" className="w-3 h-3" />
+                                  {updatingItemId === `${item.product?._id}-${JSON.stringify(item.variant)}` ? (
+                                    <Icon icon="mdi:loading" className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Icon icon="ic:baseline-plus" className="w-3.5 h-3.5 text-[#1b3022]" />
+                                  )}
                                 </button>
                               </div>
 
-                              {/* Remove button */}
-                              <button
-                                onClick={() => handleRemoveItem(item.product._id, item.variant)}
-                                className="w-7 h-7 flex items-center justify-center bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition-colors border border-gray-100"
-                                aria-label="Remove item"
-                              >
-                                <Icon icon="solar:trash-bin-trash-linear" className="w-4 h-4" />
-                              </button>
-                            </div>
-
-                            <div className="flex flex-col items-end">
-                              <span className="text-[10px] text-gray-400 font-medium sm:block hidden">Total</span>
-                              <span className="text-sm font-bold text-gray-900">
-                                ₹{price * item.quantity}
-                              </span>
+                              {/* Delete action */}
+                              <div className="flex items-center text-xs font-semibold text-gray-400">
+                                <button
+                                  onClick={() => handleRemoveItem(item.product?._id, item.variant)}
+                                  className="flex items-center gap-1 hover:text-red-600 transition-colors py-1 px-1.5"
+                                >
+                                  <Icon icon="solar:trash-bin-trash-linear" className="w-4 h-4 text-gray-400 hover:text-red-600" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>

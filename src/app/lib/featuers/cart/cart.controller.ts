@@ -32,6 +32,22 @@ export class CartController {
         }
     }
 
+    static async updateItemQuantity(reqData: any) {
+        try {
+            const user = await verifyJWT();
+            if (!user) return ApiResponse(401, null, "Unauthorized.");
+
+            const { productId, variant, quantity } = reqData; // quantity is diff
+            if (!productId || quantity === undefined) return ApiResponse(400, null, "Missing fields.");
+
+            const cart = await CartService.addToCart(user.id!, productId, variant, quantity);
+            return ApiResponse(200, cart, "Cart quantity updated.");
+        } catch (error: any) {
+            console.error("Error in updateItemQuantity:", error);
+            return ApiResponse(500, null, error.message);
+        }
+    }
+
     static async removeItem(reqData: any) {
         try {
             const user = await verifyJWT();
@@ -61,3 +77,5 @@ export class CartController {
         }
     }
 }
+
+export const updateItemQuantity = CartController.updateItemQuantity;

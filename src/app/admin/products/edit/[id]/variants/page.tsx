@@ -664,9 +664,7 @@ const ProductVariantsPage = ({ params }: ProductVariantsPageProps) => {
                     {gallery.map((item, imgIdx) => {
                       const displayUrl =
                         item.kind === 'saved'
-                          ? item.url.startsWith('http')
-                            ? item.url
-                            : `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dummy'}/image/upload/${item.url}`
+                          ? item.url
                           : item.preview;
 
                       return (

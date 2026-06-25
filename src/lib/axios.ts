@@ -89,6 +89,14 @@ export async function put<T>(
   return unwrap<T>(await api.put<ApiResult<T>>(url, data, config));
 }
 
+export async function patch<T>(
+  url: string,
+  data?: unknown,
+  config?: AxiosRequestConfig
+) {
+  return unwrap<T>(await api.patch<ApiResult<T>>(url, data, config));
+}
+
 export async function del<T>(url: string, config?: AxiosRequestConfig) {
   return unwrap<T>(await api.delete<ApiResult<T>>(url, config));
 }

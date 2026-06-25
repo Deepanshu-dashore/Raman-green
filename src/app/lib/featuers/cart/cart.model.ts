@@ -8,7 +8,8 @@ export interface ICartItem extends Document {
         weight: string,
         price: number,
         stock: number,
-        sku: string
+        sku: string,
+        images?: string[]
     }
     quantity: number;
 }
@@ -39,7 +40,8 @@ const cartSchema = new Schema<ICart>({
                 weight: String,
                 price: Number,
                 stock: Number,
-                sku: String
+                sku: String,
+                images: [String]
             },
             quantity: {
                 type: Number,

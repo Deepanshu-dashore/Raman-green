@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { get, post, del } from "@/lib/axios";
+import { get, post, del, patch } from "@/lib/axios";
 import { RootState } from "./index";
 
 export interface CartItem {
@@ -9,6 +9,7 @@ export interface CartItem {
     image: string;
     category?: string;
     slug?: string;
+    description?: string;
   };
   variant: {
     _id?: string;
@@ -16,6 +17,7 @@ export interface CartItem {
     price: number;
     stock?: number;
     sku?: string;
+    images?: string[];
   };
   quantity: number;
   price: number;
@@ -39,6 +41,7 @@ interface CartState {
   error: string | null;
   showCartModal: boolean;
   cartModalData: CartModalData | null;
+  updatingItemId: string | null; // tracks which item is being updated
 }
 
 const initialState: CartState = {
@@ -49,6 +52,7 @@ const initialState: CartState = {
   error: null,
   showCartModal: false,
   cartModalData: null,
+  updatingItemId: null,
 };
 
 // Local storage helper
@@ -235,10 +239,6 @@ export const updateItemQuantity = createAsyncThunk(
       const state = getState() as RootState;
       const isAuthenticated = !!state.auth.user;
       if (isAuthenticated) {
-        // Re-adding item with relative change or set absolute.
-        // On backend, we can set absolute by posting a custom update or addToCart relative.
-        // Currently CartController.addToCart adds quantity relatively: cart.items[itemIndex].quantity += quantity.
-        // To set an absolute quantity, we can calculate the difference: diff = target - current
         const currentItem = state.cart.items.find(
           (item) =>
             item.product._id === payload.productId &&
@@ -249,11 +249,10 @@ export const updateItemQuantity = createAsyncThunk(
 
         if (diff === 0) return state.cart;
 
-        const response = await post<any>("/api/cart", {
-          productId: payload.productId,
-          variant: payload.variant,
-          quantity: diff,
-        });
+        const response = await patch<any>(`/api/cart/${payload.productId}/${encodeURIComponent(JSON.stringify(payload.variant))}`,
+          {
+            quantity: diff,
+          });
         return response.data;
       } else {
         const local = loadLocalCart();
@@ -360,6 +359,27 @@ const cartSlice = createSlice({
         state.error = action.payload as string;
       })
       // addItemToCart
+       .addCase(updateItemQuantity.pending, (state, action) => {
+         state.loading = true;
+         state.updatingItemId = `${action.meta.arg.productId}-${JSON.stringify(action.meta.arg.variant)}`;
+         state.error = null;
+       })
+       .addCase(updateItemQuantity.fulfilled, (state, action) => {
+         state.loading = false;
+         state.updatingItemId = null;
+         const updated = action.payload;
+         if (updated && updated.items) {
+           state.items = updated.items;
+           state.totalItems = updated.totalItems;
+           state.totalPrice = updated.totalPrice;
+         }
+       })
+       .addCase(updateItemQuantity.rejected, (state, action) => {
+         state.loading = false;
+         state.updatingItemId = null;
+         state.error = action.error.message || "Failed to update quantity";
+       })
+       // addItemToCart
       .addCase(addItemToCart.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -390,23 +410,6 @@ const cartSlice = createSlice({
         }
       })
       .addCase(removeItemFromCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-      // updateItemQuantity
-      .addCase(updateItemQuantity.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(updateItemQuantity.fulfilled, (state, action: PayloadAction<any>) => {
-        state.loading = false;
-        if (action.payload) {
-          state.items = action.payload.items || [];
-          state.totalItems = action.payload.totalItems ?? 0;
-          state.totalPrice = action.payload.totalPrice ?? 0;
-        }
-      })
-      .addCase(updateItemQuantity.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
