@@ -7,8 +7,36 @@ import toast from "react-hot-toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { removeItemFromCart, updateItemQuantity } from "@/store/cartSlice";
 import LandingLayout from "@/components/landing/LandingLayout";
-import debounce from "lodash/debounce"; // debounced quantity updates
-import type { DebouncedFunc } from "lodash";
+
+interface DebouncedFunc<T extends (...args: any[]) => any> {
+  (...args: Parameters<T>): void;
+  cancel(): void;
+}
+
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): DebouncedFunc<T> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  
+  const debounced = function (this: any, ...args: Parameters<T>) {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => {
+      func.apply(this, args);
+    }, wait);
+  };
+
+  debounced.cancel = () => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+  };
+
+  return debounced;
+}
 
 export default function CartPage() {
   const { items, totalPrice, totalItems, loading, updatingItemId } = useAppSelector((state) => state.cart);
