@@ -13,33 +13,6 @@ interface CategoryItem {
   href: string;
 }
 
-const DEFAULT_CATEGORIES: CategoryItem[] = [
-  {
-    title: "Heritage Seeds",
-    wellnessTag: "VITALITY",
-    image: "/category/seeds.png",
-    href: "/shop?category=seeds",
-  },
-  {
-    title: "Organic Crops",
-    wellnessTag: "PERFORMANCE",
-    image: "/category/vegetable_powders.png",
-    href: "/shop?category=crops",
-  },
-  {
-    title: "Artisanal Dry Foods",
-    wellnessTag: "HERITAGE",
-    image: "/category/dry_foods.png",
-    href: "/shop?category=dry-foods",
-  },
-  {
-    title: "Instant Food Grains",
-    wellnessTag: "PURITY",
-    image: "/category/instant_mix.png",
-    href: "/shop?category=instant",
-  },
-];
-
 export default function CategoryGrid() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +28,15 @@ export default function CategoryGrid() {
       try {
         const response = await categoriesApi.getAll();
         if (response.success && Array.isArray(response.data) && response.data.length > 0) {
-          const mapped = response.data.map((cat: any, index: number) => {
+          // Filter out Level 3 sub-subcategories (where both parent and grandparent exist)
+          const filteredCategories = response.data.filter((cat: any) => {
+            const hasParent = !!cat.parent;
+            const parentObj = typeof cat.parent === 'object' ? cat.parent : null;
+            const hasGrandparent = parentObj ? !!parentObj.parent : false;
+            return !(hasParent && hasGrandparent);
+          });
+          
+          const mapped = filteredCategories.map((cat: any, index: number) => {
             const name = cat.name || "";
             const normalized = name.toLowerCase().trim();
             const tagMap: Record<string, string> = {
@@ -67,23 +48,38 @@ export default function CategoryGrid() {
             const defaultTags = ["VITALITY", "PERFORMANCE", "HERITAGE", "PURITY", "NATURAL", "ORGANIC"];
             const wellnessTag = tagMap[normalized] || defaultTags[index % defaultTags.length];
 
+            let resolvedImage = cat.image || "";
+            // Resolve missing local assets to valid public files
+            if (!resolvedImage || resolvedImage.startsWith("/category/dehydrated")) {
+              const categorySlug = (cat.slug || "").toLowerCase();
+              if (categorySlug.includes("seed")) {
+                resolvedImage = "/category/seeds.png";
+              } else if (categorySlug.includes("powder") || categorySlug.includes("vegetable") || categorySlug.includes("crop")) {
+                resolvedImage = "/category/vegetable_powders.png";
+              } else if (categorySlug.includes("mix") || categorySlug.includes("ready") || categorySlug.includes("instant")) {
+                resolvedImage = "/category/instant_mix.png";
+              } else {
+                resolvedImage = "/category/dry_foods.png";
+              }
+            }
+
             return {
               title: name,
               wellnessTag,
-              image: cat.image || "/category/seeds.png",
+              image: resolvedImage,
               href: `/shop?category=${cat.slug || ""}`,
             };
           });
           setCategories(mapped);
           setCurrentIndex(mapped.length);
         } else {
-          setCategories(DEFAULT_CATEGORIES);
-          setCurrentIndex(DEFAULT_CATEGORIES.length);
+          setCategories([]);
+          setCurrentIndex(0);
         }
       } catch (error) {
         console.error("Error fetching categories:", error);
-        setCategories(DEFAULT_CATEGORIES);
-        setCurrentIndex(DEFAULT_CATEGORIES.length);
+        setCategories([]);
+        setCurrentIndex(0);
       } finally {
         setIsLoading(false);
       }
@@ -159,6 +155,10 @@ export default function CategoryGrid() {
     if (!isTransitioning || isLoading) return;
     setCurrentIndex((prev) => prev - 1);
   };
+
+  if (!isLoading && categories.length === 0) {
+    return null;
+  }
 
   return (
     <section className="py-20 md:py-28 storefront bg-cream text-charcoal overflow-hidden">
@@ -244,6 +244,9 @@ export default function CategoryGrid() {
                         src={cat.image}
                         alt={cat.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/category/seeds.png";
+                        }}
                       />
 
                       {/* Dark gradient overlay for text legibility */}

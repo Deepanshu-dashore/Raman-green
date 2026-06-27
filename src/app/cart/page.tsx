@@ -82,9 +82,17 @@ export default function CartPage() {
       handleRemoveItem(productId, variant);
       return;
     }
-    const productName = items.find(
+    const item = items.find(
       (item) => item.product?._id === productId && JSON.stringify(item.variant) === JSON.stringify(variant)
-    )?.product?.name || "Product";
+    );
+    const productName = item?.product?.name || "Product";
+    const availableStock = item?.variant?.stock ?? 0;
+
+    if (change > 0 && targetQty > availableStock) {
+      toast.error(`Cannot increase quantity. Only ${availableStock} units of "${productName}" are available in stock.`);
+      return;
+    }
+
     // Call debounced function with product name
     debouncedUpdateRef.current?.(productId, variant, targetQty, productName);
   };
@@ -242,7 +250,10 @@ export default function CartPage() {
                                 </span>
                                 <button
                                   onClick={() => handleQuantityChange(item.product?._id, item.variant, item.quantity, 1)}
-                                  disabled={updatingItemId === `${item.product?._id}-${JSON.stringify(item.variant)}`}
+                                  disabled={
+                                    updatingItemId === `${item.product?._id}-${JSON.stringify(item.variant)}` ||
+                                    item.quantity >= (item.variant?.stock ?? 0)
+                                  }
                                   className="px-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors text-[#1b3022] font-semibold disabled:opacity-50 flex items-center justify-center border-l border-gray-200"
                                 >
                                   {updatingItemId === `${item.product?._id}-${JSON.stringify(item.variant)}` ? (

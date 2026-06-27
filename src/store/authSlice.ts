@@ -16,6 +16,7 @@ interface AuthState {
   loading: boolean;
   error: string | null;
   initialized: boolean;
+  showAuthModal: boolean;
 }
 
 const initialState: AuthState = {
@@ -24,6 +25,7 @@ const initialState: AuthState = {
   loading: false,
   error: null,
   initialized: false,
+  showAuthModal: false,
 };
 
 // Async thunk to fetch the current user profile (using me API)
@@ -114,6 +116,12 @@ const authSlice = createSlice({
         localStorage.removeItem("adminToken");
         document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       }
+    },
+    showAuthModal(state) {
+      state.showAuthModal = true;
+    },
+    hideAuthModal(state) {
+      state.showAuthModal = false;
     }
   },
   extraReducers: (builder) => {
@@ -213,5 +221,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, clearCredentials } = authSlice.actions;
+export const { setCredentials, clearCredentials, showAuthModal, hideAuthModal } = authSlice.actions;
 export default authSlice.reducer;

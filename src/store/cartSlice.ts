@@ -135,7 +135,7 @@ export const fetchCart = createAsyncThunk(
         const response = await get<any>("/api/cart");
         return response.data; // Mongoose cart object
       } else {
-        return loadLocalCart();
+        return { items: [], totalItems: 0, totalPrice: 0 };
       }
     } catch (err: any) {
       return rejectWithValue(err.message || "Failed to fetch cart");
@@ -152,43 +152,15 @@ export const addItemToCart = createAsyncThunk(
     try {
       const state = getState() as RootState;
       const isAuthenticated = !!state.auth.user;
-      if (isAuthenticated) {
-        const response = await post<any>("/api/cart", {
-          productId: payload.productId,
-          variant: payload.variant,
-          quantity: payload.quantity,
-        });
-        return response.data;
-      } else {
-        // Guest user local storage implementation
-        const local = loadLocalCart();
-        const existingIndex = local.items.findIndex(
-          (item) =>
-            item.product._id === payload.productId &&
-            JSON.stringify(item.variant) === JSON.stringify(payload.variant)
-        );
-
-        const price = payload.variant?.discountedPrice || payload.variant?.price || payload.variant?.basePrice || 0;
-
-        if (existingIndex > -1) {
-          local.items[existingIndex].quantity += payload.quantity;
-          local.items[existingIndex].price = price;
-        } else {
-          local.items.push({
-            product: {
-              _id: payload.productId,
-              name: payload.productInfo?.name || "Organic Product",
-              image: payload.productInfo?.image || "",
-              category: payload.productInfo?.category || "Organic",
-            },
-            variant: payload.variant,
-            quantity: payload.quantity,
-            price: price,
-          });
-        }
-        saveLocalCart(local.items);
-        return loadLocalCart();
+      if (!isAuthenticated) {
+        return rejectWithValue("Please log in to add items to cart.");
       }
+      const response = await post<any>("/api/cart", {
+        productId: payload.productId,
+        variant: payload.variant,
+        quantity: payload.quantity,
+      });
+      return response.data;
     } catch (err: any) {
       return rejectWithValue(err.message || "Failed to add item to cart");
     }
@@ -201,28 +173,16 @@ export const removeItemFromCart = createAsyncThunk(
     try {
       const state = getState() as RootState;
       const isAuthenticated = !!state.auth.user;
-      if (isAuthenticated) {
-        // DELETE /api/cart with body is sent via custom wrapper
-        const response = await del<any>("/api/cart", {
-          data: {
-            productId: payload.productId,
-            variant: payload.variant,
-          },
-        });
-        return response.data;
-      } else {
-        // Guest user local storage implementation
-        const local = loadLocalCart();
-        const updatedItems = local.items.filter(
-          (item) =>
-            !(
-              item.product._id === payload.productId &&
-              JSON.stringify(item.variant) === JSON.stringify(payload.variant)
-            )
-        );
-        saveLocalCart(updatedItems);
-        return loadLocalCart();
+      if (!isAuthenticated) {
+        return rejectWithValue("Please log in to manage cart.");
       }
+      const response = await del<any>("/api/cart", {
+        data: {
+          productId: payload.productId,
+          variant: payload.variant,
+        },
+      });
+      return response.data;
     } catch (err: any) {
       return rejectWithValue(err.message || "Failed to remove item from cart");
     }
@@ -238,39 +198,24 @@ export const updateItemQuantity = createAsyncThunk(
     try {
       const state = getState() as RootState;
       const isAuthenticated = !!state.auth.user;
-      if (isAuthenticated) {
-        const currentItem = state.cart.items.find(
-          (item) =>
-            item.product._id === payload.productId &&
-            JSON.stringify(item.variant) === JSON.stringify(payload.variant)
-        );
-        const currentQty = currentItem ? currentItem.quantity : 0;
-        const diff = payload.quantity - currentQty;
-
-        if (diff === 0) return state.cart;
-
-        const response = await patch<any>(`/api/cart/${payload.productId}/${encodeURIComponent(JSON.stringify(payload.variant))}`,
-          {
-            quantity: diff,
-          });
-        return response.data;
-      } else {
-        const local = loadLocalCart();
-        const idx = local.items.findIndex(
-          (item) =>
-            item.product._id === payload.productId &&
-            JSON.stringify(item.variant) === JSON.stringify(payload.variant)
-        );
-        if (idx > -1) {
-          if (payload.quantity <= 0) {
-            local.items = local.items.filter((_, i) => i !== idx);
-          } else {
-            local.items[idx].quantity = payload.quantity;
-          }
-          saveLocalCart(local.items);
-        }
-        return loadLocalCart();
+      if (!isAuthenticated) {
+        return rejectWithValue("Please log in to manage cart.");
       }
+      const currentItem = state.cart.items.find(
+        (item) =>
+          item.product._id === payload.productId &&
+          JSON.stringify(item.variant) === JSON.stringify(payload.variant)
+      );
+      const currentQty = currentItem ? currentItem.quantity : 0;
+      const diff = payload.quantity - currentQty;
+
+      if (diff === 0) return state.cart;
+
+      const response = await patch<any>(`/api/cart/${payload.productId}/${encodeURIComponent(JSON.stringify(payload.variant))}`,
+        {
+          quantity: diff,
+        });
+      return response.data;
     } catch (err: any) {
       return rejectWithValue(err.message || "Failed to update quantity");
     }
@@ -283,35 +228,13 @@ export const mergeLocalCartToBackend = createAsyncThunk(
     try {
       const state = getState() as RootState;
       const isAuthenticated = !!state.auth.user;
-      if (!isAuthenticated) return loadLocalCart();
+      if (!isAuthenticated) return { items: [], totalItems: 0, totalPrice: 0 };
 
-      const local = loadLocalCart();
-      if (local.items.length === 0) {
-        const response = await get<any>("/api/cart");
-        return response.data;
-      }
-
-      // Loop through local items and add them to backend cart
-      let lastCart = null;
-      for (const item of local.items) {
-        const res = await post<any>("/api/cart", {
-          productId: item.product._id,
-          variant: item.variant,
-          quantity: item.quantity,
-        });
-        lastCart = res.data;
-      }
-
-      // Clear local storage cart once merged
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("rg-cart-new");
-        localStorage.removeItem("rg-cart");
-        localStorage.removeItem("rg-cart-count");
-      }
-
-      return lastCart;
+      // Since local guest cart is disabled, just retrieve backend cart
+      const response = await get<any>("/api/cart");
+      return response.data;
     } catch (err: any) {
-      return rejectWithValue(err.message || "Failed to merge local cart to backend");
+      return rejectWithValue(err.message || "Failed to fetch cart");
     }
   }
 );

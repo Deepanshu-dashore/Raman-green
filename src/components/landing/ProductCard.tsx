@@ -5,8 +5,9 @@ import { motion } from "framer-motion";
 import { Icon } from "@iconify/react";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { useAppDispatch } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { addItemToCart } from "@/store/cartSlice";
+import { showAuthModal } from "@/store/authSlice";
 import AddedToCartToast from "@/components/shared/AddedToCartToast";
 
 // Interface defining the fields of the Product Card
@@ -30,10 +31,16 @@ export interface ProductCardProps {
 
 export default function ProductCard({ product, index, onAddToCart }: ProductCardProps) {
   const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddToCartClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!user) {
+      dispatch(showAuthModal());
+      return;
+    }
+
     if (onAddToCart) {
       onAddToCart();
       return;

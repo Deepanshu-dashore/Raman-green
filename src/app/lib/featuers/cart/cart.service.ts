@@ -38,51 +38,57 @@ export class CartService {
 
         let cartUpdated = false;
         const ProductVariant = (await import("../product-variant/ProductVariants.model")).ProductVariant;
+        const Inventory = (await import("../inventory/Inventory.model")).Inventory;
 
         for (const item of cart.items) {
-            const currentPrice = item.price || item.variant?.price || 0;
-            if (currentPrice === 0 || !item.variant?.sku) {
-                let variantDoc = null;
-                
-                if (item.variant?.sku) {
-                    variantDoc = await ProductVariant.findOne({ sku: item.variant.sku, isDeleted: { $ne: true } });
-                } else if (item.variant?.weight) {
-                    const weightStr = item.variant.weight.toString().trim();
-                    const match = weightStr.match(/^([\d.]+)/);
-                    const numericWeight = match ? parseFloat(match[1]) : NaN;
-                    
-                    if (!isNaN(numericWeight)) {
-                        variantDoc = await ProductVariant.findOne({ 
-                            productId: item.product?._id || item.product, 
-                            weight: numericWeight, 
-                            isDeleted: { $ne: true } 
-                        });
-                    }
-                    if (!variantDoc) {
-                        variantDoc = await ProductVariant.findOne({ 
-                            productId: item.product?._id || item.product, 
-                            isDeleted: { $ne: true } 
-                        });
-                    }
-                } else {
-                    variantDoc = await ProductVariant.findOne({ 
-                        productId: item.product?._id || item.product, 
-                        isDeleted: { $ne: true } 
-                    });
-                }
-
+            if (item.variant && item.variant.sku) {
+                const variantDoc = await ProductVariant.findOne({ sku: item.variant.sku, isDeleted: { $ne: true } });
                 if (variantDoc) {
+                    const inventoryDoc = await Inventory.findOne({ variantId: variantDoc._id });
+                    const availableQty = inventoryDoc ? inventoryDoc.availableQty : 0;
+                    if (item.variant.stock !== availableQty) {
+                        item.variant.stock = availableQty;
+                        cartUpdated = true;
+                    }
+                    
                     const priceVal = variantDoc.discountedPrice || variantDoc.basePrice || 0;
-                    item.variant = {
-                        _id: variantDoc._id.toString(),
-                        weight: variantDoc.weight?.toString() ?? item.variant?.weight ?? "",
-                        price: priceVal,
-                        stock: variantDoc.lowStockAlert ?? item.variant?.stock ?? 10,
-                        sku: variantDoc.sku ?? item.variant?.sku ?? "",
-                        images: variantDoc.images ?? item.variant?.images ?? [],
-                    } as any;
-                    item.price = priceVal;
-                    cartUpdated = true;
+                    if (item.variant.price !== priceVal || item.price !== priceVal) {
+                        item.variant.price = priceVal;
+                        item.price = priceVal;
+                        cartUpdated = true;
+                    }
+                }
+            } else {
+                const currentPrice = item.price || item.variant?.price || 0;
+                if (currentPrice === 0 || !item.variant?.sku) {
+                    let variantDoc = null;
+                    if (item.variant?.weight) {
+                        const weightStr = item.variant.weight.toString().trim();
+                        const match = weightStr.match(/^([\d.]+)/);
+                        const numericWeight = match ? parseFloat(match[1]) : NaN;
+                        if (!isNaN(numericWeight)) {
+                            variantDoc = await ProductVariant.findOne({ 
+                                productId: item.product?._id || item.product, 
+                                weight: numericWeight, 
+                                isDeleted: { $ne: true } 
+                            });
+                        }
+                    }
+                    if (variantDoc) {
+                        const priceVal = variantDoc.discountedPrice || variantDoc.basePrice || 0;
+                        const inventoryDoc = await Inventory.findOne({ variantId: variantDoc._id });
+                        const availableQty = inventoryDoc ? inventoryDoc.availableQty : 0;
+                        item.variant = {
+                            _id: variantDoc._id.toString(),
+                            weight: variantDoc.weight?.toString() ?? item.variant?.weight ?? "",
+                            price: priceVal,
+                            stock: availableQty,
+                            sku: variantDoc.sku ?? item.variant?.sku ?? "",
+                            images: variantDoc.images ?? item.variant?.images ?? [],
+                        } as any;
+                        item.price = priceVal;
+                        cartUpdated = true;
+                    }
                 }
             }
         }
@@ -121,21 +127,56 @@ export class CartService {
             }
         }
 
-        // If variant is provided as an ID (string), fetch full variant document
+        // Standardize & resolve variant document from DB
         let variantData: any = variant;
-        if (typeof variant === "string" && mongoose.isValidObjectId(variant)) {
-            const ProductVariant = (await import("../product-variant/ProductVariants.model")).ProductVariant;
-            const variantDoc = await ProductVariant.findById(variant).lean();
-            if (variantDoc) {
-                variantData = {
-                    _id: variantDoc._id.toString(),
-                    weight: variantDoc.weight?.toString() ?? "",
-                    price: variantDoc.discountedPrice ?? variantDoc.basePrice ?? 0,
-                    images: variantDoc.images ?? [],
-                    sku: variantDoc.sku ?? "",
-                };
+        const ProductVariant = (await import("../product-variant/ProductVariants.model")).ProductVariant;
+        let variantDoc = null;
+
+        if (variantData?._id && mongoose.isValidObjectId(variantData._id)) {
+            variantDoc = await ProductVariant.findOne({ _id: variantData._id, isDeleted: { $ne: true } }).lean();
+        }
+        
+        if (!variantDoc && variantData?.sku) {
+            variantDoc = await ProductVariant.findOne({ sku: variantData.sku, isDeleted: { $ne: true } }).lean();
+        }
+
+        if (!variantDoc && variantData?.weight) {
+            const weightStr = variantData.weight.toString().trim();
+            const match = weightStr.match(/^([\d.]+)/);
+            const numericWeight = match ? parseFloat(match[1]) : NaN;
+            
+            if (!isNaN(numericWeight)) {
+                variantDoc = await ProductVariant.findOne({ 
+                    productId: actualProductId, 
+                    weight: numericWeight, 
+                    isDeleted: { $ne: true } 
+                }).lean();
             }
         }
+
+        if (!variantDoc) {
+            variantDoc = await ProductVariant.findOne({ 
+                productId: actualProductId, 
+                isDeleted: { $ne: true } 
+            }).lean();
+        }
+
+        if (!variantDoc) {
+            throw new Error("Product variant is unavailable.");
+        }
+
+        variantData = {
+            _id: variantDoc._id.toString(),
+            weight: variantDoc.weight ? `${variantDoc.weight} g` : (variantData?.weight || ""),
+            price: variantDoc.discountedPrice || variantDoc.basePrice || 0,
+            images: variantDoc.images || [],
+            sku: variantDoc.sku || "",
+        };
+
+        // Query Inventory stock level
+        const Inventory = (await import("../inventory/Inventory.model")).Inventory;
+        const inventoryDoc = await Inventory.findOne({ variantId: variantDoc._id });
+        const availableStock = inventoryDoc ? inventoryDoc.availableQty : 0;
 
         // Proceed with cart lookup/creation using actualProductId
         let cart = await Cart.findOne({ user: userId });
@@ -151,41 +192,15 @@ export class CartService {
             isSameVariant(item.variant, variantData)
         );
 
-        let price = variantData?.discountedPrice || variantData?.price || variantData?.basePrice || 0;
+        const currentQtyInCart = itemIndex > -1 ? cart.items[itemIndex].quantity : 0;
+        const targetQty = currentQtyInCart + quantity;
 
-        if (price === 0) {
-            const ProductVariant = (await import("../product-variant/ProductVariants.model")).ProductVariant;
-            let variantDoc = null;
-            if (variantData?.sku) {
-                variantDoc = await ProductVariant.findOne({ sku: variantData.sku, isDeleted: { $ne: true } }).lean();
-            } else if (variantData?.weight) {
-                const weightStr = variantData.weight.toString().trim();
-                const match = weightStr.match(/^([\d.]+)/);
-                const numericWeight = match ? parseFloat(match[1]) : NaN;
-                
-                if (!isNaN(numericWeight)) {
-                    variantDoc = await ProductVariant.findOne({ 
-                        productId: actualProductId, 
-                        weight: numericWeight, 
-                        isDeleted: { $ne: true } 
-                    }).lean();
-                }
-                if (!variantDoc) {
-                    variantDoc = await ProductVariant.findOne({ 
-                        productId: actualProductId, 
-                        isDeleted: { $ne: true } 
-                    }).lean();
-                }
-            }
-            if (variantDoc) {
-                price = variantDoc.discountedPrice || variantDoc.basePrice || 0;
-                variantData.price = price;
-                if (!variantData._id) variantData._id = variantDoc._id.toString();
-                if (!variantData.images || variantData.images.length === 0) {
-                    variantData.images = variantDoc.images || [];
-                }
-            }
+        // Stock availability verification check
+        if (quantity > 0 && targetQty > availableStock) {
+            throw new Error(`Only ${availableStock} units of this product variant are available in stock.`);
         }
+
+        let price = variantData.price;
 
         if (itemIndex > -1) {
             cart.items[itemIndex].quantity += quantity;
@@ -211,6 +226,17 @@ export class CartService {
             const itemPrice = item.variant?.price || (item as any).price || 0;
             return sum + (item.quantity * itemPrice);
         }, 0);
+
+        // Dynamically set stock for returned items
+        for (const item of cart.items) {
+            if (item.variant && item.variant.sku) {
+                const vDoc = await ProductVariant.findOne({ sku: item.variant.sku, isDeleted: { $ne: true } });
+                if (vDoc) {
+                    const invDoc = await Inventory.findOne({ variantId: vDoc._id });
+                    item.variant.stock = invDoc ? invDoc.availableQty : 0;
+                }
+            }
+        }
 
         await cart.save();
         await cart.populate("items.product");

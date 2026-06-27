@@ -44,6 +44,7 @@ export const metadata: Metadata = {
 import { Toaster } from "react-hot-toast";
 import StoreProvider from "@/providers/StoreProvider";
 import QueryProvider from "@/providers/QueryProvider";
+import AuthRequiredModal from "@/components/shared/AuthRequiredModal";
 
 export default function RootLayout({
   children,
@@ -60,6 +61,7 @@ export default function RootLayout({
           <QueryProvider>
             {children}
             <Toaster position="top-right" />
+            <AuthRequiredModal />
           </QueryProvider>
         </StoreProvider>
       </body>

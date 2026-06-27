@@ -8,13 +8,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { productsData, Product, Review } from "@/constants/products";
 import ProductCard from "@/components/landing/ProductCard";
-import { useAppDispatch } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { addItemToCart } from "@/store/cartSlice";
+import { showAuthModal } from "@/store/authSlice";
 import AddedToCartToast from "@/components/shared/AddedToCartToast";
 import { useApiQuery } from "@/hooks/useApiQuery";
 
 interface DetailProduct extends Omit<Product, 'details' | 'category'> {
   id: string;
+  _id?: string;
   name: string;
   description: string;
   price: number;
@@ -260,7 +262,8 @@ export default function ProductDetailPage({ params }: PageProps) {
   const [reviews, setReviews] = useState<Review[]>(initialProduct.reviews);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState<boolean>(false);
   const [votedReviews, setVotedReviews] = useState<Record<string, boolean>>({});
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const cartItems = useAppSelector((state) => state.cart.items);
   const [isAddingToCart, setIsAddingToCart] = useState<boolean>(false);
 
   const isLoading = isProductLoading;
@@ -291,6 +294,7 @@ export default function ProductDetailPage({ params }: PageProps) {
 
     return {
       id: dbProd.slug || dbProd._id,
+      _id: dbProd._id?.toString(),
       name: dbProd.name,
       description: dbProd.description || "",
       price: basePrice,
@@ -424,8 +428,27 @@ export default function ProductDetailPage({ params }: PageProps) {
 
   const weightOptions = getWeightOptions();
 
-  // Retrieve up to 4 relevant recommendations matching the current category
-  const getRecommendations = () => {
+  // Fetch recommended products from the minimal API dynamically
+  const { data: recommendationsResult } = useApiQuery<any>(
+    ["recommendations", product.category, product.id],
+    product.category ? `/api/products/minimal?category=${product.category}&limit=5` : "",
+    undefined,
+    { enabled: !!product.category }
+  );
+
+  const recommendedProducts = useMemo(() => {
+    const apiProducts = recommendationsResult 
+      ? (Array.isArray(recommendationsResult) ? recommendationsResult : recommendationsResult.products || [])
+      : [];
+    
+    // Filter out the current product from recommendations
+    const filtered = apiProducts.filter((p: any) => p.id !== product.id && p.id !== productId);
+
+    if (filtered.length > 0) {
+      return filtered.slice(0, 4);
+    }
+
+    // Fallback to mock recommendations if API returns empty
     const categoryMatches = productsData.filter(
       (p) => p.category === product.category && p.id !== product.id
     );
@@ -436,9 +459,7 @@ export default function ProductDetailPage({ params }: PageProps) {
       (p) => p.id !== product.id && p.category !== product.category
     );
     return [...categoryMatches, ...others].slice(0, 4);
-  };
-
-  const recommendedProducts = getRecommendations();
+  }, [recommendationsResult, product.category, product.id, productId]);
 
   // Review Form States
   const [formRating, setFormRating] = useState<number>(1);
@@ -481,23 +502,12 @@ export default function ProductDetailPage({ params }: PageProps) {
     return [];
   };
 
-  // Fetch currently authenticated user
+  // Sync form author name when user changes
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => {
-        if (res.ok) return res.json();
-        throw new Error();
-      })
-      .then((resJson) => {
-        if (resJson.success && resJson.data) {
-          setCurrentUser(resJson.data);
-          setFormAuthor(resJson.data.name);
-        }
-      })
-      .catch(() => {
-        setCurrentUser(null);
-      });
-  }, []);
+    if (currentUser?.name) {
+      setFormAuthor(currentUser.name);
+    }
+  }, [currentUser]);
 
   // Update image when product changes
   useEffect(() => {
@@ -516,6 +526,11 @@ export default function ProductDetailPage({ params }: PageProps) {
   const handleAddToCart = async () => {
     if (isAddingToCart) return;
 
+    if (!currentUser) {
+      dispatch(showAuthModal());
+      return;
+    }
+
     try {
       setIsAddingToCart(true);
       const activeVar = getActiveVariant();
@@ -526,6 +541,28 @@ export default function ProductDetailPage({ params }: PageProps) {
         sku: `${product.id}-${selectedWeight}`,
         images: activeVar?.images ?? []
       };
+
+      // Verify stock level before dispatching action
+      const existingCartItem = cartItems.find((item: any) => {
+        const itemProdId = (item.product?._id || item.product)?.toString();
+        const targetProdId = (product._id || product.id)?.toString();
+        const isProductMatch = itemProdId === targetProdId || (item.product?.slug && item.product.slug === product.id);
+        
+        const isVariantMatch = 
+          item.variant?.sku === variantObj.sku || 
+          item.variant?.weight === variantObj.weight || 
+          JSON.stringify(item.variant) === JSON.stringify(variantObj);
+
+        return isProductMatch && isVariantMatch;
+      });
+      const currentCartQty = existingCartItem ? existingCartItem.quantity : 0;
+      const targetQty = currentCartQty + quantity;
+      const availableStock = activeVar ? (activeVar.stock ?? 0) : 0;
+
+      if (targetQty > availableStock) {
+        toast.error(`Cannot add more items. Only ${availableStock} units of this variant are available in stock, and you have ${currentCartQty} in your cart.`);
+        return;
+      }
 
       const productInfo = {
         name: product.name,
@@ -674,11 +711,11 @@ export default function ProductDetailPage({ params }: PageProps) {
   };
 
   // Average Rating Calculation
-  const totalReviewsCount = 123 + reviews.length;
-  const ratingAverage = (
-    (reviews.reduce((acc, rev) => acc + rev.rating, 0) + 4.8 * 123) /
-    totalReviewsCount
-  ).toFixed(1);
+  const hasReviews = reviews.length > 0;
+  const totalReviewsCount = reviews.length;
+  const ratingAverage = hasReviews 
+    ? (reviews.reduce((acc, rev) => acc + rev.rating, 0) / totalReviewsCount).toFixed(1)
+    : "0.0";
 
   if (isLoading) {
     return (
@@ -857,16 +894,30 @@ export default function ProductDetailPage({ params }: PageProps) {
                     {product.subCategoryLabel}
                   </span>
                 )}
-                <div className="flex items-center gap-1.5">
-                  <div className="flex text-[#4d6700] gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Icon key={i} icon="solar:star-bold" className="w-3.5 h-3.5 text-[#4d6700]" />
-                    ))}
+                {hasReviews ? (
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex text-[#4d6700] gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => {
+                        const starVal = i + 1;
+                        const avg = parseFloat(ratingAverage);
+                        return (
+                          <Icon 
+                            key={i} 
+                            icon={starVal <= avg ? "solar:star-bold" : (starVal - avg < 1 ? "solar:star-half-bold" : "solar:star-linear")} 
+                            className="w-3.5 h-3.5 text-[#4d6700]" 
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className="text-[11px] font-inter font-semibold text-charcoal/50">
+                      ({ratingAverage} &bull; {totalReviewsCount} reviews)
+                    </span>
                   </div>
-                  <span className="text-[11px] font-inter font-semibold text-charcoal/50">
-                    ({totalReviewsCount} reviews)
+                ) : (
+                  <span className="text-[11px] font-inter font-semibold text-charcoal/45 italic">
+                    No reviews yet
                   </span>
-                </div>
+                )}
               </div>
 
               {/* Title (Source Serif 4) */}
@@ -1137,7 +1188,7 @@ export default function ProductDetailPage({ params }: PageProps) {
 
             {/* Recommendation Cards Grid using core ProductCard */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-              {recommendedProducts.map((recProd, idx) => (
+              {recommendedProducts.map((recProd: any, idx: number) => (
                 <div
                   key={recProd.id}
                   className="h-full"
@@ -1151,7 +1202,7 @@ export default function ProductDetailPage({ params }: PageProps) {
                       id: recProd.id,
                       name: recProd.name,
                       description: recProd.description,
-                      price: recProd.formattedPrice,
+                      price: typeof recProd.price === 'number' ? `₹${recProd.price}` : (recProd.price || recProd.formattedPrice || "₹0"),
                       originalPrice: recProd.originalPrice,
                       image: recProd.image,
                       hoverImage: recProd.hoverImage,
@@ -1180,16 +1231,31 @@ export default function ProductDetailPage({ params }: PageProps) {
                   Honest Feedback
                 </h2>
 
-                {/* Sub-Ratings summary */}
-                <div className="flex items-center gap-2.5 mt-3 flex-wrap">
-                  <span className="text-xl font-extrabold text-[#061907]">{ratingAverage} <span className="text-xs text-charcoal/45 font-medium">/ 5</span></span>
-                  <div className="flex text-[#4d6700] gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Icon key={i} icon="solar:star-bold" className="w-4 h-4" />
-                    ))}
+                {hasReviews ? (
+                  <div className="flex items-center gap-2.5 mt-3 flex-wrap">
+                    <span className="text-xl font-extrabold text-[#061907]">
+                      {ratingAverage} <span className="text-xs text-charcoal/45 font-medium">/ 5</span>
+                    </span>
+                    <div className="flex text-[#4d6700] gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => {
+                        const starVal = i + 1;
+                        const avg = parseFloat(ratingAverage);
+                        return (
+                          <Icon 
+                            key={i} 
+                            icon={starVal <= avg ? "solar:star-bold" : (starVal - avg < 1 ? "solar:star-half-bold" : "solar:star-linear")} 
+                            className="w-4 h-4 text-[#4d6700]" 
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className="text-xs font-semibold text-charcoal/50">({totalReviewsCount} Verified Reviews)</span>
                   </div>
-                  <span className="text-xs font-semibold text-charcoal/50">({totalReviewsCount} Verified Reviews)</span>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-2.5 mt-3 flex-wrap">
+                    <span className="text-xs font-semibold text-charcoal/45 italic">No reviews yet for this product</span>
+                  </div>
+                )}
               </div>
 
               {/* Pill-shaped WRITE A REVIEW button */}

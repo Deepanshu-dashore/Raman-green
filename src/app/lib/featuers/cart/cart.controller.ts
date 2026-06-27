@@ -1,12 +1,19 @@
 import { CartService } from "./cart.service";
 import { ApiResponse } from "../../utils/ApiResponse";
 import { verifyJWT } from "../../middlewares/verifyJWT";
+import { User } from "../../db/index.model";
 
 export class CartController {
     static async getMyCart() {
         try {
             const user = await verifyJWT();
             if (!user) return ApiResponse(401, null, "Unauthorized.");
+
+            const dbUser = await User.findById(user.id);
+            if (!dbUser) return ApiResponse(401, null, "Unauthorized: User not found.");
+            if (dbUser.role !== "customer") {
+                return ApiResponse(403, null, "Access denied. Only customers are allowed to manage carts.");
+            }
 
             const cart = await CartService.getCart(user.id!);
             return ApiResponse(200, cart, "Cart fetched successfully.");
@@ -20,6 +27,12 @@ export class CartController {
         try {
             const user = await verifyJWT();
             if (!user) return ApiResponse(401, null, "Unauthorized.");
+
+            const dbUser = await User.findById(user.id);
+            if (!dbUser) return ApiResponse(401, null, "Unauthorized: User not found.");
+            if (dbUser.role !== "customer") {
+                return ApiResponse(403, null, "Access denied. Only customers are allowed to manage carts.");
+            }
 
             const { productId, variant, quantity } = reqData;
             if (!productId || !quantity) return ApiResponse(400, null, "Missing fields.");
@@ -37,6 +50,12 @@ export class CartController {
             const user = await verifyJWT();
             if (!user) return ApiResponse(401, null, "Unauthorized.");
 
+            const dbUser = await User.findById(user.id);
+            if (!dbUser) return ApiResponse(401, null, "Unauthorized: User not found.");
+            if (dbUser.role !== "customer") {
+                return ApiResponse(403, null, "Access denied. Only customers are allowed to manage carts.");
+            }
+
             const { productId, variant, quantity } = reqData; // quantity is diff
             if (!productId || quantity === undefined) return ApiResponse(400, null, "Missing fields.");
 
@@ -53,6 +72,12 @@ export class CartController {
             const user = await verifyJWT();
             if (!user) return ApiResponse(401, null, "Unauthorized.");
 
+            const dbUser = await User.findById(user.id);
+            if (!dbUser) return ApiResponse(401, null, "Unauthorized: User not found.");
+            if (dbUser.role !== "customer") {
+                return ApiResponse(403, null, "Access denied. Only customers are allowed to manage carts.");
+            }
+
             const { productId, variant } = reqData;
             const cart = await CartService.removeFromCart(user.id!, productId, variant);
             return ApiResponse(200, cart, "Item removed from cart.");
@@ -66,6 +91,11 @@ export class CartController {
         try {
             const user = await verifyJWT();
             if (!user) return ApiResponse(200, { count: 0 }, "Not authenticated.");
+
+            const dbUser = await User.findById(user.id);
+            if (!dbUser || dbUser.role !== "customer") {
+                return ApiResponse(200, { count: 0 }, "Not a customer.");
+            }
 
             const cart = await CartService.getCart(user.id!);
             if (!cart) return ApiResponse(200, { count: 0 }, "Cart not found.");
